@@ -26,11 +26,15 @@ import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import organizationRoutes from './routes/organization.routes.js';
+import projectRoutes from './routes/project.routes.js';
+import taskRoutes from './routes/task.routes.js';
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/organizations", organizationRoutes);
 app.use("/api/v1", healthRoutes);
+app.use("/api/v1", projectRoutes);
+app.use("/api/v1", taskRoutes);
 
 // ── Swagger UI ──────────────────────────────────────────────────────────────
 app.use(

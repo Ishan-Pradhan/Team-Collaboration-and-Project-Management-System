@@ -97,6 +97,9 @@ const options: swaggerJsdoc.Options = {
       { name: 'Email Verification', description: 'Verify and resend email confirmations' },
       { name: 'Password', description: 'Forgot / reset / change password' },
       { name: 'Admin', description: 'User management (admin only)' },
+      { name: 'Organizations', description: 'Workspaces and organizational member management' },
+      { name: 'Projects', description: 'Project tracking and management within organizations' },
+      { name: 'Tasks', description: 'Task and Kanban board operations' },
     ],
   },
   // Enumerate each route file explicitly.
@@ -111,7 +114,7 @@ const options: swaggerJsdoc.Options = {
     const routesDir = fromDirname.replace(/\\/g, '/');
     const cwdDir = fromCwd.replace(/\\/g, '/');
 
-    const files = ['auth', 'admin', 'health', 'organization'];
+    const files = ['auth', 'admin', 'health', 'organization', 'project', 'task'];
     const exts = ['ts', 'js'];
 
     const paths: string[] = [];

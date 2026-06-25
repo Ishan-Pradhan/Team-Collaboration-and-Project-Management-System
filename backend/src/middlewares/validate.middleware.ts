@@ -16,23 +16,23 @@ export const validate = (schema: Schema) => {
 
       // Validate each part only if schema exists
       if (schema.body) {
-        const parsedBody = schema.body.parse(req.body);
+        const parsedBody = schema.body.parse(req.body || {});
         req.body = parsedBody;
         req.validated.body = parsedBody;
       }
 
       if (schema.query) {
-        const parsedQuery = schema.query.parse(req.query);
+        const parsedQuery = schema.query.parse(req.query || {});
         req.validated.query = parsedQuery;
       }
 
       if (schema.params) {
-        const parsedParams = schema.params.parse(req.params);
+        const parsedParams = schema.params.parse(req.params || {});
         req.validated.params = parsedParams;
       }
 
       if (schema.cookies) {
-        const parsed = schema.cookies.parse(req.cookies);
+        const parsed = schema.cookies.parse(req.cookies || {});
         req.validated.cookies = parsed;
       }
 
