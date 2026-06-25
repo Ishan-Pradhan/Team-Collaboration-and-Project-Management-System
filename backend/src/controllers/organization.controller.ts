@@ -315,3 +315,73 @@ export const toggleSuspendOrganization = asyncHandler(
     );
   }
 );
+
+// Get Organization by Slug
+export const getOrganizationBySlug = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { slug } = req.params as { slug: string };
+    const user = req.user;
+    if (!user) {
+      throw new ApiError(401, 'Unauthorized');
+    }
+
+    const org = await organizationRepository.findBySlug(slug);
+    if (!org) {
+      throw new ApiError(404, 'Organization not found');
+    }
+
+    // Check if user is a member or the owner
+    const membership = await organizationMemberRepository.findOne({
+      organizationId: org.id,
+      userId: user.id,
+    });
+
+    if (!membership && org.ownerId !== user.id) {
+      throw new ApiError(403, 'You are not a member of this organization');
+    }
+
+    return ok(res, org, 'Organization retrieved successfully');
+  }
+);
+
+// Update Organization Details
+export const updateOrganization = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { organizationId } = req.params as { organizationId: string };
+    const { name, description, logoUrl } = req.body as { name?: string; description?: string | null; logoUrl?: string | null };
+    const user = req.user;
+    if (!user) {
+      throw new ApiError(401, 'Unauthorized');
+    }
+
+    const org = await organizationRepository.findById(organizationId);
+    if (!org) {
+      throw new ApiError(404, 'Organization not found');
+    }
+
+    // Only owner or ORG_ADMIN can update
+    const membership = await organizationMemberRepository.findOne({
+      organizationId,
+      userId: user.id,
+    });
+
+    if (org.ownerId !== user.id && (!membership || membership.role !== 'ORG_ADMIN')) {
+      throw new ApiError(403, 'Only organization admins can update organization details');
+    }
+
+    // If name is changed, generate a new slug and check conflicts
+    let slug = org.slug;
+    if (name && name.trim() !== org.name) {
+      slug = await generateSlug(name);
+    }
+
+    const updatedOrg = await organizationRepository.update(organizationId, {
+      name: name ? name.trim() : org.name,
+      description: description !== undefined ? description : org.description,
+      logoUrl: logoUrl !== undefined ? logoUrl : org.logoUrl,
+      slug,
+    });
+
+    return ok(res, updatedOrg, 'Organization updated successfully');
+  }
+);

@@ -23,6 +23,10 @@ export const organizationRepository = {
     return await Organization.findByPk(id);
   },
 
+  findBySlug: async (slug: string): Promise<OrganizationInstance | null> => {
+    return await Organization.findOne({ where: { slug } });
+  },
+
   findAllWithOwner: async (): Promise<OrganizationInstance[]> => {
     return await Organization.findAll({
       include: [
@@ -33,6 +37,27 @@ export const organizationRepository = {
         },
       ],
     });
+  },
+
+  update: async (
+    id: string,
+    data: Partial<OrganizationCreationAttributes>
+  ): Promise<OrganizationInstance | null> => {
+    const org = await Organization.findByPk(id);
+    if (!org) return null;
+    return await org.update(data);
+  },
+
+  suspend: async (id: string): Promise<OrganizationInstance | null> => {
+    const org = await Organization.findByPk(id);
+    if (!org) return null;
+    return await org.update({ isSuspended: true });
+  },
+
+  unsuspend: async (id: string): Promise<OrganizationInstance | null> => {
+    const org = await Organization.findByPk(id);
+    if (!org) return null;
+    return await org.update({ isSuspended: false });
   },
 };
 

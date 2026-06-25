@@ -12,6 +12,8 @@ import {
   acceptOrganizationInvitation,
   listOrganizationMembers,
   removeOrganizationMember,
+  getOrganizationBySlug,
+  updateOrganization,
 } from '../controllers/organization.controller.js';
 import {
   createOrganizationSchema,
@@ -19,6 +21,8 @@ import {
   acceptInviteSchema,
   organizationParamSchema,
   memberParamSchema,
+  updateOrganizationSchema,
+  slugParamSchema,
 } from '../validations/organization.validation.js';
 
 const router = Router();
@@ -228,6 +232,93 @@ router
     isOrganizationAdmin,
     validate(memberParamSchema),
     removeOrganizationMember
+  );
+
+/**
+ * @swagger
+ * /organizations/slug/{slug}:
+ *   get:
+ *     tags: [Organizations]
+ *     summary: Get organization details by slug
+ *     description: Retrieve details of an organization using its unique URL slug. Accessible by any organization member.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: my-awesome-company
+ *     responses:
+ *       200:
+ *         description: Organization details retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Not a member of the organization
+ *       404:
+ *         description: Organization not found
+ */
+router
+  .route('/slug/:slug')
+  .get(
+    verifyJWT,
+    validate(slugParamSchema),
+    getOrganizationBySlug
+  );
+
+/**
+ * @swagger
+ * /organizations/{organizationId}:
+ *   put:
+ *     tags: [Organizations]
+ *     summary: Update organization details
+ *     description: Only Organization Admins can update name, description, or logoUrl.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: organizationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: My New Company Name
+ *               description:
+ *                 type: string
+ *                 example: A cool description
+ *               logoUrl:
+ *                 type: string
+ *                 format: url
+ *     responses:
+ *       200:
+ *         description: Organization updated successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Not organization admin
+ *       404:
+ *         description: Organization not found
+ */
+router
+  .route('/:organizationId')
+  .put(
+    verifyJWT,
+    isOrganizationAdmin,
+    validate(updateOrganizationSchema),
+    updateOrganization
   );
 
 export default router;
