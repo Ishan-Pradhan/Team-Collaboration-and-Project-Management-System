@@ -30,6 +30,9 @@ Project.belongsTo(Organization, { foreignKey: 'organizationId', as: 'organizatio
 // User ↔ Project (through ProjectMember)
 User.belongsToMany(Project, { through: ProjectMember, foreignKey: 'userId' });
 Project.belongsToMany(User, { through: ProjectMember, foreignKey: 'projectId' });
+Project.hasMany(ProjectMember, { foreignKey: 'projectId', as: 'members' });
+ProjectMember.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+ProjectMember.belongsTo(Project, { foreignKey: 'projectId', as: 'project' });
 
 // Project → Kanban Columns
 Project.hasMany(KanbanColumn, { foreignKey: 'projectId', onDelete: 'CASCADE', as: 'columns' });
