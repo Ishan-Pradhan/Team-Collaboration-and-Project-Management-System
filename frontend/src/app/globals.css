@@ -1,8 +1,43 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   shadcn/ui CSS Variables — mapped to Arbyte Flow design tokens
+   ========================================================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* shadcn core */
+  --background: #f8f7f4;
+  --foreground: #161616;
+
+  --card: #ffffff;
+  --card-foreground: #161616;
+
+  --popover: #ffffff;
+  --popover-foreground: #161616;
+
+  /* primary = forest green #22302a */
+  --primary: #22302a;
+  --primary-foreground: #edeae4;
+
+  /* secondary = surface-muted */
+  --secondary: #f4f2ee;
+  --secondary-foreground: #161616;
+
+  --muted: #f4f2ee;
+  --muted-foreground: #8b8b8b;
+
+  /* accent = brand gold #d4a84f */
+  --accent: #d4a84f;
+  --accent-foreground: #161616;
+
+  --destructive: #a85252;
+  --destructive-foreground: #ffffff;
+
+  --border: #ebe7e1;
+  --input: #ebe7e1;
+  --ring: #22302a;
+
+  --radius: 0.5rem;
 }
 
 @theme inline {
@@ -12,15 +47,425 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ==========================================================================
+   Tailwind CSS v4 Design System
+   SaaS Project Management Platform
+   ========================================================================== */
+
+
+
+@theme {
+  /* -----------------------------------------------------------------------
+     Fonts
+  ----------------------------------------------------------------------- */
+
+  --font-sans:
+    "Söhne",
+    "IBM Plex Sans",
+    "Neue Haas Grotesk Text",
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+
+  /* -----------------------------------------------------------------------
+     Core Colors
+  ----------------------------------------------------------------------- */
+
+  --color-background: #f8f7f4;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f4f2ee;
+  --color-surface-hover: #f1efea;
+
+  /* Text */
+
+  --color-text-primary: #161616;
+  --color-text-secondary: #5d5d5d;
+  --color-text-muted: #8b8b8b;
+
+  /* primary */
+
+  --color-primary-hover: #18211d;
+  --color-primary: #22302a;
+  --color-primary-active: #2d3d35;
+  --color-primary-text: #edeae4;
+
+  /* Brand */
+
+  --color-brand: #d4a84f;
+  --color-brand-hover: #c59638;
+  --color-brand-soft: #f5e8c6;
+
+  /* Status */
+
+  --color-success: #4b7f52;
+  --color-success-soft: #eef4ec;
+
+  --color-warning: #c38a2d;
+  --color-warning-soft: #f5e8c6;
+
+  --color-danger: #a85252;
+  --color-danger-soft: #f7d7d7;
+
+  --color-info: #6d6d6d;
+  --color-info-soft: #ececec;
+
+  /* Workspace Colors */
+
+  --color-workspace-acme: #d4a84f;
+  --color-workspace-velocity: #6f8c78;
+  --color-workspace-northpeak: #7a67a8;
+  --color-workspace-studio: #a86c58;
+
+  /* Borders */
+
+  --color-border-subtle: #ebe7e1;
+  --color-border-muted: #e2ddd5;
+
+  /* -----------------------------------------------------------------------
+     shadcn/ui — Tailwind v4 variable aliases
+     Maps shadcn bare CSS vars to Tailwind utility classes
+  ----------------------------------------------------------------------- */
+
+  /* bg-background, bg-foreground, etc. */
+  --color-foreground: var(--foreground);
+
+  /* bg-card / text-card-foreground */
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  /* bg-popover / text-popover-foreground */
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  /* bg-primary / text-primary-foreground (shadcn convention) */
+  /* Note: these alias to the same values as --color-primary above */
+  --color-primary-foreground: var(--primary-foreground);
+
+  /* bg-secondary / text-secondary-foreground */
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  /* bg-muted / text-muted-foreground */
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  /* bg-accent / text-accent-foreground */
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  /* bg-destructive / text-destructive-foreground */
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  /* border-border, border-input */
+  --color-border: var(--border);
+  --color-input: var(--input);
+
+  /* ring */
+  --color-ring: var(--ring);
+
+  /* -----------------------------------------------------------------------
+     Radius
+  ----------------------------------------------------------------------- */
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+
+  /* shadcn radius token */
+  --radius: 0.5rem;
+
+  /* -----------------------------------------------------------------------
+     Shadows
+  ----------------------------------------------------------------------- */
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-dropdown:
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 1px 2px rgba(0, 0, 0, 0.04);
+
+  --shadow-modal:
+    0 12px 40px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+
+  /* -----------------------------------------------------------------------
+     Typography Scale
+  ----------------------------------------------------------------------- */
+
+  --text-display: 3rem;      /* 48px */
+  --text-display--line-height: 3.5rem;
+
+  --text-h1: 2rem;           /* 32px */
+  --text-h1--line-height: 2.5rem;
+
+  --text-h2: 1.5rem;         /* 24px */
+  --text-h2--line-height: 2rem;
+
+  --text-h3: 1.125rem;       /* 18px */
+  --text-h3--line-height: 1.625rem;
+
+  --text-body-lg: 1rem;      /* 16px */
+  --text-body-lg--line-height: 1.5rem;
+
+  --text-body: 0.875rem;     /* 14px */
+  --text-body--line-height: 1.375rem;
+
+  --text-caption: 0.75rem;   /* 12px */
+  --text-caption--line-height: 1.125rem;
+}
+
+/* ==========================================================================
+   Base Layer
+   ========================================================================== */
+
+@layer base {
+ 
+  html {
+    font-family: var(--font-sans);
+    color: var(--color-text-primary);
+    background: var(--color-background);
+    text-rendering: geometricPrecision;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-text-primary text-body;
+  }
+
+  h1 {
+    font-size: var(--text-h1);
+    line-height: 2.5rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  h2 {
+    font-size: var(--text-h2);
+    line-height: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
+  h3 {
+    font-size: var(--text-h3);
+    line-height: 1.625rem;
+    font-weight: 600;
+  }
+}
+
+/* ==========================================================================
+   Custom Components
+   ========================================================================== */
+
+@layer components {
+  /* Layout */
+
+  .app-shell {
+    @apply min-h-screen bg-background;
+  }
+
+  .workspace-sidebar {
+    @apply bg-primary text-primary-text;
+  }
+
+  .content-surface {
+    @apply bg-surface;
+  }
+
+  /* Buttons */
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center
+           rounded-md
+           bg-primary
+           px-4 py-2
+           text-body
+           font-medium
+           text-white
+           transition-colors;
+  }
+
+  .btn-primary:hover {
+    background: var(--color-primary-hover);
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center
+           rounded-md
+           bg-surface
+           px-4 py-2
+           text-body
+           font-medium
+           text-text-primary
+           shadow-card;
+  }
+
+  /* Inputs */
+
+  .input {
+    @apply h-10
+           rounded-sm
+           bg-surface
+           text-text-primary
+           px-3
+           outline-none;
+    border: 1px solid var(--color-border-subtle);
+  }
+
+  .input:focus {
+    border-color: var(--color-brand);
+  }
+
+  /* Cards */
+
+  .card {
+    @apply rounded-md bg-surface;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Kanban */
+
+  .kanban-column {
+    @apply rounded-md p-3;
+    background: var(--color-surface-muted);
+  }
+
+  .kanban-card {
+    @apply rounded-md bg-surface p-3;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Navigation */
+
+  .nav-item {
+    @apply flex items-center gap-3
+           rounded-md
+           px-3 py-2
+           text-body
+           font-medium
+           transition-colors;
+  }
+
+  .nav-item:hover {
+    background: var(--color-sidebar-hover);
+  }
+
+  .nav-item-active {
+    background: var(--color-sidebar-active);
+  }
+
+  /* Channels */
+
+  .channel-item {
+    @apply flex items-center
+           rounded-sm
+           px-3 py-1.5
+           text-caption;
+  }
+
+  .channel-item:hover {
+    background: var(--color-sidebar-hover);
+  }
+
+  /* Status Badges */
+
+  .badge-success {
+    @apply rounded-sm px-2 py-1 text-caption font-medium;
+    background: var(--color-success-soft);
+    color: var(--color-success);
+  }
+
+  .badge-warning {
+    @apply rounded-sm px-2 py-1 text-caption font-medium;
+    background: var(--color-warning-soft);
+    color: var(--color-warning);
+  }
+
+  .badge-danger {
+    @apply rounded-sm px-2 py-1 text-caption font-medium;
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+  }
+
+  /* Priority */
+
+  .priority-low {
+    background: #eef4ec;
+    color: #4b7f52;
+  }
+
+  .priority-medium {
+    background: #f5e8c6;
+    color: #b57912;
+  }
+
+  .priority-high {
+    background: #f7d7d7;
+    color: #b54a4a;
+  }
+
+  .priority-critical {
+    background: #e8c0c0;
+    color: #8e2f2f;
+  }
+}
+
+/* ==========================================================================
+   Utilities
+   ========================================================================== */
+
+@utility text-display {
+  font-size: var(--text-display);
+  line-height: 3.5rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+@utility text-h1 {
+  font-size: var(--text-h1);
+  line-height: 2.5rem;
+  font-weight: 600;
+}
+
+@utility text-h2 {
+  font-size: var(--text-h2);
+  line-height: 2rem;
+  font-weight: 600;
+}
+
+@utility text-h3 {
+  font-size: var(--text-h3);
+  line-height: 1.625rem;
+  font-weight: 600;
+}
+
+@utility text-body-lg {
+  font-size: var(--text-body-lg);
+  line-height: 1.5rem;
+}
+
+@utility text-body {
+  font-size: var(--text-body);
+  line-height: 1.375rem;
+}
+
+@utility text-caption {
+  font-size: var(--text-caption);
+  line-height: 1.125rem;
+}
+
+@utility surface {
+  background: var(--color-surface);
+}
+
+@utility surface-muted {
+  background: var(--color-surface-muted);
 }
