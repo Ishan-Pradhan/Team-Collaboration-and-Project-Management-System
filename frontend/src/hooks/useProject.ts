@@ -119,6 +119,35 @@ export const useCreateColumn = (projectId: string) => {
   });
 };
 
+export const useUpdateColumn = (projectId: string, columnId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { name?: string; color?: string }) => {
+      const res = await api.put<{ success: boolean; data: KanbanColumn }>(
+        `/projects/${projectId}/columns/${columnId}`,
+        data
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectId, 'columns'] });
+    },
+  });
+};
+
+export const useDeleteColumn = (projectId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (columnId: string) => {
+      await api.delete(`/projects/${projectId}/columns/${columnId}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectId, 'columns'] });
+      qc.invalidateQueries({ queryKey: ['projects', projectId, 'tasks'] });
+    },
+  });
+};
+
 export const useReorderColumns = (projectId: string) => {
   const qc = useQueryClient();
   return useMutation({

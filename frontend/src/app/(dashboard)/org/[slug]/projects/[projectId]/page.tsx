@@ -1,8 +1,6 @@
 'use client';
 
-import { use, useState, useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useOrganizationBySlug } from '@/hooks/useOrganization';
+import { use, useState, useMemo, useEffect, useRef } from 'react';
 import {
   useProject,
   useProjectColumns,
@@ -12,14 +10,20 @@ import {
   useMoveTask,
   useDeleteTask,
   useCreateColumn,
+  useUpdateColumn,
+  useDeleteColumn,
+  useReorderColumns,
 } from '@/hooks/useProject';
 import { toast } from 'sonner';
 import {
   Calendar,
   ChevronDown,
+  GripVertical,
   Loader2,
   MoreHorizontal,
+  Pencil,
   Plus,
+  Trash2,
   User,
   X,
   Layout,
@@ -34,358 +38,323 @@ import type { Task, KanbanColumn } from '@/types/project.types';
 
 import {
   DndContext,
-  useDraggable,
-  useDroppable,
+  DragEndEvent,
+  DragOverEvent,
+  DragStartEvent,
+  DragOverlay,
+  PointerSensor,
   useSensor,
   useSensors,
-  PointerSensor,
-  DragEndEvent,
+  closestCorners,
+  MeasuringStrategy,
+  defaultDropAnimationSideEffects,
+  useDroppable,
 } from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  horizontalListSortingStrategy,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface PageProps {
   params: Promise<{ slug: string; projectId: string }>;
 }
 
-const PRIORITY_CONFIG: Record<
-  Task['priority'],
-  { label: string; className: string }
-> = {
-  LOW: {
-    label: 'Low',
-    className: 'bg-[#e6f4ea] text-[#1e8e3e]',
-  },
-  MEDIUM: {
-    label: 'Medium',
-    className: 'bg-[#fef7e0] text-[#f29900]',
-  },
-  HIGH: {
-    label: 'High',
-    className: 'bg-[#fce8e6] text-[#d93025]',
-  },
-  CRITICAL: {
-    label: 'Critical',
-    className: 'bg-red-100 text-red-800 font-bold',
-  },
+type ActiveDrag =
+  | { type: 'task'; task: Task }
+  | { type: 'column'; column: KanbanColumn }
+  | null;
+
+const PRIORITY: Record<Task['priority'], { label: string; bar: string; chip: string }> = {
+  LOW:      { label: 'Low',      bar: 'bg-emerald-400', chip: 'bg-emerald-50 text-emerald-700' },
+  MEDIUM:   { label: 'Medium',   bar: 'bg-amber-400',   chip: 'bg-amber-50 text-amber-700'   },
+  HIGH:     { label: 'High',     bar: 'bg-orange-400',  chip: 'bg-orange-50 text-orange-700'  },
+  CRITICAL: { label: 'Critical', bar: 'bg-red-500',     chip: 'bg-red-50 text-red-700'        },
 };
 
 // ─────────────────────────────────────────────────────────────
-// Task Card Component
+// KanbanCard — drag listeners live ON the card root itself
 // ─────────────────────────────────────────────────────────────
-function TaskCard({
+function KanbanCard({
   task,
   onEdit,
+  overlay = false,
 }: {
   task: Task;
-  onEdit: (t: Task) => void;
+  onEdit?: () => void;
+  overlay?: boolean;
 }) {
-  const priority = PRIORITY_CONFIG[task.priority];
-
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
-    data: {
-      taskId: task.id,
-      columnId: task.columnId,
-    },
+    data: { type: 'task', task },
+    disabled: overlay,
   });
 
-  const style = transform
-    ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+  const p = PRIORITY[task.priority];
+  const overdue = task.dueDate && !overlay && new Date(task.dueDate) < new Date();
+
+  return (
+    <div
+      ref={overlay ? undefined : setNodeRef}
+      {...(overlay ? {} : { ...attributes, ...listeners })}
+      onClick={overlay ? undefined : onEdit}
+      style={
+        overlay
+          ? undefined
+          : { transform: CSS.Translate.toString(transform), transition }
       }
-    : undefined;
+      className={cn(
+        'group relative flex flex-col gap-2.5 rounded-lg border bg-white',
+        'px-3.5 pb-3 pt-3 select-none touch-none outline-none',
+        overlay
+          ? 'shadow-2xl border-gray-300 cursor-grabbing scale-[1.03]'
+          : 'cursor-grab border-gray-200 shadow-sm hover:border-gray-300 hover:shadow-md transition-shadow duration-100 active:cursor-grabbing',
+        isDragging && !overlay && 'opacity-0',
+      )}
+    >
+      {/* Priority bar */}
+      <span className={cn('absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full', p.bar)} />
+
+      {/* Title */}
+      <p className="pl-3 pr-1 text-[13px] font-medium leading-snug text-gray-900">
+        {task.title}
+      </p>
+
+      {/* Meta row */}
+      <div className="flex items-center justify-between pl-3">
+        {task.assignee ? (
+          <div className="flex items-center gap-1.5" title={task.assignee.name}>
+            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-600 text-[9px] font-bold text-white uppercase">
+              {task.assignee.name.charAt(0)}
+            </div>
+            <span className="text-[11px] text-gray-500">{task.assignee.name.split(' ')[0]}</span>
+          </div>
+        ) : (
+          <div className="flex h-5 w-5 items-center justify-center rounded-full border border-dashed border-gray-300 text-gray-400">
+            <User size={10} />
+          </div>
+        )}
+
+        <div className="flex items-center gap-1.5">
+          {task.dueDate && (
+            <span className={cn('flex items-center gap-1 text-[11px]', overdue ? 'text-red-500 font-medium' : 'text-gray-400')}>
+              <Calendar size={10} />
+              {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </span>
+          )}
+          <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-semibold', p.chip)}>
+            {p.label}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// ColumnTaskArea — useDroppable makes empty columns droppable
+// ─────────────────────────────────────────────────────────────
+function ColumnTaskArea({
+  columnId,
+  tasks,
+  onEditTask,
+}: {
+  columnId: string;
+  tasks: Task[];
+  onEditTask: (t: Task) => void;
+}) {
+  const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks]);
+
+  // Makes empty area of column droppable
+  const { setNodeRef, isOver } = useDroppable({
+    id: `col-drop-${columnId}`,
+    data: { type: 'column', columnId },
+  });
+
+  return (
+    <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+      <div
+        ref={setNodeRef}
+        className={cn(
+          'flex flex-col gap-2 px-2 pb-1 min-h-[56px] rounded-lg transition-colors duration-150',
+          isOver && tasks.length === 0 && 'bg-blue-50/60 outline-dashed outline-2 outline-blue-200',
+        )}
+      >
+        {tasks.map((task) => (
+          <KanbanCard key={task.id} task={task} onEdit={() => onEditTask(task)} />
+        ))}
+      </div>
+    </SortableContext>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Column inner (column header + task area + add button)
+// ─────────────────────────────────────────────────────────────
+function KanbanColumnInner({
+  column,
+  tasks,
+  projectId,
+  onAddTask,
+  onEditTask,
+  onDelete,
+  onLocalRename,
+  colDragHandleProps,
+  isDraggingColumn,
+}: {
+  column: KanbanColumn;
+  tasks: Task[];
+  projectId: string;
+  onAddTask: (id: string) => void;
+  onEditTask: (t: Task) => void;
+  onDelete: (id: string) => void;
+  onLocalRename: (id: string, name: string) => void;
+  colDragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
+  isDraggingColumn?: boolean;
+}) {
+  const updateColumn = useUpdateColumn(projectId, column.id);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [nameVal, setNameVal] = useState(column.name);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setNameVal(column.name); }, [column.name]);
+
+  useEffect(() => {
+    function outside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    }
+    if (menuOpen) document.addEventListener('mousedown', outside);
+    return () => document.removeEventListener('mousedown', outside);
+  }, [menuOpen]);
+
+  const commitRename = () => {
+    const v = nameVal.trim();
+    if (v && v !== column.name) {
+      onLocalRename(column.id, v);
+      updateColumn.mutate({ name: v }, {
+        onError: () => { toast.error('Failed to rename'); onLocalRename(column.id, column.name); },
+      });
+    } else {
+      setNameVal(column.name);
+    }
+    setRenaming(false);
+  };
+
+  return (
+    <div className={cn(
+      'flex w-full flex-col rounded-xl bg-[#f1f2f4]',
+      isDraggingColumn && 'opacity-40',
+    )}>
+      {/* Header */}
+      <div className="flex items-center gap-1 px-2.5 pt-2.5 pb-2">
+        {/* Column drag grip */}
+        <div
+          {...colDragHandleProps}
+          className="shrink-0 cursor-grab p-1 text-gray-400 hover:text-gray-600 transition-colors touch-none"
+        >
+          <GripVertical size={14} />
+        </div>
+
+        {renaming ? (
+          <input
+            autoFocus
+            value={nameVal}
+            onChange={(e) => setNameVal(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitRename();
+              if (e.key === 'Escape') { setNameVal(column.name); setRenaming(false); }
+            }}
+            className="flex-1 min-w-0 rounded-md border border-blue-400 bg-white px-2 py-0.5 text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-300"
+          />
+        ) : (
+          <h3 className="flex-1 min-w-0 truncate text-[13px] font-bold text-gray-700 select-none">
+            {column.name}
+          </h3>
+        )}
+
+        <span className="shrink-0 rounded-full bg-gray-200 px-2 py-0.5 text-[11px] font-semibold text-gray-500 select-none">
+          {tasks.length}
+        </span>
+
+        <button
+          onClick={() => onAddTask(column.id)}
+          className="shrink-0 rounded-md p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
+          title="Add card"
+        >
+          <Plus size={14} />
+        </button>
+
+        <div ref={menuRef} className="relative shrink-0">
+          <button
+            onClick={() => setMenuOpen((o) => !o)}
+            className="rounded-md p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors"
+          >
+            <MoreHorizontal size={14} />
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-xl border border-gray-200 bg-white py-1.5 shadow-xl">
+              <button
+                onClick={() => { setRenaming(true); setMenuOpen(false); }}
+                className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <Pencil size={13} className="text-gray-400" /> Rename
+              </button>
+              <div className="mx-2 my-1 border-t border-gray-100" />
+              <button
+                onClick={() => { onDelete(column.id); setMenuOpen(false); }}
+                className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <Trash2 size={13} /> Delete column
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Cards */}
+      <ColumnTaskArea columnId={column.id} tasks={tasks} onEditTask={onEditTask} />
+
+      {/* Add card */}
+      <button
+        onClick={() => onAddTask(column.id)}
+        className="mx-2 mb-2 flex items-center gap-2 rounded-lg px-2 py-2 text-[13px] text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
+      >
+        <Plus size={14} /> Add a card
+      </button>
+    </div>
+  );
+}
+
+function SortableColumn(props: {
+  column: KanbanColumn;
+  tasks: Task[];
+  projectId: string;
+  onAddTask: (id: string) => void;
+  onEditTask: (t: Task) => void;
+  onDelete: (id: string) => void;
+  onLocalRename: (id: string, name: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: props.column.id,
+    data: { type: 'column', column: props.column },
+  });
 
   return (
     <div
       ref={setNodeRef}
-      style={style}
-      {...listeners}
-      {...attributes}
-      className={cn(
-        'group relative cursor-grab select-none rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-all duration-150',
-        'hover:border-gray-300 hover:shadow-md',
-        isDragging && 'rotate-[1.5deg] scale-[1.02] shadow-xl opacity-90 cursor-grabbing z-10 border-brand-400'
-      )}
-      onClick={() => onEdit(task)}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      className="w-[280px] shrink-0"
     >
-      <div className="mb-3">
-        <p className="text-[13px] font-medium text-gray-900 leading-snug">
-          {task.title}
-        </p>
-      </div>
-
-      <div className="flex items-center justify-between text-[11px] font-medium text-gray-500">
-        <div className="flex items-center gap-2">
-          {task.assignee ? (
-            <div className="flex items-center gap-1.5">
-              <div
-                className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white uppercase"
-                title={task.assignee.name}
-              >
-                {task.assignee.name.charAt(0)}
-              </div>
-              <span className="text-[11px] text-gray-600 font-medium">{task.assignee.name.split(' ')[0]}</span>
-            </div>
-          ) : (
-             <div className="flex items-center gap-1.5">
-               <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-gray-500">
-                 <User size={10} />
-               </div>
-               <span className="text-[11px] text-gray-600 font-medium">Unassigned</span>
-             </div>
-          )}
-          
-          {task.dueDate && (
-            <span className="ml-1 text-gray-500 font-medium">
-              {new Date(task.dueDate).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              })}
-            </span>
-          )}
-        </div>
-
-        <span
-          className={cn(
-            'rounded px-2 py-0.5 text-[11px] font-medium',
-            priority.className
-          )}
-        >
-          {priority.label}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
-// Kanban Column Component
-// ─────────────────────────────────────────────────────────────
-function KanbanColumnView({
-  column,
-  tasks,
-  onAddTask,
-  onEditTask,
-}: {
-  column: KanbanColumn;
-  tasks: Task[];
-  onAddTask: (columnId: string) => void;
-  onEditTask: (task: Task) => void;
-}) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: column.id,
-  });
-
-  return (
-    <div className="flex w-[280px] min-w-[280px] flex-shrink-0 flex-col rounded-xl bg-[#f4f5f7] p-2">
-      {/* Column header */}
-      <div className="flex items-center justify-between px-2 py-2">
-        <div className="flex items-center gap-2">
-          <h3 className="text-[14px] font-bold text-gray-900">{column.name}</h3>
-          <span className="text-[13px] text-gray-500 font-medium">
-            {tasks.length}
-          </span>
-        </div>
-      </div>
-
-      {/* Drop zone + task list */}
-      <div
-        ref={setNodeRef}
-        className={cn(
-          'flex-1 space-y-2.5 overflow-y-auto px-1 pb-1 min-h-[100px] transition-colors',
-          isOver && 'bg-gray-200/50 rounded-lg outline-dashed outline-2 outline-gray-300'
-        )}
-      >
-        {tasks.map((task) => (
-          <TaskCard
-            key={task.id}
-            task={task}
-            onEdit={onEditTask}
-          />
-        ))}
-
-        <button
-          onClick={() => onAddTask(column.id)}
-          className="mt-1 flex items-center gap-1.5 w-full rounded p-1.5 text-[13px] text-gray-500 hover:bg-gray-200/70 hover:text-gray-700 transition-colors"
-        >
-          <Plus size={14} />
-          Add task
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
-// Task Edit Drawer
-// ─────────────────────────────────────────────────────────────
-function TaskDrawer({
-  task,
-  projectId,
-  onClose,
-}: {
-  task: Task | null;
-  projectId: string;
-  onClose: () => void;
-}) {
-  const updateTask = useUpdateTask(projectId, task?.id || '');
-  const deleteTask = useDeleteTask(projectId);
-  const [title, setTitle] = useState(task?.title || '');
-  const [description, setDescription] = useState(task?.description || '');
-  const [priority, setPriority] = useState<Task['priority']>(task?.priority || 'MEDIUM');
-  const [dueDate, setDueDate] = useState(task?.dueDate || '');
-  const [saving, setSaving] = useState(false);
-
-  if (!task) return null;
-
-  const handleSave = async () => {
-    if (!title.trim()) return;
-    setSaving(true);
-    updateTask.mutate(
-      {
-        title: title.trim(),
-        description: description.trim() || null,
-        priority,
-        dueDate: dueDate || null,
-      },
-      {
-        onSuccess: () => {
-          toast.success('Task updated');
-          onClose();
-        },
-        onError: () => toast.error('Failed to update task'),
-        onSettled: () => setSaving(false),
-      }
-    );
-  };
-
-  const handleDelete = () => {
-    if (confirm('Are you sure you want to delete this task?')) {
-      deleteTask.mutate(task.id, {
-        onSuccess: () => {
-          toast.success('Task deleted');
-          onClose();
-        },
-        onError: () => toast.error('Failed to delete task')
-      });
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Backdrop */}
-      <div
-        className="flex-1 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
+      <KanbanColumnInner
+        {...props}
+        colDragHandleProps={{ ...attributes, ...listeners }}
+        isDraggingColumn={isDragging}
       />
-
-      {/* Drawer */}
-      <div className="flex w-full max-w-[480px] flex-col border-l border-border-subtle bg-white shadow-xl animate-slide-in">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border-subtle px-6 py-4">
-          <h2 className="text-base font-semibold text-text-primary">Edit Task</h2>
-          <button
-            onClick={onClose}
-            className="rounded p-1.5 text-text-secondary hover:bg-surface-muted transition-colors"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto space-y-5 px-6 py-5">
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-text-secondary">Title</label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Task title"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-text-secondary">Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-              placeholder="Add more detail..."
-              className="w-full rounded-md border border-border-subtle bg-white px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand/20 resize-none"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-text-secondary">Priority</label>
-            <div className="flex flex-wrap gap-2">
-              {(Object.keys(PRIORITY_CONFIG) as Task['priority'][]).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPriority(p)}
-                  className={cn(
-                    'rounded-full border px-3 py-1 text-[11px] font-semibold transition-all',
-                    priority === p
-                      ? PRIORITY_CONFIG[p].className + ' ring-2 ring-offset-1 ring-current border-transparent'
-                      : 'border-border-subtle text-text-secondary hover:bg-surface-muted'
-                  )}
-                >
-                  {PRIORITY_CONFIG[p].label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-text-secondary flex items-center gap-1">
-              <Calendar size={12} />
-              Due Date
-            </label>
-            <Input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="w-auto"
-            />
-          </div>
-
-          {task.assignee && (
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-text-secondary">Assignee</label>
-              <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white uppercase">
-                  {task.assignee.name.charAt(0)}
-                </div>
-                <span className="text-sm text-text-primary">{task.assignee.name}</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between border-t border-border-subtle px-6 py-4">
-          <Button 
-            variant="ghost" 
-            className="text-danger hover:bg-danger/10 hover:text-danger px-3 -ml-3"
-            onClick={handleDelete}
-            disabled={deleteTask.isPending}
-          >
-            Delete
-          </Button>
-          <div className="flex items-center gap-2.5">
-            <Button variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={saving || !title.trim()}>
-              {saving ? (
-                <>
-                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save Changes'
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -414,122 +383,61 @@ function AddTaskModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-
     createTask.mutate(
+      { title: title.trim(), columnId, description: description.trim() || null, priority, dueDate: dueDate || null },
       {
-        title: title.trim(),
-        columnId,
-        description: description.trim() || null,
-        priority,
-        dueDate: dueDate || null,
-      },
-      {
-        onSuccess: () => {
-          toast.success('Task created!');
-          onClose();
-        },
-        onError: (err: any) => {
-          toast.error(err.response?.data?.message || 'Failed to create task');
-        },
+        onSuccess: () => { toast.success('Card created'); onClose(); },
+        onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to create card'),
       }
     );
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="relative w-full max-w-md rounded-xl border border-border bg-white p-6 shadow-modal">
-        <button
-          onClick={onClose}
-          className="absolute right-4 top-4 rounded p-1 text-text-secondary hover:bg-surface-muted transition-colors"
-        >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="relative w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-2xl">
+        <button onClick={onClose} className="absolute right-4 top-4 rounded p-1 text-gray-400 hover:bg-gray-100 transition-colors">
           <X size={16} />
         </button>
-
-        <h2 className="text-base font-semibold text-text-primary">Add Task</h2>
+        <h2 className="text-base font-semibold text-gray-900">Add Card</h2>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-text-secondary">Title *</label>
-            <Input
-              autoFocus
-              placeholder="What needs to be done?"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              disabled={createTask.isPending}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-text-secondary">Column</label>
-            <select
-              value={columnId}
-              onChange={(e) => setColumnId(e.target.value)}
-              disabled={createTask.isPending}
-              className="w-full rounded-md border border-border-subtle bg-white px-3 py-2 text-sm text-text-primary focus:border-brand focus:outline-none"
-            >
-              {columns.map((col) => (
-                <option key={col.id} value={col.id}>
-                  {col.name}
-                </option>
-              ))}
-            </select>
+            <label className="text-xs font-semibold text-gray-500">Title *</label>
+            <Input autoFocus placeholder="What needs to be done?" value={title} onChange={(e) => setTitle(e.target.value)} required disabled={createTask.isPending} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-text-secondary">Priority</label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as Task['priority'])}
-                disabled={createTask.isPending}
-                className="w-full rounded-md border border-border-subtle bg-white px-3 py-2 text-sm text-text-primary focus:border-brand focus:outline-none"
-              >
-                {(Object.keys(PRIORITY_CONFIG) as Task['priority'][]).map((p) => (
-                  <option key={p} value={p}>
-                    {PRIORITY_CONFIG[p].label}
-                  </option>
-                ))}
+              <label className="text-xs font-semibold text-gray-500">Column</label>
+              <select value={columnId} onChange={(e) => setColumnId(e.target.value)} disabled={createTask.isPending}
+                className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none">
+                {columns.map((col) => <option key={col.id} value={col.id}>{col.name}</option>)}
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-text-secondary">Due Date</label>
-              <Input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                disabled={createTask.isPending}
-              />
+              <label className="text-xs font-semibold text-gray-500">Priority</label>
+              <select value={priority} onChange={(e) => setPriority(e.target.value as Task['priority'])} disabled={createTask.isPending}
+                className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none">
+                {(Object.keys(PRIORITY) as Task['priority'][]).map((p) => <option key={p} value={p}>{PRIORITY[p].label}</option>)}
+              </select>
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-text-secondary">
-              Description <span className="font-normal text-text-muted">(optional)</span>
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              placeholder="Add details..."
-              disabled={createTask.isPending}
-              className="w-full rounded-md border border-border-subtle bg-white px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:border-brand focus:outline-none resize-none"
-            />
+            <label className="text-xs font-semibold text-gray-500">Due Date</label>
+            <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={createTask.isPending} />
           </div>
 
-          <div className="flex justify-end gap-2.5 pt-1">
-            <Button type="button" variant="outline" onClick={onClose} disabled={createTask.isPending}>
-              Cancel
-            </Button>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-gray-500">Description <span className="font-normal text-gray-400">(optional)</span></label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Add details..." disabled={createTask.isPending}
+              className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none resize-none" />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" onClick={onClose} disabled={createTask.isPending}>Cancel</Button>
             <Button type="submit" disabled={createTask.isPending || !title.trim()}>
-              {createTask.isPending ? (
-                <>
-                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                  Adding...
-                </>
-              ) : (
-                'Add Task'
-              )}
+              {createTask.isPending ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" />Adding...</> : 'Add Card'}
             </Button>
           </div>
         </form>
@@ -539,286 +447,470 @@ function AddTaskModal({
 }
 
 // ─────────────────────────────────────────────────────────────
-// Main Kanban Board Page
+// Task Edit Drawer
 // ─────────────────────────────────────────────────────────────
-export default function ProjectKanbanPage({ params }: PageProps) {
-  const { slug, projectId } = use(params);
-  const router = useRouter();
+function TaskDrawer({ task, projectId, onClose }: { task: Task; projectId: string; onClose: () => void }) {
+  const updateTask = useUpdateTask(projectId, task.id);
+  const deleteTask = useDeleteTask(projectId);
+  const [title, setTitle] = useState(task.title);
+  const [description, setDescription] = useState(task.description || '');
+  const [priority, setPriority] = useState<Task['priority']>(task.priority);
+  const [dueDate, setDueDate] = useState(task.dueDate || '');
+  const [saving, setSaving] = useState(false);
 
-  const { data: org } = useOrganizationBySlug(slug);
-  const { data: project, isLoading: projLoading } = useProject(projectId);
-  const { data: columns, isLoading: colsLoading } = useProjectColumns(projectId);
-  const { data: tasks, isLoading: tasksLoading } = useProjectTasks(projectId);
-
-  const moveTask = useMoveTask(projectId);
-  const createColumn = useCreateColumn(projectId);
-
-  const [addingTaskColumnId, setAddingTaskColumnId] = useState<string | null>(null);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [addingColumn, setAddingColumn] = useState(false);
-  const [newColumnName, setNewColumnName] = useState('');
-  const [activeTab, setActiveTab] = useState('Board');
-
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const isLoading = projLoading || colsLoading || tasksLoading;
-
-  // Group tasks by columnId
-  const tasksByColumn = useMemo(() => {
-    const map: Record<string, Task[]> = {};
-    columns?.forEach((col) => {
-      map[col.id] = [];
-    });
-    tasks?.forEach((task) => {
-      if (map[task.columnId]) {
-        map[task.columnId].push(task);
-      }
-    });
-    return map;
-  }, [tasks, columns]);
-
-  const handleDropTask = (taskId: string, targetColumnId: string) => {
-    const position = (tasksByColumn[targetColumnId] || []).length;
-    moveTask.mutate(
-      { taskId, columnId: targetColumnId, position },
+  const handleSave = () => {
+    if (!title.trim()) return;
+    setSaving(true);
+    updateTask.mutate(
+      { title: title.trim(), description: description.trim() || null, priority, dueDate: dueDate || null },
       {
-        onSuccess: () => toast.success('Task moved'),
-        onError: () => toast.error('Failed to move task'),
+        onSuccess: () => { toast.success('Card updated'); onClose(); },
+        onError: () => toast.error('Failed to update card'),
+        onSettled: () => setSaving(false),
       }
     );
   };
 
+  const handleDelete = () => {
+    if (!confirm('Delete this card?')) return;
+    deleteTask.mutate(task.id, {
+      onSuccess: () => { toast.success('Card deleted'); onClose(); },
+      onError: () => toast.error('Failed to delete card'),
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end">
+      <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="flex w-full max-w-[480px] flex-col border-l border-gray-200 bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+          <h2 className="text-base font-semibold text-gray-900">Edit Card</h2>
+          <button onClick={onClose} className="rounded p-1.5 text-gray-400 hover:bg-gray-100 transition-colors"><X size={18} /></button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-5 px-6 py-5">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-gray-500">Title</label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-gray-500">Description</label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} placeholder="Add more detail..."
+              className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none resize-none" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-gray-500">Priority</label>
+            <div className="flex flex-wrap gap-2">
+              {(Object.keys(PRIORITY) as Task['priority'][]).map((p) => (
+                <button key={p} onClick={() => setPriority(p)}
+                  className={cn('rounded-full border px-3 py-1 text-[11px] font-semibold transition-all',
+                    priority === p ? PRIORITY[p].chip + ' ring-2 ring-offset-1 ring-current border-transparent' : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                  )}>
+                  {PRIORITY[p].label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-gray-500 flex items-center gap-1"><Calendar size={12} /> Due Date</label>
+            <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-auto" />
+          </div>
+          {task.assignee && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-500">Assignee</label>
+              <div className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white uppercase">{task.assignee.name.charAt(0)}</div>
+                <span className="text-sm text-gray-800">{task.assignee.name}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between border-t border-gray-100 px-6 py-4">
+          <Button variant="ghost" className="text-red-600 hover:bg-red-50 hover:text-red-700 -ml-3 px-3" onClick={handleDelete} disabled={deleteTask.isPending}>Delete</Button>
+          <div className="flex gap-2.5">
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button onClick={handleSave} disabled={saving || !title.trim()}>
+              {saving ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" />Saving...</> : 'Save Changes'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Main Page
+// ─────────────────────────────────────────────────────────────
+export default function ProjectKanbanPage({ params }: PageProps) {
+  const { projectId } = use(params);
+
+  const { data: project, isLoading: projLoading } = useProject(projectId);
+  const { data: serverColumns, isLoading: colsLoading } = useProjectColumns(projectId);
+  const { data: serverTasks, isLoading: tasksLoading } = useProjectTasks(projectId);
+
+  const moveTask    = useMoveTask(projectId);
+  const createColumn  = useCreateColumn(projectId);
+  const deleteColumn  = useDeleteColumn(projectId);
+  const reorderColumns = useReorderColumns(projectId);
+
+  // ── local drag state ───────────────────────────────────────
+  const [localColumns, setLocalColumns] = useState<KanbanColumn[]>([]);
+  const [localTaskMap, setLocalTaskMap] = useState<Record<string, Task[]>>({});
+  const [activeDrag, setActiveDrag]    = useState<ActiveDrag>(null);
+
+  // Tracks in-flight mutations so server sync doesn't snap back
+  const [pendingMutations, setPendingMutations] = useState(0);
+  const isMutating = pendingMutations > 0;
+
+  // ── other UI state ─────────────────────────────────────────
+  const [addingTaskColumnId, setAddingTaskColumnId] = useState<string | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [addingColumn, setAddingColumn]  = useState(false);
+  const [newColumnName, setNewColumnName] = useState('');
+  const [activeTab, setActiveTab] = useState('Board');
+  const [mounted, setMounted]    = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  // ── sync server → local (blocked during drag AND mutation) ─
+  useEffect(() => {
+    if (serverColumns && !activeDrag && !isMutating) setLocalColumns(serverColumns);
+  }, [serverColumns, activeDrag, isMutating]);
+
+  useEffect(() => {
+    if (serverColumns && serverTasks && !activeDrag && !isMutating) {
+      const map: Record<string, Task[]> = {};
+      serverColumns.forEach((col) => { map[col.id] = []; });
+      serverTasks.forEach((task) => {
+        if (map[task.columnId]) map[task.columnId].push(task);
+      });
+      Object.values(map).forEach((arr) => arr.sort((a, b) => a.position - b.position));
+      setLocalTaskMap(map);
+    }
+  }, [serverColumns, serverTasks, activeDrag, isMutating]);
+
+  // ── sensors ────────────────────────────────────────────────
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
+  );
+
+  const columnIds = useMemo(() => localColumns.map((c) => c.id), [localColumns]);
+
+  // ── drag helpers ───────────────────────────────────────────
+  /** Given an item ID, find which column it lives in right now */
+  function findColumn(id: string): string | undefined {
+    for (const [colId, tasks] of Object.entries(localTaskMap)) {
+      if (tasks.some((t) => t.id === id)) return colId;
+    }
+  }
+
+  // ── drag handlers ──────────────────────────────────────────
+  function handleDragStart({ active }: DragStartEvent) {
+    const d = active.data.current;
+    if (d?.type === 'task')   setActiveDrag({ type: 'task',   task: d.task });
+    if (d?.type === 'column') setActiveDrag({ type: 'column', column: d.column });
+  }
+
+  function handleDragOver({ active, over }: DragOverEvent) {
+    if (!over || active.id === over.id) return;
+    if (active.data.current?.type !== 'task') return;
+
+    const overId    = over.id as string;
+    const overType  = over.data.current?.type as string | undefined;
+
+    // Resolve source column
+    const srcColId = findColumn(active.id as string);
+    if (!srcColId) return;
+
+    // Resolve target column
+    let tgtColId: string | undefined;
+    if (overType === 'task') {
+      tgtColId = findColumn(overId);
+    } else if (overId.startsWith('col-drop-')) {
+      tgtColId = overId.replace('col-drop-', '');
+    } else if (overType === 'column') {
+      tgtColId = over.data.current?.column?.id ?? over.data.current?.columnId ?? overId;
+    }
+
+    if (!tgtColId) return;
+
+    setLocalTaskMap((prev) => {
+      const srcTasks = prev[srcColId] ?? [];
+      const tgtTasks = prev[tgtColId!] ?? [];
+
+      if (srcColId === tgtColId) {
+        // Same column — reorder
+        if (overType !== 'task') return prev;
+        const from = srcTasks.findIndex((t) => t.id === active.id);
+        const to   = srcTasks.findIndex((t) => t.id === overId);
+        if (from === -1 || to === -1 || from === to) return prev;
+        return { ...prev, [srcColId]: arrayMove(srcTasks, from, to) };
+      }
+
+      // Different column — move card
+      const movingTask = srcTasks.find((t) => t.id === active.id);
+      if (!movingTask) return prev;
+
+      const newSrc = srcTasks.filter((t) => t.id !== active.id);
+      const newTgt = [...tgtTasks];
+      const moved  = { ...movingTask, columnId: tgtColId! };
+
+      if (overType === 'task') {
+        const toIdx = newTgt.findIndex((t) => t.id === overId);
+        newTgt.splice(toIdx >= 0 ? toIdx : newTgt.length, 0, moved);
+      } else {
+        newTgt.push(moved);
+      }
+
+      return { ...prev, [srcColId]: newSrc, [tgtColId!]: newTgt };
+    });
+  }
+
+  function handleDragEnd({ active, over }: DragEndEvent) {
+    setActiveDrag(null);
+
+    const activeType = active.data.current?.type;
+
+    if (activeType === 'column') {
+      if (!over || active.id === over.id) return;
+      const from = localColumns.findIndex((c) => c.id === active.id);
+      const to   = localColumns.findIndex((c) => c.id === over.id);
+      if (from === -1 || to === -1 || from === to) return;
+      const ordered = arrayMove(localColumns, from, to);
+      setLocalColumns(ordered);
+      setPendingMutations((n) => n + 1);
+      reorderColumns.mutate(ordered.map((c) => c.id), {
+        onError: () => { toast.error('Failed to reorder columns'); if (serverColumns) setLocalColumns(serverColumns); },
+        onSettled: () => setPendingMutations((n) => n - 1),
+      });
+      return;
+    }
+
+    if (activeType === 'task') {
+      // Find where the card ended up in local state
+      const colId = findColumn(active.id as string);
+      if (!colId) return;
+      const position = (localTaskMap[colId] ?? []).findIndex((t) => t.id === active.id);
+      setPendingMutations((n) => n + 1);
+      moveTask.mutate(
+        { taskId: active.id as string, columnId: colId, position: Math.max(0, position) },
+        {
+          onError: () => toast.error('Failed to move card'),
+          onSettled: () => setPendingMutations((n) => n - 1),
+        }
+      );
+    }
+  }
+
+  // ── column actions ─────────────────────────────────────────
   const handleAddColumn = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newColumnName.trim()) return;
     createColumn.mutate(
       { name: newColumnName.trim() },
       {
-        onSuccess: () => {
-          toast.success('Column created');
-          setAddingColumn(false);
-          setNewColumnName('');
-        },
-        onError: () => toast.error('Failed to create column'),
+        onSuccess: () => { toast.success('Column added'); setAddingColumn(false); setNewColumnName(''); },
+        onError: () => toast.error('Failed to add column'),
       }
     );
   };
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    })
-  );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over) return;
-
-    const taskId = active.id as string;
-    const targetColumnId = over.id as string;
-    const sourceColumnId = active.data.current?.columnId;
-
-    if (sourceColumnId !== targetColumnId) {
-      handleDropTask(taskId, targetColumnId);
-    }
+  const handleDeleteColumn = (colId: string) => {
+    if (!confirm('Delete this column and all its cards?')) return;
+    deleteColumn.mutate(colId, {
+      onSuccess: () => toast.success('Column deleted'),
+      onError:  () => toast.error('Failed to delete column'),
+    });
   };
+
+  const handleLocalRename = (colId: string, name: string) =>
+    setLocalColumns((prev) => prev.map((c) => (c.id === colId ? { ...c, name } : c)));
+
+  // ── render ─────────────────────────────────────────────────
+  const isLoading = projLoading || colsLoading || tasksLoading;
 
   if (!mounted || isLoading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center bg-white">
-        <Loader2 className="animate-spin text-gray-400" size={24} />
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="animate-spin text-gray-300" size={28} />
       </div>
     );
   }
 
   if (!project) {
     return (
-      <div className="rounded-lg border border-danger/20 bg-danger/5 p-6 text-center m-8">
-        <h2 className="text-lg font-semibold text-danger">Project not found</h2>
+      <div className="m-8 rounded-lg border border-red-100 bg-red-50 p-6 text-center">
+        <h2 className="text-lg font-semibold text-red-600">Project not found</h2>
       </div>
     );
   }
 
   const tabs = [
     { name: 'Board', icon: Layout },
-    { name: 'List', icon: List },
-    { name: 'Timeline', icon: Calendar },
-    { name: 'Calendar', icon: Calendar },
+    { name: 'List',  icon: List },
     { name: 'Files', icon: Paperclip },
     { name: 'Settings', icon: Settings },
   ];
 
-  return (
-    <div className="flex h-full flex-col bg-white">
-      {/* Page Header */}
-      <div className="flex items-center justify-between px-8 pt-6 pb-4">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-            {project.name}
-          </h1>
-          <ChevronDown className="text-gray-500 cursor-pointer" size={20} />
-        </div>
+  const allTasks = Object.values(localTaskMap).flat();
 
-        <div className="flex items-center gap-4">
-          {/* Mock Avatars */}
+  return (
+    <div className="flex h-full flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-8 pt-6 pb-3">
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">{project.name}</h1>
+          <ChevronDown size={18} className="text-gray-400 cursor-pointer" />
+        </div>
+        <div className="flex items-center gap-3">
           <div className="flex -space-x-2">
-            <img className="inline-block h-8 w-8 rounded-full ring-2 ring-white" src="https://i.pravatar.cc/100?img=1" alt=""/>
-            <img className="inline-block h-8 w-8 rounded-full ring-2 ring-white" src="https://i.pravatar.cc/100?img=2" alt=""/>
-            <img className="inline-block h-8 w-8 rounded-full ring-2 ring-white" src="https://i.pravatar.cc/100?img=3" alt=""/>
+            {['1','2','3'].map((n) => (
+              <img key={n} className="inline-block h-7 w-7 rounded-full ring-2 ring-white" src={`https://i.pravatar.cc/100?img=${n}`} alt="" />
+            ))}
           </div>
-          
-          <Button variant="outline" className="h-8 gap-1.5 text-[13px] font-medium border-gray-300 text-gray-700">
-            <User size={14} />
-            Invite
-          </Button>
-          <Button variant="outline" size="icon" className="h-8 w-8 border-gray-300 text-gray-700">
-            <MoreHorizontal size={14} />
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-sm border-gray-200">
+            <User size={13} /> Invite
           </Button>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="border-b border-gray-200 px-8">
-        <div className="flex gap-6">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.name;
+        <div className="flex gap-5">
+          {tabs.map(({ name, icon: Icon }) => {
+            const active = activeTab === name;
             return (
-              <button
-                key={tab.name}
-                onClick={() => setActiveTab(tab.name)}
-                className={cn(
-                  "flex items-center gap-2 pb-3 text-[14px] font-medium transition-colors border-b-2",
-                  isActive
-                    ? "border-gray-900 text-gray-900"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                )}
-              >
-                <Icon size={15} />
-                {tab.name}
+              <button key={name} onClick={() => setActiveTab(name)}
+                className={cn('flex items-center gap-1.5 pb-3 text-[13px] font-medium transition-colors border-b-2',
+                  active ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                )}>
+                <Icon size={14} />{name}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Main Content Area */}
+      {/* Board */}
       {activeTab === 'Board' ? (
-        <div className="flex-1 overflow-x-auto p-8 pt-6">
-          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-            <div className="flex gap-4 items-start h-full">
-              {(columns || []).map((col) => (
-                <KanbanColumnView
-                  key={col.id}
-                  column={col}
-                  tasks={tasksByColumn[col.id] || []}
-                  onAddTask={(colId) => setAddingTaskColumnId(colId)}
-                  onEditTask={setEditingTask}
-                />
-              ))}
+        <div className="flex-1 overflow-x-auto overflow-y-hidden px-6 py-5">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
+              <div className="flex h-full items-start gap-3">
+                {localColumns.map((col) => (
+                  <SortableColumn
+                    key={col.id}
+                    column={col}
+                    tasks={localTaskMap[col.id] || []}
+                    projectId={projectId}
+                    onAddTask={setAddingTaskColumnId}
+                    onEditTask={setEditingTask}
+                    onDelete={handleDeleteColumn}
+                    onLocalRename={handleLocalRename}
+                  />
+                ))}
 
-              {/* Add Column Button */}
-              <div className="w-[280px] min-w-[280px] flex-shrink-0">
-                {addingColumn ? (
-                  <form
-                    onSubmit={handleAddColumn}
-                    className="rounded-xl bg-[#f4f5f7] p-3 space-y-2"
-                  >
-                    <Input
-                      autoFocus
-                      placeholder="Column name"
-                      value={newColumnName}
-                      onChange={(e) => setNewColumnName(e.target.value)}
-                      className="text-sm bg-white"
-                    />
-                    <div className="flex gap-1.5">
-                      <Button type="submit" size="sm" disabled={createColumn.isPending || !newColumnName.trim()}>
-                        Add
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => { setAddingColumn(false); setNewColumnName(''); }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </form>
-                ) : (
-                  <button
-                    onClick={() => setAddingColumn(true)}
-                    className="flex items-center gap-2 px-2 py-2 text-[14px] text-gray-500 hover:text-gray-800 transition-colors"
-                  >
-                    <Plus size={16} />
-                    Add column
-                  </button>
-                )}
+                {/* Add column */}
+                <div className="w-[280px] shrink-0">
+                  {addingColumn ? (
+                    <form onSubmit={handleAddColumn} className="rounded-xl bg-[#f1f2f4] p-3 space-y-2">
+                      <Input autoFocus placeholder="Column name" value={newColumnName}
+                        onChange={(e) => setNewColumnName(e.target.value)} className="text-sm bg-white" />
+                      <div className="flex gap-1.5">
+                        <Button type="submit" size="sm" disabled={createColumn.isPending || !newColumnName.trim()}>Add</Button>
+                        <Button type="button" size="sm" variant="outline" onClick={() => { setAddingColumn(false); setNewColumnName(''); }}>Cancel</Button>
+                      </div>
+                    </form>
+                  ) : (
+                    <button onClick={() => setAddingColumn(true)}
+                      className="flex w-full items-center gap-2 rounded-xl border-2 border-dashed border-gray-300 px-3 py-3 text-sm text-gray-400 hover:border-gray-400 hover:text-gray-600 transition-colors">
+                      <Plus size={15} /> Add column
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
+            </SortableContext>
+
+            {/* Drag overlay — floats above everything, smooth */}
+            <DragOverlay 
+              dropAnimation={{ 
+                duration: 200, 
+                easing: 'cubic-bezier(0.18,0.67,0.6,1.22)',
+                sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.4' } } }),
+              }}
+            >
+              {activeDrag?.type === 'task' && (
+                <KanbanCard task={activeDrag.task} overlay />
+              )}
+              {activeDrag?.type === 'column' && (
+                <div className="w-[280px] shadow-2xl rounded-xl opacity-95">
+                  <KanbanColumnInner
+                    column={activeDrag.column}
+                    tasks={localTaskMap[activeDrag.column.id] || []}
+                    projectId={projectId}
+                    onAddTask={() => {}} onEditTask={() => {}} onDelete={() => {}} onLocalRename={() => {}}
+                  />
+                </div>
+              )}
+            </DragOverlay>
           </DndContext>
         </div>
       ) : activeTab === 'List' ? (
-        <div className="flex-1 p-8">
-           <h2 className="text-lg font-semibold text-gray-800 mb-4">Project Tasks</h2>
-           <div className="rounded-lg border border-gray-200 bg-white">
-             <div className="grid grid-cols-12 gap-4 border-b border-gray-200 p-4 font-medium text-sm text-gray-500">
-               <div className="col-span-5">Title</div>
-               <div className="col-span-3">Status</div>
-               <div className="col-span-2">Priority</div>
-               <div className="col-span-2 text-right">Due Date</div>
-             </div>
-             <div className="divide-y divide-gray-200">
-               {tasks?.map(task => (
-                 <div key={task.id} className="grid grid-cols-12 gap-4 p-4 text-sm items-center hover:bg-gray-50 cursor-pointer" onClick={() => setEditingTask(task)}>
-                   <div className="col-span-5 font-medium text-gray-900">{task.title}</div>
-                   <div className="col-span-3">
-                     <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">{columns?.find(c => c.id === task.columnId)?.name || 'Unknown'}</span>
-                   </div>
-                   <div className="col-span-2">
-                     <span className={cn('px-2 py-1 rounded text-xs', PRIORITY_CONFIG[task.priority].className)}>
-                       {PRIORITY_CONFIG[task.priority].label}
-                     </span>
-                   </div>
-                   <div className="col-span-2 text-right text-gray-500">
-                     {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}
-                   </div>
-                 </div>
-               ))}
-               {tasks?.length === 0 && (
-                 <div className="p-8 text-center text-gray-500">No tasks found.</div>
-               )}
-             </div>
-           </div>
+        <div className="flex-1 overflow-y-auto p-8">
+          <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+            <div className="grid grid-cols-12 gap-4 border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <div className="col-span-5">Title</div>
+              <div className="col-span-3">Status</div>
+              <div className="col-span-2">Priority</div>
+              <div className="col-span-2 text-right">Due Date</div>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {allTasks.map((task) => (
+                <div key={task.id} onClick={() => setEditingTask(task)}
+                  className="grid grid-cols-12 gap-4 px-5 py-3.5 text-sm items-center hover:bg-gray-50 cursor-pointer transition-colors">
+                  <div className="col-span-5 font-medium text-gray-900 truncate">{task.title}</div>
+                  <div className="col-span-3">
+                    <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs font-medium">
+                      {localColumns.find((c) => c.id === task.columnId)?.name || '—'}
+                    </span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className={cn('px-2 py-0.5 rounded-full text-xs font-semibold', PRIORITY[task.priority].chip)}>
+                      {PRIORITY[task.priority].label}
+                    </span>
+                  </div>
+                  <div className="col-span-2 text-right text-gray-400 text-xs">
+                    {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '—'}
+                  </div>
+                </div>
+              ))}
+              {allTasks.length === 0 && (
+                <div className="py-12 text-center text-sm text-gray-400">No cards yet.</div>
+              )}
+            </div>
+          </div>
         </div>
       ) : (
-        <div className="flex-1 p-8 flex flex-col items-center justify-center text-gray-400">
-          <p>This view is under construction.</p>
+        <div className="flex-1 flex items-center justify-center text-sm text-gray-400">
+          This view is coming soon.
         </div>
       )}
 
-      {/* Add Task Modal */}
-      {addingTaskColumnId && columns && (
-        <AddTaskModal
-          projectId={projectId}
-          columns={columns}
-          defaultColumnId={addingTaskColumnId}
-          onClose={() => setAddingTaskColumnId(null)}
-        />
+      {/* Modals */}
+      {addingTaskColumnId && serverColumns && (
+        <AddTaskModal projectId={projectId} columns={serverColumns} defaultColumnId={addingTaskColumnId} onClose={() => setAddingTaskColumnId(null)} />
       )}
-
-      {/* Task Edit Drawer */}
       {editingTask && (
-        <TaskDrawer
-          task={editingTask}
-          projectId={projectId}
-          onClose={() => setEditingTask(null)}
-        />
+        <TaskDrawer task={editingTask} projectId={projectId} onClose={() => setEditingTask(null)} />
       )}
     </div>
   );

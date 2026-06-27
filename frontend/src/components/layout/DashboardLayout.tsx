@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   ChevronDown,
-  Folder,
   FolderOpen,
   LayoutDashboard,
   LogOut,
@@ -37,8 +36,6 @@ function getOrgColor(name: string): string {
   return colors[Math.abs(hash) % colors.length];
 }
 
-import { useEffect } from 'react';
-
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
@@ -50,10 +47,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   // Parse organization slug from the pathname
   const match = pathname.match(/^\/org\/([^/]+)/);
   const currentSlug = match ? match[1] : null;
@@ -64,12 +57,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const activeOrg = orgs?.find((o) => o.slug === currentSlug) || null;
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Sync workspace store with the URL's current slug
   useEffect(() => {
     if (activeOrg) {
       setCurrentOrg(activeOrg);
     }
   }, [activeOrg, setCurrentOrg]);
+
+  if (!mounted) return null;
 
   const handleOrgSwitch = (org: any) => {
     setOrgDropdownOpen(false);
@@ -87,6 +86,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       name: 'Overview',
       href: currentSlug ? `/org/${currentSlug}` : '/dashboard',
       icon: LayoutDashboard,
+      exact: true,
     },
     {
       name: 'Projects',
@@ -203,7 +203,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <nav className="flex-1 space-y-1 p-3">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const active = item.href !== '#' && pathname.startsWith(item.href);
+            const active = item.href !== '#' && (item.exact ? pathname === item.href : pathname.startsWith(item.href));
             if (item.disabled) return null;
 
             return (
@@ -273,8 +273,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </header>
 
         {/* Children content area */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-background">
-          <div className="mx-auto max-w-6xl">
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-transparent">
+          <div className="mx-auto h-[90vh] bg-transparent">
             {children}
           </div>
         </main>
