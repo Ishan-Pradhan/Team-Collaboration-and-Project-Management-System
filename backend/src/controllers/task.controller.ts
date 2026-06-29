@@ -6,6 +6,11 @@ import { asyncHandler } from '../utils/AsyncHandler.js';
 import { taskRepository } from '../repositories/task.repository.js';
 import { projectRepository } from '../repositories/project.repository.js';
 import { kanbanColumnRepository } from '../repositories/kanbanColumn.repository.js';
+import { taskCommentRepository } from '../repositories/taskComment.repository.js';
+import { taskAttachmentRepository } from '../repositories/taskAttachment.repository.js';
+import { subtaskRepository } from '../repositories/subtask.repository.js';
+import { uploadToCloudinary, deleteFromCloudinary } from '../services/cloudinary.service.js';
+import { organizationMemberRepository } from '../repositories/organization.repository.js';
 
 // Helper — verify user is a project member
 const requireProjectMembership = async (projectId: string, userId: string) => {
@@ -40,12 +45,12 @@ export const listProjectTasks = asyncHandler(
 export const createTask = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const { projectId } = req.params as { projectId: string };
-    const { title, description, columnId, priority, assigneeId, dueDate } = req.body as {
+    const { title, description, columnId, priority, assigneeIds, dueDate } = req.body as {
       title: string;
       description?: string | null;
       columnId: string;
       priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-      assigneeId?: string | null;
+      assigneeIds?: string[];
       dueDate?: string | null;
     };
     const user = req.user;
@@ -53,12 +58,10 @@ export const createTask = asyncHandler(
 
     await requireProjectMembership(projectId, user.id);
 
-    // Verify column belongs to project
     const columns = await kanbanColumnRepository.findByProject(projectId);
     const colExists = columns.some((c) => c.id === columnId);
     if (!colExists) throw new ApiError(400, 'Column does not belong to this project');
 
-    // Position = count of existing tasks in that column
     const position = await taskRepository.countByColumn(columnId);
 
     const task = await taskRepository.create({
@@ -67,17 +70,17 @@ export const createTask = asyncHandler(
       title: title.trim(),
       description: description?.trim() || null,
       priority: priority ?? 'MEDIUM',
-      assigneeId: assigneeId || null,
       dueDate: dueDate || null,
       createdById: user.id,
       position,
     });
 
-    return res.status(201).json({
-      success: true,
-      message: 'Task created successfully',
-      data: task,
-    });
+    if (assigneeIds && assigneeIds.length > 0) {
+      await taskRepository.syncAssignees(task.id, assigneeIds);
+    }
+
+    const created = await taskRepository.findById(task.id);
+    return res.status(201).json({ success: true, message: 'Task created successfully', data: created });
   }
 );
 
@@ -102,11 +105,11 @@ export const getTask = asyncHandler(
 export const updateTask = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const { projectId, taskId } = req.params as { projectId: string; taskId: string };
-    const { title, description, priority, assigneeId, dueDate } = req.body as {
+    const { title, description, priority, assigneeIds, dueDate } = req.body as {
       title?: string;
       description?: string | null;
       priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-      assigneeId?: string | null;
+      assigneeIds?: string[];
       dueDate?: string | null;
     };
     const user = req.user;
@@ -118,14 +121,18 @@ export const updateTask = asyncHandler(
     if (!task || task.projectId !== projectId)
       throw new ApiError(404, 'Task not found');
 
-    const updated = await taskRepository.update(taskId, {
+    await taskRepository.update(taskId, {
       title: title !== undefined ? title.trim() : task.title,
       description: description !== undefined ? description : task.description,
       priority: priority !== undefined ? priority : task.priority,
-      assigneeId: assigneeId !== undefined ? assigneeId : task.assigneeId,
       dueDate: dueDate !== undefined ? dueDate : task.dueDate,
     });
 
+    if (assigneeIds !== undefined) {
+      await taskRepository.syncAssignees(taskId, assigneeIds);
+    }
+
+    const updated = await taskRepository.findById(taskId);
     return ok(res, updated, 'Task updated successfully');
   }
 );
@@ -168,9 +175,6 @@ export const deleteTask = asyncHandler(
       throw new ApiError(404, 'Task not found');
 
     // Only task creator, project creator, or org admin can delete
-    const { organizationMemberRepository } = await import(
-      '../repositories/organization.repository.js'
-    );
     const orgMembership = await organizationMemberRepository.findOne({
       organizationId: project.organizationId,
       userId: user.id,
@@ -285,3 +289,229 @@ export const reorderColumns = asyncHandler(
     return ok(res, columns, 'Columns reordered successfully');
   }
 );
+
+// ─────────────────────────────────────────────────────────────
+// HELPER
+// ─────────────────────────────────────────────────────────────
+
+const isOrgAdminForProject = async (projectId: string, userId: string): Promise<boolean> => {
+  const project = await projectRepository.findById(projectId);
+  if (!project) return false;
+  const orgMembership = await organizationMemberRepository.findOne({
+    organizationId: project.organizationId,
+    userId,
+  });
+  return orgMembership?.role === 'ORG_ADMIN' || project.createdById === userId;
+};
+
+// ─────────────────────────────────────────────────────────────
+// COMMENTS
+// ─────────────────────────────────────────────────────────────
+
+// GET /projects/:projectId/tasks/:taskId/comments
+export const listComments = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { projectId, taskId } = req.params as { projectId: string; taskId: string };
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  await requireProjectMembership(projectId, user.id);
+
+  const comments = await taskCommentRepository.findByTask(taskId);
+  return ok(res, comments, 'Comments retrieved successfully');
+});
+
+// POST /projects/:projectId/tasks/:taskId/comments
+export const createComment = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { projectId, taskId } = req.params as { projectId: string; taskId: string };
+  const { content } = req.body as { content: string };
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  await requireProjectMembership(projectId, user.id);
+
+  const task = await taskRepository.findById(taskId);
+  if (!task || task.projectId !== projectId) throw new ApiError(404, 'Task not found');
+
+  const comment = await taskCommentRepository.create({ taskId, authorId: user.id, content: content.trim() });
+  return res.status(201).json({ success: true, message: 'Comment added', data: comment });
+});
+
+// DELETE /projects/:projectId/tasks/:taskId/comments/:commentId
+export const deleteComment = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { projectId, taskId, commentId } = req.params as {
+    projectId: string; taskId: string; commentId: string;
+  };
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  await requireProjectMembership(projectId, user.id);
+
+  const comment = await taskCommentRepository.findById(commentId);
+  if (!comment || comment.taskId !== taskId) throw new ApiError(404, 'Comment not found');
+
+  const admin = await isOrgAdminForProject(projectId, user.id);
+  if (!admin && comment.authorId !== user.id)
+    throw new ApiError(403, 'You can only delete your own comments');
+
+  if (admin && comment.authorId !== user.id) {
+    await taskCommentRepository.deleteByAdmin(commentId);
+  } else {
+    await taskCommentRepository.delete(commentId, user.id);
+  }
+
+  return ok(res, null, 'Comment deleted');
+});
+
+// ─────────────────────────────────────────────────────────────
+// SUBTASKS
+// ─────────────────────────────────────────────────────────────
+
+// GET /projects/:projectId/tasks/:taskId/subtasks
+export const listSubtasks = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { projectId, taskId } = req.params as { projectId: string; taskId: string };
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  await requireProjectMembership(projectId, user.id);
+
+  const subtasks = await subtaskRepository.findByTask(taskId);
+  return ok(res, subtasks, 'Subtasks retrieved');
+});
+
+// POST /projects/:projectId/tasks/:taskId/subtasks
+export const createSubtask = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { projectId, taskId } = req.params as { projectId: string; taskId: string };
+  const { title } = req.body as { title: string };
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  await requireProjectMembership(projectId, user.id);
+
+  const task = await taskRepository.findById(taskId);
+  if (!task || task.projectId !== projectId) throw new ApiError(404, 'Task not found');
+
+  const position = await subtaskRepository.countByTask(taskId);
+  const subtask = await subtaskRepository.create({ taskId, title: title.trim(), createdById: user.id, position });
+  return res.status(201).json({ success: true, message: 'Subtask created', data: subtask });
+});
+
+// PATCH /projects/:projectId/tasks/:taskId/subtasks/:subtaskId/toggle
+export const toggleSubtask = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { projectId, taskId, subtaskId } = req.params as {
+    projectId: string; taskId: string; subtaskId: string;
+  };
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  await requireProjectMembership(projectId, user.id);
+
+  const subtask = await subtaskRepository.findById(subtaskId);
+  if (!subtask || subtask.taskId !== taskId) throw new ApiError(404, 'Subtask not found');
+
+  const updated = await subtaskRepository.toggle(subtaskId, !subtask.isCompleted);
+  return ok(res, updated, 'Subtask toggled');
+});
+
+// DELETE /projects/:projectId/tasks/:taskId/subtasks/:subtaskId
+export const deleteSubtask = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { projectId, taskId, subtaskId } = req.params as {
+    projectId: string; taskId: string; subtaskId: string;
+  };
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  await requireProjectMembership(projectId, user.id);
+
+  const subtask = await subtaskRepository.findById(subtaskId);
+  if (!subtask || subtask.taskId !== taskId) throw new ApiError(404, 'Subtask not found');
+
+  const admin = await isOrgAdminForProject(projectId, user.id);
+  if (!admin && subtask.createdById !== user.id)
+    throw new ApiError(403, 'You can only delete your own subtasks');
+
+  await subtaskRepository.delete(subtaskId);
+  return ok(res, null, 'Subtask deleted');
+});
+
+// ─────────────────────────────────────────────────────────────
+// ATTACHMENTS
+// ─────────────────────────────────────────────────────────────
+
+// GET /projects/:projectId/tasks/:taskId/attachments
+export const listTaskAttachments = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { projectId, taskId } = req.params as { projectId: string; taskId: string };
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  await requireProjectMembership(projectId, user.id);
+
+  const attachments = await taskAttachmentRepository.findByTask(taskId);
+  return ok(res, attachments, 'Attachments retrieved');
+});
+
+// GET /projects/:projectId/files  — all project files
+export const listProjectFiles = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { projectId } = req.params as { projectId: string };
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  await requireProjectMembership(projectId, user.id);
+
+  const files = await taskAttachmentRepository.findByProject(projectId);
+  return ok(res, files, 'Project files retrieved');
+});
+
+// POST /projects/:projectId/tasks/:taskId/attachments  — upload file
+export const uploadAttachment = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { projectId, taskId } = req.params as { projectId: string; taskId: string };
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  await requireProjectMembership(projectId, user.id);
+
+  const task = await taskRepository.findById(taskId);
+  if (!task || task.projectId !== projectId) throw new ApiError(404, 'Task not found');
+
+  const file = req.file;
+  if (!file) throw new ApiError(400, 'No file uploaded');
+
+  const uploaded = await uploadToCloudinary(file.buffer, {
+    folder: `task-attachments/${projectId}/${taskId}`,
+    resourceType: 'auto',
+  });
+
+  const attachment = await taskAttachmentRepository.create({
+    taskId,
+    projectId,
+    uploadedById: user.id,
+    fileName: file.originalname,
+    fileUrl: uploaded.url,
+    cloudinaryPublicId: uploaded.publicId,
+    fileType: file.mimetype,
+    fileSize: file.size,
+  });
+
+  return res.status(201).json({ success: true, message: 'File uploaded', data: attachment });
+});
+
+// DELETE /projects/:projectId/tasks/:taskId/attachments/:attachmentId
+export const deleteAttachment = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { projectId, taskId, attachmentId } = req.params as {
+    projectId: string; taskId: string; attachmentId: string;
+  };
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  await requireProjectMembership(projectId, user.id);
+
+  const attachment = await taskAttachmentRepository.findById(attachmentId);
+  if (!attachment || attachment.taskId !== taskId) throw new ApiError(404, 'Attachment not found');
+
+  const admin = await isOrgAdminForProject(projectId, user.id);
+  if (!admin && attachment.uploadedById !== user.id)
+    throw new ApiError(403, 'You can only delete files you uploaded');
+
+  await deleteFromCloudinary(attachment.cloudinaryPublicId, 'image');
+  await taskAttachmentRepository.delete(attachmentId);
+  return ok(res, null, 'Attachment deleted');
+});

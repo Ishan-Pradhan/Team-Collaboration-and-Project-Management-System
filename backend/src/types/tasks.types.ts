@@ -10,7 +10,6 @@ export interface Tasks {
   title: string;
   description: string | null;
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  assigneeId: string | null;
   createdById: string;
   dueDate: string | Date | null;
   position: number;
@@ -20,7 +19,7 @@ export interface Tasks {
   updatedAt?: Date;
   project?: ProjectInstance;
   column?: KanbanColumnInstance;
-  assignee?: UserInstance;
+  assignees?: UserInstance[];
   creator?: UserInstance;
 }
 
@@ -29,7 +28,6 @@ export type TaskCreationAttributes = Optional<
   | 'id'
   | 'description'
   | 'priority'
-  | 'assigneeId'
   | 'dueDate'
   | 'position'
   | 'dueSoonNotificationSent'
@@ -59,3 +57,46 @@ export type TaskCommentCreationAttributes = Optional<
 
 export interface TaskCommentInstance
   extends Model<TaskComments, TaskCommentCreationAttributes>, TaskComments {}
+
+export interface TaskAttachments {
+  id: string;
+  taskId: string;
+  projectId: string;
+  uploadedById: string;
+  fileName: string;
+  fileUrl: string;
+  cloudinaryPublicId: string;
+  fileType: string;
+  fileSize: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+  uploadedBy?: UserInstance;
+}
+
+export type TaskAttachmentCreationAttributes = Optional<
+  TaskAttachments,
+  'id' | 'createdAt' | 'updatedAt'
+>;
+
+export interface TaskAttachmentInstance
+  extends Model<TaskAttachments, TaskAttachmentCreationAttributes>, TaskAttachments {}
+
+export interface Subtasks {
+  id: string;
+  taskId: string;
+  title: string;
+  isCompleted: boolean;
+  position: number;
+  createdById: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  createdBy?: UserInstance;
+}
+
+export type SubtaskCreationAttributes = Optional<
+  Subtasks,
+  'id' | 'isCompleted' | 'position' | 'createdAt' | 'updatedAt'
+>;
+
+export interface SubtaskInstance
+  extends Model<Subtasks, SubtaskCreationAttributes>, Subtasks {}

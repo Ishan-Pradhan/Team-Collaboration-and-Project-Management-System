@@ -51,3 +51,20 @@ export const slugParamSchema = {
   }),
 };
 
+export const inviteParamSchema = {
+  params: z.object({
+    organizationId: z.string().uuid(),
+    inviteId: z.string().uuid(),
+  }),
+};
+
+export const changeMemberRoleSchema = {
+  params: z.object({
+    organizationId: z.string().uuid(),
+    userId: z.string().uuid(),
+  }),
+  body: z.object({
+    role: z.enum(['ORG_ADMIN', 'MEMBER']),
+  }),
+};
+

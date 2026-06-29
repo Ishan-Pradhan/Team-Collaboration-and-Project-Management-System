@@ -32,6 +32,27 @@ export interface OrganizationMember {
   };
 }
 
+// ─── Pending Invite ────────────────────────────────────────────
+
+export interface PendingInvite {
+  id: string;
+  email: string;
+  status: 'PENDING';
+  expiresAt: string;
+  createdAt: string;
+  invitedBy?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+export interface PendingInvitesResponse {
+  success: boolean;
+  message: string;
+  data: PendingInvite[];
+}
+
 // ─── Invite ────────────────────────────────────────────────────
 
 export type InviteStatus = 'PENDING' | 'ACCEPTED' | 'EXPIRED';

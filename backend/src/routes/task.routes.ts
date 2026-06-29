@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
+import { uploadMiddleware } from '../middlewares/upload.middleware.js';
 import {
   listProjectTasks,
   createTask,
@@ -13,6 +14,17 @@ import {
   updateColumn,
   deleteColumn,
   reorderColumns,
+  listComments,
+  createComment,
+  deleteComment,
+  listSubtasks,
+  createSubtask,
+  toggleSubtask,
+  deleteSubtask,
+  listTaskAttachments,
+  listProjectFiles,
+  uploadAttachment,
+  deleteAttachment,
 } from '../controllers/task.controller.js';
 import { z } from 'zod';
 
@@ -36,7 +48,7 @@ const createTaskSchema = {
     description: z.string().max(2000).nullable().optional(),
     columnId: z.string().uuid(),
     priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
-    assigneeId: z.string().uuid().nullable().optional(),
+    assigneeIds: z.array(z.string().uuid()).optional(),
     dueDate: z.string().nullable().optional(),
   }),
 };
@@ -47,7 +59,7 @@ const updateTaskSchema = {
     title: z.string().min(1).max(300).optional(),
     description: z.string().max(2000).nullable().optional(),
     priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
-    assigneeId: z.string().uuid().nullable().optional(),
+    assigneeIds: z.array(z.string().uuid()).optional(),
     dueDate: z.string().nullable().optional(),
   }),
 };
@@ -379,5 +391,100 @@ router
   .route('/projects/:projectId/columns/:columnId')
   .put(verifyJWT, validate(updateColumnSchema), updateColumn)
   .delete(verifyJWT, validate(columnParamSchema), deleteColumn);
+
+// ─── Comments ────────────────────────────────────────────────
+const commentParamSchema = {
+  params: z.object({ projectId: z.string().uuid(), taskId: z.string().uuid() }),
+};
+const commentDeleteSchema = {
+  params: z.object({
+    projectId: z.string().uuid(),
+    taskId: z.string().uuid(),
+    commentId: z.string().uuid(),
+  }),
+};
+const createCommentSchema = {
+  params: z.object({ projectId: z.string().uuid(), taskId: z.string().uuid() }),
+  body: z.object({ content: z.string().min(1).max(5000) }),
+};
+
+router
+  .route('/projects/:projectId/tasks/:taskId/comments')
+  .get(verifyJWT, validate(commentParamSchema), listComments)
+  .post(verifyJWT, validate(createCommentSchema), createComment);
+
+router.delete(
+  '/projects/:projectId/tasks/:taskId/comments/:commentId',
+  verifyJWT,
+  validate(commentDeleteSchema),
+  deleteComment,
+);
+
+// ─── Subtasks ─────────────────────────────────────────────────
+const subtaskParamSchema = {
+  params: z.object({ projectId: z.string().uuid(), taskId: z.string().uuid() }),
+};
+const createSubtaskSchema = {
+  params: z.object({ projectId: z.string().uuid(), taskId: z.string().uuid() }),
+  body: z.object({ title: z.string().min(1).max(500) }),
+};
+const subtaskActionSchema = {
+  params: z.object({
+    projectId: z.string().uuid(),
+    taskId: z.string().uuid(),
+    subtaskId: z.string().uuid(),
+  }),
+};
+
+router
+  .route('/projects/:projectId/tasks/:taskId/subtasks')
+  .get(verifyJWT, validate(subtaskParamSchema), listSubtasks)
+  .post(verifyJWT, validate(createSubtaskSchema), createSubtask);
+
+router.patch(
+  '/projects/:projectId/tasks/:taskId/subtasks/:subtaskId/toggle',
+  verifyJWT,
+  validate(subtaskActionSchema),
+  toggleSubtask,
+);
+
+router.delete(
+  '/projects/:projectId/tasks/:taskId/subtasks/:subtaskId',
+  verifyJWT,
+  validate(subtaskActionSchema),
+  deleteSubtask,
+);
+
+// ─── Attachments ──────────────────────────────────────────────
+const attachmentParamSchema = {
+  params: z.object({ projectId: z.string().uuid(), taskId: z.string().uuid() }),
+};
+const attachmentDeleteSchema = {
+  params: z.object({
+    projectId: z.string().uuid(),
+    taskId: z.string().uuid(),
+    attachmentId: z.string().uuid(),
+  }),
+};
+
+router
+  .route('/projects/:projectId/tasks/:taskId/attachments')
+  .get(verifyJWT, validate(attachmentParamSchema), listTaskAttachments)
+  .post(verifyJWT, validate(attachmentParamSchema), uploadMiddleware.single('file'), uploadAttachment);
+
+router.delete(
+  '/projects/:projectId/tasks/:taskId/attachments/:attachmentId',
+  verifyJWT,
+  validate(attachmentDeleteSchema),
+  deleteAttachment,
+);
+
+// ─── Project Files (all files in a project) ───────────────────
+router.get(
+  '/projects/:projectId/files',
+  verifyJWT,
+  validate({ params: z.object({ projectId: z.string().uuid() }) }),
+  listProjectFiles,
+);
 
 export default router;

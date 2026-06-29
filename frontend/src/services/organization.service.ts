@@ -1,11 +1,14 @@
 import { api } from '@/lib/axios';
 import type {
   Organization,
+  OrganizationMember,
   OrganizationsResponse,
   CreateOrganizationResponse,
   OrganizationMembersResponse,
   InviteUserResponse,
   AcceptInviteResponse,
+  PendingInvite,
+  PendingInvitesResponse,
 } from '@/types/organization.types';
 
 export async function getMyOrganizations(): Promise<Organization[]> {
@@ -55,4 +58,25 @@ export async function acceptInvite(token: string) {
 
 export async function removeMember(organizationId: string, userId: string): Promise<void> {
   await api.delete(`/organizations/${organizationId}/members/${userId}`);
+}
+
+export async function listPendingInvites(organizationId: string): Promise<PendingInvite[]> {
+  const res = await api.get<PendingInvitesResponse>(`/organizations/${organizationId}/invites`);
+  return res.data.data;
+}
+
+export async function revokeInvite(organizationId: string, inviteId: string): Promise<void> {
+  await api.delete(`/organizations/${organizationId}/invites/${inviteId}`);
+}
+
+export async function changeMemberRole(
+  organizationId: string,
+  userId: string,
+  role: 'ORG_ADMIN' | 'MEMBER'
+): Promise<OrganizationMember> {
+  const res = await api.patch<{ success: boolean; data: OrganizationMember }>(
+    `/organizations/${organizationId}/members/${userId}/role`,
+    { role }
+  );
+  return res.data.data;
 }

@@ -51,20 +51,71 @@ export interface Task {
   priority: TaskPriority;
   position: number;
   dueDate: string | null;
-  assigneeId: string | null;
   createdById: string;
   createdAt: string;
   updatedAt: string;
-  assignee?: {
+  assignees?: {
+    id: string;
+    name: string;
+    email: string;
+    avatarUrl: string | null;
+  }[];
+  creator?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+// ─── Comment ───────────────────────────────────────────────────
+
+export interface TaskComment {
+  id: string;
+  taskId: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  author?: {
     id: string;
     name: string;
     email: string;
     avatarUrl: string | null;
   };
-  creator?: {
+}
+
+// ─── Subtask ───────────────────────────────────────────────────
+
+export interface Subtask {
+  id: string;
+  taskId: string;
+  title: string;
+  isCompleted: boolean;
+  position: number;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Attachment ────────────────────────────────────────────────
+
+export interface TaskAttachment {
+  id: string;
+  taskId: string;
+  projectId: string;
+  uploadedById: string;
+  fileName: string;
+  fileUrl: string;
+  cloudinaryPublicId: string;
+  fileType: string;
+  fileSize: number;
+  createdAt: string;
+  updatedAt: string;
+  uploadedBy?: {
     id: string;
     name: string;
     email: string;
+    avatarUrl: string | null;
   };
 }
 

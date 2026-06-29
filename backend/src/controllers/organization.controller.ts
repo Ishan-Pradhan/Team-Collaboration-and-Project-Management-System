@@ -344,6 +344,42 @@ export const getOrganizationBySlug = asyncHandler(
   }
 );
 
+// List Pending Invites
+export const listPendingInvites = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { organizationId } = req.params as { organizationId: string };
+    const invites = await organizationInviteRepository.findPendingByOrg(organizationId);
+    return ok(res, invites, 'Pending invites retrieved');
+  }
+);
+
+// Revoke Invite
+export const revokeInvite = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { organizationId, inviteId } = req.params as { organizationId: string; inviteId: string };
+    const deleted = await organizationInviteRepository.deleteById(inviteId, organizationId);
+    if (!deleted) throw new ApiError(404, 'Invite not found or already accepted');
+    return ok(res, null, 'Invite revoked');
+  }
+);
+
+// Change Member Role
+export const changeMemberRole = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { organizationId, userId } = req.params as { organizationId: string; userId: string };
+    const { role } = req.body as { role: 'ORG_ADMIN' | 'MEMBER' };
+
+    const org = await organizationRepository.findById(organizationId);
+    if (!org) throw new ApiError(404, 'Organization not found');
+    if (org.ownerId === userId) throw new ApiError(400, 'Cannot change the owner\'s role');
+
+    const updated = await organizationMemberRepository.updateRole(organizationId, userId, role);
+    if (!updated) throw new ApiError(404, 'Member not found');
+
+    return ok(res, updated, 'Member role updated');
+  }
+);
+
 // Update Organization Details
 export const updateOrganization = asyncHandler(
   async (req: AuthRequest, res: Response) => {

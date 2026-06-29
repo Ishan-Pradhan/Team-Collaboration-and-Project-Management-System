@@ -9,6 +9,9 @@ import type {
   TaskResponse,
   Task,
   KanbanColumn,
+  TaskComment,
+  Subtask,
+  TaskAttachment,
 } from '@/types/project.types';
 
 export async function getOrgProjects(organizationId: string): Promise<Project[]> {
@@ -106,7 +109,7 @@ export async function createTask(
     columnId: string;
     description?: string | null;
     priority?: Task['priority'];
-    assigneeId?: string | null;
+    assigneeIds?: string[];
     dueDate?: string | null;
   },
 ): Promise<Task> {
@@ -121,7 +124,7 @@ export async function updateTask(
     title?: string;
     description?: string | null;
     priority?: Task['priority'];
-    assigneeId?: string | null;
+    assigneeIds?: string[];
     dueDate?: string | null;
   },
 ): Promise<Task> {
@@ -151,4 +154,115 @@ export async function addProjectMember(projectId: string, userId: string) {
 
 export async function removeProjectMember(projectId: string, userId: string): Promise<void> {
   await api.delete(`/projects/${projectId}/members/${userId}`);
+}
+
+// ─── Comments ──────────────────────────────────────────────────
+
+export async function getTaskComments(projectId: string, taskId: string): Promise<TaskComment[]> {
+  const res = await api.get<{ success: boolean; data: TaskComment[] }>(
+    `/projects/${projectId}/tasks/${taskId}/comments`
+  );
+  return res.data.data;
+}
+
+export async function createTaskComment(
+  projectId: string,
+  taskId: string,
+  content: string,
+): Promise<TaskComment> {
+  const res = await api.post<{ success: boolean; data: TaskComment }>(
+    `/projects/${projectId}/tasks/${taskId}/comments`,
+    { content }
+  );
+  return res.data.data;
+}
+
+export async function deleteTaskComment(
+  projectId: string,
+  taskId: string,
+  commentId: string,
+): Promise<void> {
+  await api.delete(`/projects/${projectId}/tasks/${taskId}/comments/${commentId}`);
+}
+
+// ─── Subtasks ──────────────────────────────────────────────────
+
+export async function getSubtasks(projectId: string, taskId: string): Promise<Subtask[]> {
+  const res = await api.get<{ success: boolean; data: Subtask[] }>(
+    `/projects/${projectId}/tasks/${taskId}/subtasks`
+  );
+  return res.data.data;
+}
+
+export async function createSubtask(
+  projectId: string,
+  taskId: string,
+  title: string,
+): Promise<Subtask> {
+  const res = await api.post<{ success: boolean; data: Subtask }>(
+    `/projects/${projectId}/tasks/${taskId}/subtasks`,
+    { title }
+  );
+  return res.data.data;
+}
+
+export async function toggleSubtask(
+  projectId: string,
+  taskId: string,
+  subtaskId: string,
+): Promise<Subtask> {
+  const res = await api.patch<{ success: boolean; data: Subtask }>(
+    `/projects/${projectId}/tasks/${taskId}/subtasks/${subtaskId}/toggle`
+  );
+  return res.data.data;
+}
+
+export async function deleteSubtask(
+  projectId: string,
+  taskId: string,
+  subtaskId: string,
+): Promise<void> {
+  await api.delete(`/projects/${projectId}/tasks/${taskId}/subtasks/${subtaskId}`);
+}
+
+// ─── Attachments ───────────────────────────────────────────────
+
+export async function getTaskAttachments(
+  projectId: string,
+  taskId: string,
+): Promise<TaskAttachment[]> {
+  const res = await api.get<{ success: boolean; data: TaskAttachment[] }>(
+    `/projects/${projectId}/tasks/${taskId}/attachments`
+  );
+  return res.data.data;
+}
+
+export async function uploadTaskAttachment(
+  projectId: string,
+  taskId: string,
+  file: File,
+): Promise<TaskAttachment> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await api.post<{ success: boolean; data: TaskAttachment }>(
+    `/projects/${projectId}/tasks/${taskId}/attachments`,
+    form,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  );
+  return res.data.data;
+}
+
+export async function deleteTaskAttachment(
+  projectId: string,
+  taskId: string,
+  attachmentId: string,
+): Promise<void> {
+  await api.delete(`/projects/${projectId}/tasks/${taskId}/attachments/${attachmentId}`);
+}
+
+export async function getProjectFiles(projectId: string): Promise<TaskAttachment[]> {
+  const res = await api.get<{ success: boolean; data: TaskAttachment[] }>(
+    `/projects/${projectId}/files`
+  );
+  return res.data.data;
 }

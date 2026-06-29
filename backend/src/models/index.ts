@@ -7,7 +7,10 @@ import { Project } from './projects.model.js';
 import { ProjectMember } from './projectMembers.model.js';
 import { KanbanColumn } from './kanbanColumns.model.js';
 import { Task } from './tasks.model.js';
+import { TaskAssignee } from './taskAssignees.model.js';
 import { TaskComment } from './taskComments.model.js';
+import { TaskAttachment } from './taskAttachments.model.js';
+import { Subtask } from './subtasks.model.js';
 import { ChatMessage } from './chatMessages.model.js';
 import { Notification } from './notifications.model.js';
 
@@ -44,13 +47,24 @@ Task.belongsTo(KanbanColumn, { foreignKey: 'columnId', as: 'column' });
 
 // Task associations
 Task.belongsTo(Project, { foreignKey: 'projectId', as: 'project' });
-Task.belongsTo(User, { as: 'assignee', foreignKey: 'assigneeId' });
 Task.belongsTo(User, { as: 'creator', foreignKey: 'createdById' });
+Task.belongsToMany(User, { through: TaskAssignee, foreignKey: 'taskId', otherKey: 'userId', as: 'assignees' });
+User.belongsToMany(Task, { through: TaskAssignee, foreignKey: 'userId', otherKey: 'taskId', as: 'assignedTasks' });
 Task.hasMany(TaskComment, { foreignKey: 'taskId', onDelete: 'CASCADE', as: 'comments' });
+Task.hasMany(TaskAttachment, { foreignKey: 'taskId', onDelete: 'CASCADE', as: 'attachments' });
+Task.hasMany(Subtask, { foreignKey: 'taskId', onDelete: 'CASCADE', as: 'subtasks' });
 
 // Task Comments
 TaskComment.belongsTo(Task, { foreignKey: 'taskId', as: 'task' });
 TaskComment.belongsTo(User, { as: 'author', foreignKey: 'authorId' });
+
+// Task Attachments
+TaskAttachment.belongsTo(Task, { foreignKey: 'taskId', as: 'task' });
+TaskAttachment.belongsTo(User, { as: 'uploadedBy', foreignKey: 'uploadedById' });
+
+// Subtasks
+Subtask.belongsTo(Task, { foreignKey: 'taskId', as: 'task' });
+Subtask.belongsTo(User, { as: 'createdBy', foreignKey: 'createdById' });
 
 // Chat Messages
 ChatMessage.belongsTo(Project, { foreignKey: 'projectId', as: 'project' });
@@ -77,7 +91,10 @@ export {
   ProjectMember,
   KanbanColumn,
   Task,
+  TaskAssignee,
   TaskComment,
+  TaskAttachment,
+  Subtask,
   ChatMessage,
   Notification,
 };

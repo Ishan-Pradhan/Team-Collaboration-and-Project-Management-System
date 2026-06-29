@@ -14,6 +14,9 @@ import {
   removeOrganizationMember,
   getOrganizationBySlug,
   updateOrganization,
+  listPendingInvites,
+  revokeInvite,
+  changeMemberRole,
 } from '../controllers/organization.controller.js';
 import {
   createOrganizationSchema,
@@ -23,6 +26,8 @@ import {
   memberParamSchema,
   updateOrganizationSchema,
   slugParamSchema,
+  inviteParamSchema,
+  changeMemberRoleSchema,
 } from '../validations/organization.validation.js';
 
 const router = Router();
@@ -162,7 +167,12 @@ router
     isOrganizationAdmin,
     validate(inviteUserSchema),
     inviteUserToOrganization
-  );
+  )
+  .get(verifyJWT, isOrganizationAdmin, listPendingInvites);
+
+router
+  .route('/:organizationId/invites/:inviteId')
+  .delete(verifyJWT, isOrganizationAdmin, validate(inviteParamSchema), revokeInvite);
 
 /**
  * @swagger
@@ -233,6 +243,10 @@ router
     validate(memberParamSchema),
     removeOrganizationMember
   );
+
+router
+  .route('/:organizationId/members/:userId/role')
+  .patch(verifyJWT, isOrganizationAdmin, validate(changeMemberRoleSchema), changeMemberRole);
 
 /**
  * @swagger

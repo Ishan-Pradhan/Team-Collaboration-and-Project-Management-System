@@ -117,6 +117,16 @@ export const organizationMemberRepository = {
       ],
     });
   },
+
+  updateRole: async (
+    organizationId: string,
+    userId: string,
+    role: 'ORG_ADMIN' | 'MEMBER'
+  ): Promise<OrganizationMemberInstance | null> => {
+    const member = await OrganizationMember.findOne({ where: { organizationId, userId } });
+    if (!member) return null;
+    return await member.update({ role });
+  },
 };
 
 export const organizationInviteRepository = {
@@ -139,6 +149,28 @@ export const organizationInviteRepository = {
     return await Invitation.findOne({
       where: { token, status: 'PENDING' },
     });
+  },
+
+  findPendingByOrg: async (organizationId: string): Promise<OrganizationInviteInstance[]> => {
+    return await Invitation.findAll({
+      where: {
+        organizationId,
+        status: 'PENDING',
+        expiresAt: { [Op.gt]: new Date() },
+      },
+      include: [
+        {
+          model: User,
+          as: 'invitedBy',
+          attributes: ['id', 'name', 'email'],
+        },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+  },
+
+  deleteById: async (id: string, organizationId: string): Promise<number> => {
+    return await Invitation.destroy({ where: { id, organizationId, status: 'PENDING' } });
   },
 };
 

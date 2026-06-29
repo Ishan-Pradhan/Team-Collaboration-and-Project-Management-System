@@ -5,7 +5,10 @@ import { ok } from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/AsyncHandler.js';
 import { projectRepository } from '../repositories/project.repository.js';
 import { kanbanColumnRepository } from '../repositories/kanbanColumn.repository.js';
-import { organizationMemberRepository } from '../repositories/organization.repository.js';
+import {
+  organizationMemberRepository,
+  organizationRepository,
+} from '../repositories/organization.repository.js';
 
 // Create a new project
 export const createProject = asyncHandler(
@@ -71,7 +74,12 @@ export const listProjects = asyncHandler(
       throw new ApiError(403, 'Unauthorized access to organization projects');
     }
 
-    const projects = await projectRepository.findByOrg(organizationId);
+    const org = await organizationRepository.findById(organizationId);
+    const isAdmin = org?.ownerId === user.id || orgMembership?.role === 'ORG_ADMIN';
+    const projects = isAdmin
+      ? await projectRepository.findByOrg(organizationId)
+      : await projectRepository.findByOrgForUser(organizationId, user.id);
+
     return ok(res, projects, 'Projects retrieved successfully');
   }
 );

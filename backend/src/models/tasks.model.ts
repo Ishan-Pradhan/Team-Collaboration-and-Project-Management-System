@@ -32,11 +32,6 @@ export const Task = sequelize.define<TaskInstance>(
       defaultValue: 'MEDIUM',
       allowNull: false,
     },
-    assigneeId: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      defaultValue: null,
-    },
     createdById: {
       type: DataTypes.UUID,
       allowNull: false,

@@ -16,7 +16,21 @@ export const projectRepository = {
 
   findByOrg: async (orgId: string): Promise<ProjectInstance[]> => {
     return await Project.findAll({
-      where: { organizationId: orgId, status: 'ACTIVE' },
+      where: { organizationId: orgId },
+    });
+  },
+
+  findByOrgForUser: async (orgId: string, userId: string): Promise<ProjectInstance[]> => {
+    return await Project.findAll({
+      where: { organizationId: orgId },
+      include: [
+        {
+          model: ProjectMember,
+          as: 'members',
+          where: { userId },
+          required: true,
+        },
+      ],
     });
   },
 

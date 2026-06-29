@@ -2,18 +2,19 @@
 
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useOrganizationBySlug } from '@/hooks/useOrganization';
+import { useOrganizationBySlug, useOrganizationMembers } from '@/hooks/useOrganization';
 import { useOrgProjects, useCreateProject } from '@/hooks/useProject';
 import { useAuthStore } from '@/store/auth.store';
 import { parseApiError } from '@/lib/axios';
 import { toast } from 'sonner';
-import { Archive, FolderPlus, Loader2, Plus, X } from 'lucide-react';
+import { Archive, FolderPlus, Loader2, Plus, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { Project } from '@/types/project.types';
 import { ProjectsSkeleton } from '@/components/shared/skeletons/ProjectsSkeleton';
 import { ErrorState } from '@/components/shared/ErrorState';
+import ManageProjectMembersModal from '@/components/shared/ManageProjectMembersModal';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -38,25 +39,28 @@ function getProjectColor(name: string) {
 
 function ProjectCard({
   project,
+  isAdmin,
   onNavigate,
+  onManageMembers,
   archived = false,
 }: {
   project: Project;
+  isAdmin: boolean;
   onNavigate: () => void;
+  onManageMembers: () => void;
   archived?: boolean;
 }) {
   const color = getProjectColor(project.name);
   const initials = getProjectInitials(project.name);
 
   return (
-    <button
-      onClick={onNavigate}
+    <div
       className={cn(
-        'group relative w-full rounded-xl border bg-white p-5 text-left shadow-card transition-all duration-150 hover:shadow-md hover:border-border',
+        'group relative w-full rounded-xl border bg-white p-5 shadow-card transition-all duration-150 hover:shadow-md hover:border-border',
         archived ? 'border-border-subtle opacity-60' : 'border-border-subtle'
       )}
     >
-      <div className="flex items-start gap-3">
+      <button onClick={onNavigate} className="flex w-full items-start gap-3 text-left">
         <div
           className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white"
           style={{ backgroundColor: color }}
@@ -71,20 +75,31 @@ function ProjectCard({
             <p className="mt-0.5 line-clamp-2 text-xs text-text-secondary">{project.description}</p>
           )}
         </div>
-      </div>
+      </button>
 
       <div className="mt-4 flex items-center justify-between">
         <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide', statusColors[project.status])}>
           {project.status}
         </span>
-        <span className="text-[10px] text-text-muted">{new Date(project.createdAt).toLocaleDateString()}</span>
+        <div className="flex items-center gap-2">
+          {isAdmin && !archived && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onManageMembers(); }}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-text-secondary hover:bg-surface-muted transition-colors"
+              title="Manage members"
+            >
+              <Users size={12} />Members
+            </button>
+          )}
+          <span className="text-[10px] text-text-muted">{new Date(project.createdAt).toLocaleDateString()}</span>
+        </div>
       </div>
 
       <span
         className="absolute inset-y-0 left-0 w-1 rounded-l-xl opacity-0 transition-opacity duration-150 group-hover:opacity-100"
         style={{ backgroundColor: color }}
       />
-    </button>
+    </div>
   );
 }
 
@@ -95,11 +110,13 @@ export default function ProjectsPage({ params }: Props) {
 
   const { data: org, isLoading: orgLoading, error: orgError, refetch } = useOrganizationBySlug(slug);
   const { data: projects, isLoading: projectsLoading } = useOrgProjects(org?.id ?? '');
+  const { data: orgMembers } = useOrganizationMembers(org?.id ?? '');
   const createProject = useCreateProject();
 
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [managingProject, setManagingProject] = useState<Project | null>(null);
 
   if (orgLoading || projectsLoading) return <ProjectsSkeleton />;
 
@@ -115,7 +132,8 @@ export default function ProjectsPage({ params }: Props) {
 
   const activeProjects = projects?.filter((p) => p.status === 'ACTIVE') ?? [];
   const archivedProjects = projects?.filter((p) => p.status === 'ARCHIVED') ?? [];
-  const isAdmin = org.ownerId === user?.id;
+  const currentMembership = orgMembers?.find((m) => m.userId === user?.id);
+  const isAdmin = org.ownerId === user?.id || currentMembership?.role === 'ORG_ADMIN';
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,7 +186,9 @@ export default function ProjectsPage({ params }: Props) {
             <ProjectCard
               key={project.id}
               project={project}
+              isAdmin={isAdmin}
               onNavigate={() => router.push(`/org/${slug}/projects/${project.id}`)}
+              onManageMembers={() => setManagingProject(project)}
             />
           ))}
         </div>
@@ -184,7 +204,9 @@ export default function ProjectsPage({ params }: Props) {
               <ProjectCard
                 key={project.id}
                 project={project}
+                isAdmin={isAdmin}
                 onNavigate={() => router.push(`/org/${slug}/projects/${project.id}`)}
+                onManageMembers={() => setManagingProject(project)}
                 archived
               />
             ))}
@@ -249,6 +271,16 @@ export default function ProjectsPage({ params }: Props) {
             </form>
           </div>
         </div>
+      )}
+
+      {managingProject && org && (
+        <ManageProjectMembersModal
+          projectId={managingProject.id}
+          organizationId={org.id}
+          createdById={managingProject.createdById}
+          isOpen={!!managingProject}
+          onClose={() => setManagingProject(null)}
+        />
       )}
     </div>
   );

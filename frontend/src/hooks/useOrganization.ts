@@ -8,6 +8,9 @@ import {
   inviteUser,
   acceptInvite,
   removeMember,
+  listPendingInvites,
+  revokeInvite,
+  changeMemberRole,
 } from '@/services/organization.service';
 
 export const useMyOrganizations = () =>
@@ -61,5 +64,29 @@ export const useRemoveMember = (organizationId: string) => {
     mutationFn: (userId: string) => removeMember(organizationId, userId),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ['organizations', organizationId, 'members'] }),
+  });
+};
+
+export const usePendingInvites = (organizationId: string) =>
+  useQuery({
+    queryKey: ['organizations', organizationId, 'invites'],
+    queryFn: () => listPendingInvites(organizationId),
+    enabled: !!organizationId,
+  });
+
+export const useRevokeInvite = (organizationId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (inviteId: string) => revokeInvite(organizationId, inviteId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['organizations', organizationId, 'invites'] }),
+  });
+};
+
+export const useChangeMemberRole = (organizationId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: 'ORG_ADMIN' | 'MEMBER' }) =>
+      changeMemberRole(organizationId, userId, role),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['organizations', organizationId, 'members'] }),
   });
 };

@@ -19,6 +19,17 @@ import {
   deleteTask,
   addProjectMember,
   removeProjectMember,
+  getTaskComments,
+  createTaskComment,
+  deleteTaskComment,
+  getSubtasks,
+  createSubtask,
+  toggleSubtask,
+  deleteSubtask,
+  getTaskAttachments,
+  uploadTaskAttachment,
+  deleteTaskAttachment,
+  getProjectFiles,
 } from '@/services/project.service';
 
 // ─── Projects ────────────────────────────────────────────────
@@ -138,7 +149,7 @@ export const useCreateTask = (projectId: string) => {
       columnId: string;
       description?: string | null;
       priority?: Task['priority'];
-      assigneeId?: string | null;
+      assigneeIds?: string[];
       dueDate?: string | null;
     }) => createTask(projectId, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['projects', projectId, 'tasks'] }),
@@ -152,7 +163,7 @@ export const useUpdateTask = (projectId: string, taskId: string) => {
       title?: string;
       description?: string | null;
       priority?: Task['priority'];
-      assigneeId?: string | null;
+      assigneeIds?: string[];
       dueDate?: string | null;
     }) => updateTask(projectId, taskId, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['projects', projectId, 'tasks'] }),
@@ -191,3 +202,104 @@ export const useRemoveProjectMember = (projectId: string) => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['projects', projectId, 'members'] }),
   });
 };
+
+// ─── Comments ────────────────────────────────────────────────
+
+export const useTaskComments = (projectId: string, taskId: string) =>
+  useQuery({
+    queryKey: ['projects', projectId, 'tasks', taskId, 'comments'],
+    queryFn: () => getTaskComments(projectId, taskId),
+    enabled: !!projectId && !!taskId,
+  });
+
+export const useCreateComment = (projectId: string, taskId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (content: string) => createTaskComment(projectId, taskId, content),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['projects', projectId, 'tasks', taskId, 'comments'] }),
+  });
+};
+
+export const useDeleteComment = (projectId: string, taskId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (commentId: string) => deleteTaskComment(projectId, taskId, commentId),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['projects', projectId, 'tasks', taskId, 'comments'] }),
+  });
+};
+
+// ─── Subtasks ────────────────────────────────────────────────
+
+export const useSubtasks = (projectId: string, taskId: string) =>
+  useQuery({
+    queryKey: ['projects', projectId, 'tasks', taskId, 'subtasks'],
+    queryFn: () => getSubtasks(projectId, taskId),
+    enabled: !!projectId && !!taskId,
+  });
+
+export const useCreateSubtask = (projectId: string, taskId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (title: string) => createSubtask(projectId, taskId, title),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['projects', projectId, 'tasks', taskId, 'subtasks'] }),
+  });
+};
+
+export const useToggleSubtask = (projectId: string, taskId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (subtaskId: string) => toggleSubtask(projectId, taskId, subtaskId),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['projects', projectId, 'tasks', taskId, 'subtasks'] }),
+  });
+};
+
+export const useDeleteSubtask = (projectId: string, taskId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (subtaskId: string) => deleteSubtask(projectId, taskId, subtaskId),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['projects', projectId, 'tasks', taskId, 'subtasks'] }),
+  });
+};
+
+// ─── Attachments ─────────────────────────────────────────────
+
+export const useTaskAttachments = (projectId: string, taskId: string) =>
+  useQuery({
+    queryKey: ['projects', projectId, 'tasks', taskId, 'attachments'],
+    queryFn: () => getTaskAttachments(projectId, taskId),
+    enabled: !!projectId && !!taskId,
+  });
+
+export const useUploadAttachment = (projectId: string, taskId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => uploadTaskAttachment(projectId, taskId, file),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectId, 'tasks', taskId, 'attachments'] });
+      qc.invalidateQueries({ queryKey: ['projects', projectId, 'files'] });
+    },
+  });
+};
+
+export const useDeleteAttachment = (projectId: string, taskId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (attachmentId: string) => deleteTaskAttachment(projectId, taskId, attachmentId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects', projectId, 'tasks', taskId, 'attachments'] });
+      qc.invalidateQueries({ queryKey: ['projects', projectId, 'files'] });
+    },
+  });
+};
+
+export const useProjectFiles = (projectId: string) =>
+  useQuery({
+    queryKey: ['projects', projectId, 'files'],
+    queryFn: () => getProjectFiles(projectId),
+    enabled: !!projectId,
+  });

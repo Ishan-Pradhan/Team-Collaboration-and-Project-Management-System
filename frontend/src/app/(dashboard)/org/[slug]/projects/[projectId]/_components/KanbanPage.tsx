@@ -2,11 +2,11 @@
 
 import { use, useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
-import { ChevronDown, Layout, List, Paperclip, Plus, Settings, User } from 'lucide-react';
+import { ChevronDown, Download, File, FileText, Image as ImageIcon, Layout, List, Loader2, Paperclip, Plus, Settings, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { Task, KanbanColumn } from '@/types/project.types';
+import type { Task, KanbanColumn, TaskAttachment } from '@/types/project.types';
 import { PRIORITY } from '@/constants/task.constants';
 import { KanbanSkeleton } from '@/components/shared/skeletons/KanbanSkeleton';
 import {
@@ -17,7 +17,11 @@ import {
   useDeleteColumn,
   useReorderColumns,
   useMoveTask,
+  useProjectMembers,
+  useProjectFiles,
 } from '@/hooks/useProject';
+import { useOrganizationBySlug, useOrganizationMembers } from '@/hooks/useOrganization';
+import { useAuthStore } from '@/store/auth.store';
 
 import {
   DndContext,
@@ -41,6 +45,7 @@ import {
 import { SortableColumn, KanbanCard } from './KanbanColumn';
 import { AddTaskModal } from './AddTaskModal';
 import { TaskDrawer } from './TaskDrawer';
+import ManageProjectMembersModal from '@/components/shared/ManageProjectMembersModal';
 
 type ActiveDrag =
   | { type: 'task'; task: Task }
@@ -51,12 +56,26 @@ interface Props {
   params: Promise<{ slug: string; projectId: string }>;
 }
 
-export default function KanbanPage({ params }: Props) {
-  const { projectId } = use(params);
+const MEMBER_COLORS = ['#22302a', '#d4a84f', '#6f8c78', '#a86c58', '#4b7f52', '#c38a2d'];
+function getMemberColor(name: string) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  return MEMBER_COLORS[Math.abs(h) % MEMBER_COLORS.length];
+}
 
+export default function KanbanPage({ params }: Props) {
+  const { slug, projectId } = use(params);
+
+  const { user: currentUser } = useAuthStore();
   const { data: project, isLoading: projLoading } = useProject(projectId);
   const { data: serverColumns, isLoading: colsLoading } = useProjectColumns(projectId);
   const { data: serverTasks, isLoading: tasksLoading } = useProjectTasks(projectId);
+  const { data: projectMembers } = useProjectMembers(projectId);
+  const { data: org } = useOrganizationBySlug(slug);
+  const { data: orgMembers } = useOrganizationMembers(org?.id ?? '');
+
+  const currentMembership = orgMembers?.find((m) => m.userId === currentUser?.id);
+  const isAdmin = org?.ownerId === currentUser?.id || currentMembership?.role === 'ORG_ADMIN';
 
   const moveTask = useMoveTask(projectId);
   const createColumn = useCreateColumn(projectId);
@@ -72,6 +91,7 @@ export default function KanbanPage({ params }: Props) {
   const [addingTaskColumnId, setAddingTaskColumnId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [addingColumn, setAddingColumn] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
   const [newColumnName, setNewColumnName] = useState('');
   const [activeTab, setActiveTab] = useState('Board');
   const [mounted, setMounted] = useState(false);
@@ -94,7 +114,9 @@ export default function KanbanPage({ params }: Props) {
     }
   }, [serverColumns, serverTasks, activeDrag, isMutating]);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: isAdmin ? 4 : Infinity } })
+  );
   const columnIds = useMemo(() => localColumns.map((c) => c.id), [localColumns]);
 
   function findColumn(id: string): string | undefined {
@@ -245,14 +267,36 @@ export default function KanbanPage({ params }: Props) {
           <ChevronDown size={18} className="text-gray-400 cursor-pointer" />
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex -space-x-2">
-            {['1', '2', '3'].map((n) => (
-              <img key={n} className="inline-block h-7 w-7 rounded-full ring-2 ring-white" src={`https://i.pravatar.cc/100?img=${n}`} alt="" />
-            ))}
-          </div>
-          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-sm border-gray-200">
-            <User size={13} /> Invite
-          </Button>
+          {projectMembers && projectMembers.length > 0 && (
+            <div className="flex -space-x-2">
+              {projectMembers.slice(0, 4).map((m) => {
+                const name = m.user?.name ?? '?';
+                return (
+                  <div
+                    key={m.id}
+                    title={name}
+                    className="flex h-7 w-7 items-center justify-center rounded-full ring-2 ring-white text-[10px] font-bold text-white"
+                    style={{ backgroundColor: getMemberColor(name) }}
+                  >
+                    {name.charAt(0).toUpperCase()}
+                  </div>
+                );
+              })}
+              {projectMembers.length > 4 && (
+                <div className="flex h-7 w-7 items-center justify-center rounded-full ring-2 ring-white bg-gray-200 text-[10px] font-bold text-gray-600">
+                  +{projectMembers.length - 4}
+                </div>
+              )}
+            </div>
+          )}
+          {isAdmin && (
+            <button
+              onClick={() => setShowMembersModal(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-border-subtle px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-muted transition-colors"
+            >
+              <Users size={14} />Members
+            </button>
+          )}
         </div>
       </div>
 
@@ -292,6 +336,7 @@ export default function KanbanPage({ params }: Props) {
                     column={col}
                     tasks={localTaskMap[col.id] || []}
                     projectId={projectId}
+                    isAdmin={isAdmin}
                     onAddTask={setAddingTaskColumnId}
                     onEditTask={setEditingTask}
                     onDelete={handleDeleteColumn}
@@ -299,23 +344,25 @@ export default function KanbanPage({ params }: Props) {
                   />
                 ))}
 
-                <div className="w-[280px] shrink-0">
-                  {addingColumn ? (
-                    <form onSubmit={handleAddColumn} className="rounded-xl bg-[#f1f2f4] p-3 space-y-2">
-                      <Input autoFocus placeholder="Column name" value={newColumnName}
-                        onChange={(e) => setNewColumnName(e.target.value)} className="text-sm bg-white" />
-                      <div className="flex gap-1.5">
-                        <Button type="submit" size="sm" disabled={createColumn.isPending || !newColumnName.trim()}>Add</Button>
-                        <Button type="button" size="sm" variant="outline" onClick={() => { setAddingColumn(false); setNewColumnName(''); }}>Cancel</Button>
-                      </div>
-                    </form>
-                  ) : (
-                    <button onClick={() => setAddingColumn(true)}
-                      className="flex w-full items-center gap-2 rounded-xl border-2 border-dashed border-gray-300 px-3 py-3 text-sm text-gray-400 hover:border-gray-400 hover:text-gray-600 transition-colors">
-                      <Plus size={15} /> Add column
-                    </button>
-                  )}
-                </div>
+                {isAdmin && (
+                  <div className="w-[280px] shrink-0">
+                    {addingColumn ? (
+                      <form onSubmit={handleAddColumn} className="rounded-xl bg-[#f1f2f4] p-3 space-y-2">
+                        <Input autoFocus placeholder="Column name" value={newColumnName}
+                          onChange={(e) => setNewColumnName(e.target.value)} className="text-sm bg-white" />
+                        <div className="flex gap-1.5">
+                          <Button type="submit" size="sm" disabled={createColumn.isPending || !newColumnName.trim()}>Add</Button>
+                          <Button type="button" size="sm" variant="outline" onClick={() => { setAddingColumn(false); setNewColumnName(''); }}>Cancel</Button>
+                        </div>
+                      </form>
+                    ) : (
+                      <button onClick={() => setAddingColumn(true)}
+                        className="flex w-full items-center gap-2 rounded-xl border-2 border-dashed border-gray-300 px-3 py-3 text-sm text-gray-400 hover:border-gray-400 hover:text-gray-600 transition-colors">
+                        <Plus size={15} /> Add column
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </SortableContext>
 
@@ -333,6 +380,7 @@ export default function KanbanPage({ params }: Props) {
                     column={activeDrag.column}
                     tasks={localTaskMap[activeDrag.column.id] || []}
                     projectId={projectId}
+                    isAdmin={isAdmin}
                     onAddTask={() => {}}
                     onEditTask={() => {}}
                     onDelete={() => {}}
@@ -378,13 +426,15 @@ export default function KanbanPage({ params }: Props) {
             </div>
           </div>
         </div>
+      ) : activeTab === 'Files' ? (
+        <ProjectFilesView projectId={projectId} currentUserId={currentUser?.id ?? ''} isAdmin={isAdmin} />
       ) : (
         <div className="flex-1 flex items-center justify-center text-sm text-gray-400">
-          This view is coming soon.
+          Settings coming soon.
         </div>
       )}
 
-      {addingTaskColumnId && serverColumns && (
+      {isAdmin && addingTaskColumnId && serverColumns && (
         <AddTaskModal
           projectId={projectId}
           columns={serverColumns}
@@ -393,7 +443,140 @@ export default function KanbanPage({ params }: Props) {
         />
       )}
       {editingTask && (
-        <TaskDrawer task={editingTask} projectId={projectId} onClose={() => setEditingTask(null)} />
+        <TaskDrawer
+          task={editingTask}
+          projectId={projectId}
+          isAdmin={isAdmin}
+          onClose={() => setEditingTask(null)}
+        />
+      )}
+      {showMembersModal && project?.organizationId && (
+        <ManageProjectMembersModal
+          projectId={projectId}
+          organizationId={project.organizationId}
+          createdById={project.createdById}
+          isOpen={showMembersModal}
+          onClose={() => setShowMembersModal(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Project Files View ───────────────────────────────────────
+
+function fileIcon(type: string) {
+  if (type.startsWith('image/')) return <ImageIcon size={15} className="text-blue-500" />;
+  if (type === 'application/pdf') return <FileText size={15} className="text-red-500" />;
+  return <File size={15} className="text-gray-400" />;
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function ProjectFilesView({
+  projectId,
+  currentUserId,
+  isAdmin,
+}: {
+  projectId: string;
+  currentUserId: string;
+  isAdmin: boolean;
+}) {
+  const { data: files = [], isLoading } = useProjectFiles(projectId);
+  const [search, setSearch] = useState('');
+
+  const filtered = files.filter((f: TaskAttachment) =>
+    f.fileName.toLowerCase().includes(search.toLowerCase()) ||
+    (f.uploadedBy?.name ?? '').toLowerCase().includes(search.toLowerCase()),
+  );
+
+  // Group by task
+  const byTask: Record<string, TaskAttachment[]> = {};
+  filtered.forEach((f: TaskAttachment) => {
+    if (!byTask[f.taskId]) byTask[f.taskId] = [];
+    byTask[f.taskId].push(f);
+  });
+
+  return (
+    <div className="flex-1 overflow-y-auto p-8">
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-gray-900">Project Files</h2>
+          <p className="text-xs text-gray-500 mt-0.5">{files.length} file{files.length !== 1 ? 's' : ''} across all tasks</p>
+        </div>
+        <Input
+          placeholder="Search files..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-56 text-sm"
+        />
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 size={22} className="animate-spin text-gray-300" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+          <Paperclip size={36} className="mb-3 opacity-25" />
+          <p className="text-sm font-medium">No files found</p>
+          <p className="text-xs mt-1">Upload files to tasks from the task drawer</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {Object.entries(byTask).map(([, taskFiles]) => {
+            const first = taskFiles[0];
+            return (
+              <div key={first.taskId}>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400 px-1">
+                  Task · {first.taskId.slice(0, 8)}…
+                </p>
+                <div className="rounded-xl border border-gray-100 bg-white overflow-hidden divide-y divide-gray-50">
+                  {taskFiles.map((f: TaskAttachment) => (
+                    <div key={f.id} className="group flex items-center gap-4 px-4 py-3.5 hover:bg-gray-50 transition-colors">
+                      {f.fileType.startsWith('image/') ? (
+                        <img
+                          src={f.fileUrl}
+                          alt={f.fileName}
+                          className="h-10 w-10 rounded-lg object-cover border border-gray-100 shrink-0"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-100 bg-gray-50">
+                          {fileIcon(f.fileType)}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-gray-800">{f.fileName}</p>
+                        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-400">
+                          <span>{formatBytes(f.fileSize)}</span>
+                          {f.uploadedBy && <><span>·</span><span>{f.uploadedBy.name}</span></>}
+                          <span>·</span>
+                          <span>{new Date(f.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <a
+                          href={f.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download={f.fileName}
+                          className="rounded-md p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                          title="Download"
+                        >
+                          <Download size={15} />
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
