@@ -1,24 +1,22 @@
 import { useMutation } from '@tanstack/react-query';
-import { api } from '../lib/axios';
 import { useAuthStore } from '../store/auth.store';
-import { AuthResponse, User } from '../types/auth.types';
-import { LoginInput, RegisterInput } from '../schemas/auth.schema';
+import type { User } from '../types/auth.types';
+import type { LoginInput, RegisterInput } from '../schemas/auth.schema';
+import {
+  loginUser,
+  registerUser,
+  logoutUser,
+  forgotPassword,
+  resendVerificationEmail,
+} from '../services/auth.service';
 
 export const useLogin = () => {
-  const setAuth = useAuthStore((state) => state.setAuth);
-
+  const setAuth = useAuthStore((s) => s.setAuth);
   return useMutation({
-    mutationFn: async (credentials: LoginInput) => {
-      const response = await api.post<AuthResponse>('/auth/login', {
-        email: credentials.email,
-        password: credentials.password,
-      });
-      return response.data;
-    },
+    mutationFn: loginUser,
     onSuccess: (data) => {
       if (data.data) {
-        // Backend returns flat user fields in data (id, name, email, avatarUrl).
-        // The access token is set as an HttpOnly cookie — not in the response body.
+        // Backend returns partial user on login; tokens are in HttpOnly cookies.
         const user: User = {
           id: data.data.id,
           name: data.data.name,
@@ -37,38 +35,21 @@ export const useLogin = () => {
   });
 };
 
-
-export const useRegister = () => {
-  return useMutation({
-    mutationFn: async (userData: RegisterInput) => {
-      const response = await api.post<AuthResponse>('/auth/register', {
-        name: userData.name,
-        email: userData.email,
-        password: userData.password,
-      });
-      return response.data;
-    },
+export const useRegister = () =>
+  useMutation({
+    mutationFn: (data: RegisterInput) => registerUser(data),
   });
-};
 
-export const useForgotPassword = () => {
-  return useMutation({
-    mutationFn: async (email: string) => {
-      const response = await api.post('/auth/forgot-password', { email });
-      return response.data;
-    },
-  });
-};
+export const useForgotPassword = () =>
+  useMutation({ mutationFn: forgotPassword });
+
+export const useResendVerificationEmail = () =>
+  useMutation({ mutationFn: resendVerificationEmail });
 
 export const useLogout = () => {
-  const clearAuth = useAuthStore((state) => state.clearAuth);
-
+  const clearAuth = useAuthStore((s) => s.clearAuth);
   return useMutation({
-    mutationFn: async () => {
-      await api.post('/auth/logout');
-    },
-    onSuccess: () => {
-      clearAuth();
-    },
+    mutationFn: logoutUser,
+    onSuccess: () => { clearAuth(); },
   });
 };

@@ -1,0 +1,58 @@
+import { api } from '@/lib/axios';
+import type {
+  Organization,
+  OrganizationsResponse,
+  CreateOrganizationResponse,
+  OrganizationMembersResponse,
+  InviteUserResponse,
+  AcceptInviteResponse,
+} from '@/types/organization.types';
+
+export async function getMyOrganizations(): Promise<Organization[]> {
+  const res = await api.get<OrganizationsResponse>('/organizations');
+  return res.data.data;
+}
+
+export async function getOrganizationBySlug(slug: string): Promise<Organization> {
+  const res = await api.get<{ success: boolean; data: Organization }>(
+    `/organizations/slug/${slug}`
+  );
+  return res.data.data;
+}
+
+export async function createOrganization(name: string): Promise<Organization> {
+  const res = await api.post<CreateOrganizationResponse>('/organizations', { name });
+  return res.data.data;
+}
+
+export async function updateOrganization(
+  organizationId: string,
+  data: { name: string; description?: string | null },
+): Promise<Organization> {
+  const res = await api.put<CreateOrganizationResponse>(`/organizations/${organizationId}`, data);
+  return res.data.data;
+}
+
+export async function getOrganizationMembers(organizationId: string) {
+  const res = await api.get<OrganizationMembersResponse>(
+    `/organizations/${organizationId}/members`
+  );
+  return res.data.data;
+}
+
+export async function inviteUser(organizationId: string, email: string) {
+  const res = await api.post<InviteUserResponse>(
+    `/organizations/${organizationId}/invites`,
+    { email }
+  );
+  return res.data.data;
+}
+
+export async function acceptInvite(token: string) {
+  const res = await api.post<AcceptInviteResponse>('/organizations/accept-invite', { token });
+  return res.data.data;
+}
+
+export async function removeMember(organizationId: string, userId: string): Promise<void> {
+  await api.delete(`/organizations/${organizationId}/members/${userId}`);
+}

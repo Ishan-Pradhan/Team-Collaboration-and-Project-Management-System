@@ -80,7 +80,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   if (!mounted) return null;
 
-  const handleOrgSwitch = (org: any) => {
+  const handleOrgSwitch = (org: { slug: string }) => {
     setOrgDropdownOpen(false);
     router.push(`/org/${org.slug}`);
   };
@@ -97,6 +97,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       name: 'Overview',
       href: currentSlug ? `/org/${currentSlug}` : '/dashboard',
       icon: LayoutDashboard,
+      exact: true,
     },
     {
       name: 'Projects',
@@ -213,9 +214,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <nav className="flex-1 space-y-1 p-3">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const active = item.href !== '#' && pathname.startsWith(item.href);
+            const active = item.href !== '#' && (item.exact ? pathname === item.href : pathname.startsWith(item.href));
             if (item.disabled) return null;
-            console.log(item.href)
 
             return (
               <Link
