@@ -1,23 +1,19 @@
 'use client';
 
-import { use, useState, useEffect } from 'react';
+import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useOrganizationBySlug } from '@/hooks/useOrganization';
 import { useOrgProjects, useCreateProject } from '@/hooks/useProject';
 import { useAuthStore } from '@/store/auth.store';
+import { parseApiError } from '@/lib/axios';
 import { toast } from 'sonner';
-import {
-  Archive,
-  FolderPlus,
-  Loader2,
-  MoreHorizontal,
-  Plus,
-  X,
-} from 'lucide-react';
+import { Archive, FolderPlus, Loader2, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { Project } from '@/types/project.types';
+import { ProjectsSkeleton } from '@/components/shared/skeletons/ProjectsSkeleton';
+import { ErrorState } from '@/components/shared/ErrorState';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -50,14 +46,9 @@ export default function ProjectsPage({ params }: PageProps) {
   const { slug } = use(params);
   const router = useRouter();
   const { user } = useAuthStore();
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const { data: org, isLoading: orgLoading } = useOrganizationBySlug(slug);
-  const { data: projects, isLoading: projectsLoading } = useOrgProjects(org?.id || '');
+  const { data: org, isLoading: orgLoading, error: orgError, refetch } = useOrganizationBySlug(slug);
+  const { data: projects, isLoading: projectsLoading } = useOrgProjects(org?.id ?? '');
   const createProject = useCreateProject();
 
   const [showModal, setShowModal] = useState(false);
@@ -66,16 +57,12 @@ export default function ProjectsPage({ params }: PageProps) {
 
   const isLoading = orgLoading || projectsLoading;
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !org?.id) return;
 
     createProject.mutate(
-      {
-        organizationId: org.id,
-        name: name.trim(),
-        description: description.trim() || null,
-      },
+      { organizationId: org.id, name: name.trim(), description: description.trim() || null },
       {
         onSuccess: (project) => {
           toast.success('Project created!');
@@ -84,18 +71,22 @@ export default function ProjectsPage({ params }: PageProps) {
           setDescription('');
           router.push(`/org/${slug}/projects/${project.id}`);
         },
-        onError: (err: any) => {
-          toast.error(err.response?.data?.message || 'Failed to create project');
+        onError: (err: unknown) => {
+          toast.error(parseApiError(err).message);
         },
       }
     );
   };
 
-  if (!mounted || isLoading) {
+  if (isLoading) return <ProjectsSkeleton />;
+
+  if (orgError || !org) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <Loader2 className="animate-spin text-text-secondary" size={24} />
-      </div>
+      <ErrorState
+        title="Failed to load projects"
+        message="Could not load workspace data."
+        onRetry={() => refetch()}
+      />
     );
   }
 

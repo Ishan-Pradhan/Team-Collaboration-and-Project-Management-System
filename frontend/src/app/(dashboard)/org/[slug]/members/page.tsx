@@ -3,19 +3,13 @@
 import { use, useState } from 'react';
 import { useOrganizationBySlug, useOrganizationMembers, useInviteUser, useRemoveMember } from '@/hooks/useOrganization';
 import { useAuthStore } from '@/store/auth.store';
+import { parseApiError } from '@/lib/axios';
 import { toast } from 'sonner';
-import {
-  Loader2,
-  Mail,
-  Plus,
-  Shield,
-  Trash2,
-  User,
-  UserPlus,
-  X,
-} from 'lucide-react';
+import { Loader2, Mail, Shield, Trash2, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MembersSkeleton } from '@/components/shared/skeletons/MembersSkeleton';
+import { ErrorState } from '@/components/shared/ErrorState';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -34,19 +28,14 @@ export default function OrgMembersPage({ params }: PageProps) {
   const inviteMutation = useInviteUser(org?.id || '');
   const removeMutation = useRemoveMember(org?.id || '');
 
-  if (orgLoading || membersLoading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <Loader2 className="animate-spin text-text-secondary" size={24} />
-      </div>
-    );
-  }
+  if (orgLoading || membersLoading) return <MembersSkeleton />;
 
   if (!org) {
     return (
-      <div className="rounded-lg border border-danger-soft bg-danger-soft/10 p-6 text-center">
-        <h2 className="text-lg font-semibold text-danger">Organization not found</h2>
-      </div>
+      <ErrorState
+        title="Workspace not found"
+        message="This workspace does not exist or you don't have access."
+      />
     );
   }
 
@@ -68,9 +57,8 @@ export default function OrgMembersPage({ params }: PageProps) {
           setShowInviteModal(false);
         }
       },
-      onError: (err: any) => {
-        const errMsg = err.response?.data?.message || 'Failed to send invitation';
-        toast.error(errMsg);
+      onError: (err: unknown) => {
+        toast.error(parseApiError(err).message);
       },
     });
   };
@@ -83,9 +71,8 @@ export default function OrgMembersPage({ params }: PageProps) {
         toast.success(`${name} removed successfully`);
         refetch();
       },
-      onError: (err: any) => {
-        const errMsg = err.response?.data?.message || 'Failed to remove member';
-        toast.error(errMsg);
+      onError: (err: unknown) => {
+        toast.error(parseApiError(err).message);
       },
     });
   };

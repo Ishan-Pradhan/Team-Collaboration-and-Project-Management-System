@@ -1,6 +1,8 @@
 'use client';
 
 import { use, useState, useMemo, useEffect, useRef } from 'react';
+import { parseApiError } from '@/lib/axios';
+import { KanbanSkeleton } from '@/components/shared/skeletons/KanbanSkeleton';
 import {
   useProject,
   useProjectColumns,
@@ -387,7 +389,7 @@ function AddTaskModal({
       { title: title.trim(), columnId, description: description.trim() || null, priority, dueDate: dueDate || null },
       {
         onSuccess: () => { toast.success('Card created'); onClose(); },
-        onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to create card'),
+        onError: (err: unknown) => toast.error(parseApiError(err).message),
       }
     );
   };
@@ -731,13 +733,7 @@ export default function ProjectKanbanPage({ params }: PageProps) {
   // ── render ─────────────────────────────────────────────────
   const isLoading = projLoading || colsLoading || tasksLoading;
 
-  if (!mounted || isLoading) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="animate-spin text-gray-300" size={28} />
-      </div>
-    );
-  }
+  if (!mounted || isLoading) return <KanbanSkeleton />;
 
   if (!project) {
     return (

@@ -4,22 +4,15 @@ import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useOrganizationBySlug, useOrganizationMembers } from '@/hooks/useOrganization';
 import { useOrgProjects } from '@/hooks/useProject';
-import { api } from '@/lib/axios';
-import { parseApiError } from '@/lib/axios';
+import { api, parseApiError } from '@/lib/axios';
 import { useOrgStore } from '@/store/org.store';
 import { useAuthStore } from '@/store/auth.store';
 import { toast } from 'sonner';
-import {
-  ArrowRight,
-  Building2,
-  FolderOpen,
-  Loader2,
-  Lock,
-  Save,
-  Users,
-} from 'lucide-react';
+import { ArrowRight, Building2, FolderOpen, Loader2, Lock, Save, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { OrgOverviewSkeleton } from '@/components/shared/skeletons/OrgOverviewSkeleton';
+import { ErrorState } from '@/components/shared/ErrorState';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -50,22 +43,15 @@ export default function OrgOverviewPage({ params }: PageProps) {
     }
   }, [org, currentOrg, setCurrentOrg]);
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <Loader2 className="animate-spin text-text-secondary" size={24} />
-      </div>
-    );
-  }
+  if (isLoading) return <OrgOverviewSkeleton />;
 
   if (error || !org) {
     return (
-      <div className="rounded-lg border border-danger-soft bg-danger-soft/10 p-6 text-center">
-        <h2 className="text-lg font-semibold text-danger">Failed to load organization</h2>
-        <p className="mt-2 text-sm text-text-secondary">
-          The organization may not exist, or you might not have access to it.
-        </p>
-      </div>
+      <ErrorState
+        title="Failed to load workspace"
+        message="The workspace may not exist, or you might not have access to it."
+        onRetry={() => refetch()}
+      />
     );
   }
 

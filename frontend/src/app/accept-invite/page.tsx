@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAcceptInvite } from '@/hooks/useOrganization';
 import { useAuthStore } from '@/store/auth.store';
 import { useOrgStore } from '@/store/org.store';
+import { parseApiError } from '@/lib/axios';
 import { toast } from 'sonner';
 import { Loader2, MailCheck, LogIn, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,9 +33,8 @@ export default function AcceptInvitePage() {
           toast.success('Successfully joined the organization!');
           router.push('/dashboard');
         },
-        onError: (err: any) => {
-          const errMsg = err.response?.data?.message || 'Failed to accept invitation. The link may have expired or is invalid.';
-          setErrorMsg(errMsg);
+        onError: (err: unknown) => {
+          setErrorMsg(parseApiError(err).message);
         },
       });
     }
