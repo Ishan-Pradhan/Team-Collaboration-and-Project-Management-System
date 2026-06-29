@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   ChevronDown,
+  Folder,
   FolderOpen,
   LayoutDashboard,
   LogOut,
@@ -36,6 +37,8 @@ function getOrgColor(name: string): string {
   return colors[Math.abs(hash) % colors.length];
 }
 
+import { useEffect } from 'react';
+
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
@@ -46,6 +49,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+
+
+
 
   // Parse organization slug from the pathname
   const match = pathname.match(/^\/org\/([^/]+)/);
@@ -60,6 +67,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
 
   // Sync workspace store with the URL's current slug
   useEffect(() => {
@@ -86,7 +94,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       name: 'Overview',
       href: currentSlug ? `/org/${currentSlug}` : '/dashboard',
       icon: LayoutDashboard,
-      exact: true,
     },
     {
       name: 'Projects',
@@ -203,8 +210,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <nav className="flex-1 space-y-1 p-3">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const active = item.href !== '#' && (item.exact ? pathname === item.href : pathname.startsWith(item.href));
+            const active = item.href !== '#' && pathname.startsWith(item.href);
             if (item.disabled) return null;
+            console.log(item.href)
 
             return (
               <Link
