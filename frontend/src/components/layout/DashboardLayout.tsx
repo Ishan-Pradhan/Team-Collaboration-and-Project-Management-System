@@ -18,6 +18,7 @@ import Logo from '@/components/shared/Logo';
 import { useMyOrganizations } from '@/hooks/useOrganization';
 import { useOrgStore } from '@/store/org.store';
 import { useAuthStore } from '@/store/auth.store';
+import { useLogout } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 // Helper to determine org avatar background color deterministically
@@ -60,7 +61,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const { data: orgs, isLoading: orgsLoading } = useMyOrganizations();
   const { currentOrg, setCurrentOrg } = useOrgStore();
-  const { user, clearAuth } = useAuthStore();
+  const { user } = useAuthStore();
+  const logout = useLogout();
 
   const activeOrg = orgs?.find((o) => o.slug === currentSlug) || null;
 
@@ -84,8 +86,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   const handleLogout = () => {
-    clearAuth();
-    router.push('/auth/login');
+    logout.mutate(undefined, {
+      onSettled: () => router.push('/auth/login'),
+    });
   };
 
   // Sidebar links derived directly from URL slug to ensure SSR matches client

@@ -160,7 +160,7 @@ router.route('/login').post(validate(loginSchema), loginUser);
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  */
-router.route('/logout').post(verifyJWT, logoutUser);
+router.route('/logout').post(logoutUser);
 
 /**
  * @swagger
