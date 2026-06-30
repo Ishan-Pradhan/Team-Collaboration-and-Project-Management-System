@@ -42,6 +42,12 @@ function Avatar({ name, url, size = 6 }: { name: string; url?: string | null; si
   );
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api/v1';
+
+function attachmentDownloadUrl(a: TaskAttachment): string {
+  return `${API_BASE}/projects/${a.projectId}/tasks/${a.taskId}/attachments/${a.id}/download`;
+}
+
 function fileIcon(type: string) {
   if (type.startsWith('image/')) return <ImageIcon size={14} className="text-blue-500" />;
   if (type === 'application/pdf') return <FileText size={14} className="text-red-500" />;
@@ -623,7 +629,6 @@ function CommentsTab({ task, projectId, currentUserId, isAdmin }: {
 
 function FilePreviewModal({ file, onClose }: { file: TaskAttachment; onClose: () => void }) {
   const isImage = file.fileType.startsWith('image/');
-  const isPdf = file.fileType === 'application/pdf';
   const isVideo = file.fileType.startsWith('video/');
 
   return (
@@ -633,7 +638,7 @@ function FilePreviewModal({ file, onClose }: { file: TaskAttachment; onClose: ()
           <p className="truncate text-sm font-medium text-white">{file.fileName}</p>
           <div className="flex shrink-0 items-center gap-2">
             <a
-              href={file.fileUrl}
+              href={attachmentDownloadUrl(file)}
               download={file.fileName}
               className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
               title="Download"
@@ -654,13 +659,6 @@ function FilePreviewModal({ file, onClose }: { file: TaskAttachment; onClose: ()
             alt={file.fileName}
             className="max-h-[80vh] w-full rounded-xl object-contain"
           />
-        ) : isPdf ? (
-          <iframe
-            src={file.fileUrl}
-            title={file.fileName}
-            className="w-full rounded-xl"
-            style={{ height: '80vh' }}
-          />
         ) : isVideo ? (
           <video
             src={file.fileUrl}
@@ -670,13 +668,13 @@ function FilePreviewModal({ file, onClose }: { file: TaskAttachment; onClose: ()
         ) : (
           <div className="flex flex-col items-center justify-center rounded-xl bg-gray-900 p-16 text-gray-400">
             <File size={48} className="mb-4 opacity-30" />
-            <p className="text-sm">Preview not available for this file type</p>
+            <p className="text-sm">No preview available</p>
             <a
-              href={file.fileUrl}
+              href={attachmentDownloadUrl(file)}
               download={file.fileName}
-              className="mt-4 flex items-center gap-1.5 text-sm text-brand hover:text-brand-hover"
+              className="mt-4 flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300"
             >
-              <Download size={14} /> Download instead
+              <Download size={14} /> Download
             </a>
           </div>
         )}
@@ -781,7 +779,7 @@ function FilesTab({ task, projectId, currentUserId, isAdmin }: {
                   <Eye size={14} />
                 </button>
                 <a
-                  href={a.fileUrl}
+                  href={attachmentDownloadUrl(a)}
                   download={a.fileName}
                   onClick={(e) => e.stopPropagation()}
                   className="rounded-md p-1.5 text-gray-400 hover:text-primary hover:bg-brand-soft transition-colors"

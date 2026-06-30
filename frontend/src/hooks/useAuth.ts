@@ -8,6 +8,9 @@ import {
   logoutUser,
   forgotPassword,
   resendVerificationEmail,
+  updateProfile,
+  uploadAvatar,
+  changePassword,
 } from '../services/auth.service';
 
 export const useLogin = () => {
@@ -53,3 +56,26 @@ export const useLogout = () => {
     onSuccess: () => { clearAuth(); },
   });
 };
+
+export const useUpdateProfile = () => {
+  const { user, setAuth } = useAuthStore();
+  return useMutation({
+    mutationFn: updateProfile,
+    onSuccess: (data) => {
+      if (user) setAuth({ ...user, name: data.name, avatarUrl: data.avatarUrl });
+    },
+  });
+};
+
+export const useUploadAvatar = () => {
+  const { user, setAuth } = useAuthStore();
+  return useMutation({
+    mutationFn: uploadAvatar,
+    onSuccess: (data) => {
+      if (user) setAuth({ ...user, avatarUrl: data.avatarUrl });
+    },
+  });
+};
+
+export const useChangePassword = () =>
+  useMutation({ mutationFn: changePassword });

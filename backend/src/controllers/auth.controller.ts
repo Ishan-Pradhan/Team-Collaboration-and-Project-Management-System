@@ -27,6 +27,7 @@ import {
 import { generateAccessAndRefereshTokens } from '../utils/token.utils.js';
 import type { Request, Response } from 'express';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
+import { uploadToCloudinary } from '../services/cloudinary.service.js';
 
 // REGISTER
 export const registerUser = asyncHandler(
@@ -272,6 +273,57 @@ export const changePassword = asyncHandler(
 
     return ok(res, null, 'Password changed successfully');
   },
+);
+
+// UPDATE PROFILE (name)
+export const updateProfile = asyncHandler(
+  async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user?.id;
+    if (!userId) throw new ApiError(401, 'Unauthorized');
+
+    const { name } = req.body as { name?: string };
+    if (!name || !name.trim()) throw new ApiError(400, 'Name is required');
+
+    const updated = await userRepository.update(userId, { name: name.trim() });
+    if (!updated) throw new ApiError(404, 'User not found');
+
+    return ok(res, {
+      id: updated.id,
+      name: updated.name,
+      email: updated.email,
+      avatarUrl: updated.avatarUrl,
+    }, 'Profile updated successfully');
+  }
+);
+
+// UPLOAD AVATAR
+export const uploadAvatar = asyncHandler(
+  async (req: AuthRequest, res: Response): Promise<Response> => {
+    const userId = req.user?.id;
+    if (!userId) throw new ApiError(401, 'Unauthorized');
+
+    const file = (req as any).file as Express.Multer.File | undefined;
+    if (!file) throw new ApiError(400, 'No image file provided');
+
+    if (!file.mimetype.startsWith('image/')) {
+      throw new ApiError(400, 'Only image files are allowed for avatars');
+    }
+
+    const uploaded = await uploadToCloudinary(file.buffer, {
+      folder: 'avatars',
+      resourceType: 'image',
+    });
+
+    const updated = await userRepository.update(userId, { avatarUrl: uploaded.url });
+    if (!updated) throw new ApiError(404, 'User not found');
+
+    return ok(res, {
+      id: updated.id,
+      name: updated.name,
+      email: updated.email,
+      avatarUrl: updated.avatarUrl,
+    }, 'Avatar updated successfully');
+  }
 );
 
 // FORGOT PASSWORD (PUBLIC)

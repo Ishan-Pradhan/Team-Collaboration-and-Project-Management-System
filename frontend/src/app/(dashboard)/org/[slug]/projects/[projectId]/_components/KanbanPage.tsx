@@ -1,13 +1,13 @@
 'use client';
 
-import { use, useState, useMemo, useEffect } from 'react';
+import { use, useState, useMemo, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { Archive, ArchiveRestore, ChevronDown, Download, Eye, File, FileText, Image as ImageIcon, Layout, List, Loader2, Paperclip, Plus, Settings, Trash2, Users, X } from 'lucide-react';
+import { Archive, ArchiveRestore, CalendarDays, ChevronDown, Download, ExternalLink, Eye, File, FileText, Image as ImageIcon, Layout, List, Loader2, Paperclip, Plus, Settings, Trash2, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { Task, KanbanColumn, TaskAttachment, Project } from '@/types/project.types';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { PRIORITY, DUE_STATUS, getDueStatus } from '@/constants/task.constants';
 import { KanbanSkeleton } from '@/components/shared/skeletons/KanbanSkeleton';
 import {
@@ -50,6 +50,7 @@ import { SortableColumn, KanbanCard } from './KanbanColumn';
 import { AddTaskModal } from './AddTaskModal';
 import { TaskDrawer } from './TaskDrawer';
 import ManageProjectMembersModal from '@/components/shared/ManageProjectMembersModal';
+import ProjectCalendarView from './ProjectCalendarView';
 
 type ActiveDrag =
   | { type: 'task'; task: Task }
@@ -69,6 +70,7 @@ function getMemberColor(name: string) {
 
 export default function KanbanPage({ params }: Props) {
   const { slug, projectId } = use(params);
+  const searchParams = useSearchParams();
 
   const { user: currentUser } = useAuthStore();
   const { data: project, isLoading: projLoading } = useProject(projectId);
@@ -101,8 +103,21 @@ export default function KanbanPage({ params }: Props) {
   const [newColumnName, setNewColumnName] = useState('');
   const [activeTab, setActiveTab] = useState('Board');
   const [mounted, setMounted] = useState(false);
+  const handledTaskId = useRef<string | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
+
+  // Deep-link: open drawer when ?taskId=xxx is in the URL
+  useEffect(() => {
+    const taskId = searchParams.get('taskId');
+    if (!taskId || !serverTasks || handledTaskId.current === taskId) return;
+    const task = serverTasks.find((t) => t.id === taskId);
+    if (task) {
+      handledTaskId.current = taskId;
+      setEditingTask(task);
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, [searchParams, serverTasks]);
 
   useEffect(() => {
     if (serverColumns && !activeDrag && !isMutating) setLocalColumns(serverColumns);
@@ -258,6 +273,7 @@ export default function KanbanPage({ params }: Props) {
   const tabs = [
     { name: 'Board', icon: Layout },
     { name: 'List', icon: List },
+    { name: 'Calendar', icon: CalendarDays },
     { name: 'Files', icon: Paperclip },
     { name: 'Settings', icon: Settings },
   ];
@@ -455,6 +471,12 @@ export default function KanbanPage({ params }: Props) {
             </div>
           </div>
         </div>
+      ) : activeTab === 'Calendar' ? (
+        <ProjectCalendarView
+          tasks={allTasks}
+          columns={localColumns}
+          onOpenTask={setEditingTask}
+        />
       ) : activeTab === 'Files' ? (
         <ProjectFilesView projectId={projectId} currentUserId={currentUser?.id ?? ''} isAdmin={isAdmin} />
       ) : (
@@ -629,6 +651,73 @@ function ProjectSettingsView({
   );
 }
 
+// ─── PDF Viewer (blob-URL approach) ──────────────────────────
+// Fetching the PDF as a blob and rendering via a local blob URL bypasses
+// Cloudinary's Content-Disposition: attachment header and any X-Frame-Options
+// restrictions, so the browser's native PDF viewer renders it inline.
+
+function PdfViewer({ src, height }: { src: string; height: string }) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(false);
+
+  useEffect(() => {
+    let objectUrl = '';
+    setLoading(true);
+    setErr(false);
+    fetch(src)
+      .then((r) => {
+        if (!r.ok) throw new Error('fetch failed');
+        return r.blob();
+      })
+      .then((blob) => {
+        objectUrl = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+        setBlobUrl(objectUrl);
+        setLoading(false);
+      })
+      .catch(() => { setErr(true); setLoading(false); });
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [src]);
+
+  if (loading) {
+    return (
+      <div
+        className="flex items-center justify-center rounded-xl bg-gray-900"
+        style={{ height }}
+      >
+        <Loader2 size={28} className="animate-spin text-white/30" />
+      </div>
+    );
+  }
+  if (err || !blobUrl) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center gap-3 rounded-xl bg-gray-900 text-gray-400"
+        style={{ height }}
+      >
+        <File size={40} className="opacity-25" />
+        <p className="text-sm">Could not load PDF preview</p>
+        <a
+          href={src}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 text-sm text-brand hover:underline"
+        >
+          <ExternalLink size={14} /> Open in new tab
+        </a>
+      </div>
+    );
+  }
+  return (
+    <iframe
+      src={blobUrl}
+      title="PDF preview"
+      className="w-full rounded-xl bg-white"
+      style={{ height }}
+    />
+  );
+}
+
 // ─── File Preview Modal ───────────────────────────────────────
 
 function FilePreviewModal({ file, onClose }: { file: TaskAttachment; onClose: () => void }) {
@@ -642,6 +731,17 @@ function FilePreviewModal({ file, onClose }: { file: TaskAttachment; onClose: ()
         <div className="mb-3 flex items-center justify-between gap-4">
           <p className="truncate text-sm font-medium text-white">{file.fileName}</p>
           <div className="flex shrink-0 items-center gap-2">
+            {isPdf && (
+              <a
+                href={file.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                title="Open in new tab"
+              >
+                <ExternalLink size={16} />
+              </a>
+            )}
             <a
               href={file.fileUrl}
               download={file.fileName}
@@ -665,12 +765,7 @@ function FilePreviewModal({ file, onClose }: { file: TaskAttachment; onClose: ()
             className="max-h-[82vh] w-full rounded-xl object-contain"
           />
         ) : isPdf ? (
-          <iframe
-            src={file.fileUrl}
-            title={file.fileName}
-            className="w-full rounded-xl"
-            style={{ height: '82vh' }}
-          />
+          <PdfViewer src={file.fileUrl} height="82vh" />
         ) : isVideo ? (
           <video
             src={file.fileUrl}

@@ -27,3 +27,21 @@ export async function forgotPassword(email: string): Promise<void> {
 export async function resendVerificationEmail(email: string): Promise<void> {
   await api.post('/auth/resend-verification-email', { email });
 }
+
+export async function updateProfile(data: { name: string }): Promise<{ id: string; name: string; email: string; avatarUrl: string | null }> {
+  const res = await api.patch<{ data: { id: string; name: string; email: string; avatarUrl: string | null } }>('/auth/profile', data);
+  return res.data.data;
+}
+
+export async function uploadAvatar(file: File): Promise<{ id: string; name: string; email: string; avatarUrl: string | null }> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await api.patch<{ data: { id: string; name: string; email: string; avatarUrl: string | null } }>('/auth/profile/avatar', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data.data;
+}
+
+export async function changePassword(data: { currentPassword: string; newPassword: string }): Promise<void> {
+  await api.post('/auth/change-password', data);
+}

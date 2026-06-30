@@ -7,13 +7,13 @@ import {
   registerSchema,
   resendVerificationEmailSchema,
   verifyEmailSchema,
-} from '../validations/auth.validation.js';
-import {
   forgotPasswordSchema,
   resetPasswordSchema,
   changePasswordSchema,
+  updateProfileSchema,
 } from '../validations/auth.validation.js';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
+import { uploadMiddleware } from '../middlewares/upload.middleware.js';
 import {
   registerUser,
   loginUser,
@@ -22,6 +22,8 @@ import {
   forgotPassword,
   resetPassword,
   changePassword,
+  updateProfile,
+  uploadAvatar,
 } from '../controllers/auth.controller.js';
 import {
   githubAuthCallback,
@@ -399,6 +401,50 @@ router
 router
   .route('/change-password')
   .post(verifyJWT, validate(changePasswordSchema), changePassword);
+
+/**
+ * @swagger
+ * /auth/profile:
+ *   patch:
+ *     tags: [Auth]
+ *     summary: Update profile name
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name]
+ *             properties:
+ *               name:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ * /auth/profile/avatar:
+ *   patch:
+ *     tags: [Auth]
+ *     summary: Upload a new avatar image
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Avatar updated successfully
+ */
+router.patch('/profile', verifyJWT, validate(updateProfileSchema), updateProfile);
+router.patch('/profile/avatar', verifyJWT, uploadMiddleware.single('file'), uploadAvatar);
 
 // ─────────────────────────────────────────────────────────────
 // OAUTH

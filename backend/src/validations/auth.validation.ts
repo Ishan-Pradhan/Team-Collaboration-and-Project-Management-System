@@ -51,6 +51,12 @@ export const changePasswordSchema = {
   }),
 };
 
+export const updateProfileSchema = {
+  body: z.object({
+    name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
+  }),
+};
+
 export const refreshAccessTokenSchema = {
   cookies: z.object({
     refreshToken: z.string().optional(),

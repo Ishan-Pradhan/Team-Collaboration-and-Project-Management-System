@@ -11,6 +11,12 @@ import { taskAttachmentRepository } from '../repositories/taskAttachment.reposit
 import { subtaskRepository } from '../repositories/subtask.repository.js';
 import { uploadToCloudinary, deleteFromCloudinary } from '../services/cloudinary.service.js';
 import { organizationMemberRepository } from '../repositories/organization.repository.js';
+function cloudinaryResourceType(mimeType: string): 'image' | 'video' | 'raw' {
+  if (mimeType.startsWith('image/') || mimeType === 'application/pdf') return 'image';
+  if (mimeType.startsWith('video/')) return 'video';
+  return 'raw';
+}
+
 
 // Helper — verify user is a project member
 const requireProjectMembership = async (projectId: string, userId: string) => {
@@ -511,7 +517,35 @@ export const deleteAttachment = asyncHandler(async (req: AuthRequest, res: Respo
   if (!admin && attachment.uploadedById !== user.id)
     throw new ApiError(403, 'You can only delete files you uploaded');
 
-  await deleteFromCloudinary(attachment.cloudinaryPublicId, 'image');
+  await deleteFromCloudinary(attachment.cloudinaryPublicId, cloudinaryResourceType(attachment.fileType));
   await taskAttachmentRepository.delete(attachmentId);
   return ok(res, null, 'Attachment deleted');
+});
+
+// GET /projects/:projectId/tasks/:taskId/attachments/:attachmentId/download
+// Proxies the file from Cloudinary so auth is enforced and the browser receives a proper
+// Content-Disposition: attachment header without a cross-origin redirect.
+export const downloadAttachment = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { projectId, taskId, attachmentId } = req.params as {
+    projectId: string; taskId: string; attachmentId: string;
+  };
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  await requireProjectMembership(projectId, user.id);
+
+  const attachment = await taskAttachmentRepository.findById(attachmentId);
+  if (!attachment || attachment.taskId !== taskId) throw new ApiError(404, 'Attachment not found');
+
+  const upstream = await fetch(attachment.fileUrl);
+  if (!upstream.ok) throw new ApiError(502, 'Could not retrieve file from storage');
+
+  const safeName = encodeURIComponent(attachment.fileName);
+  res.setHeader('Content-Disposition', `attachment; filename="${safeName}"; filename*=UTF-8''${safeName}`);
+  res.setHeader('Content-Type', attachment.fileType);
+  if (attachment.fileSize) res.setHeader('Content-Length', String(attachment.fileSize));
+  res.setHeader('Cache-Control', 'private, no-store');
+
+  const buffer = Buffer.from(await upstream.arrayBuffer());
+  res.end(buffer);
 });

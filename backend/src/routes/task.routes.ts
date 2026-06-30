@@ -25,6 +25,7 @@ import {
   listProjectFiles,
   uploadAttachment,
   deleteAttachment,
+  downloadAttachment,
 } from '../controllers/task.controller.js';
 import { z } from 'zod';
 
@@ -477,6 +478,13 @@ router.delete(
   verifyJWT,
   validate(attachmentDeleteSchema),
   deleteAttachment,
+);
+
+router.get(
+  '/projects/:projectId/tasks/:taskId/attachments/:attachmentId/download',
+  verifyJWT,
+  validate(attachmentDeleteSchema),
+  downloadAttachment,
 );
 
 // ─── Project Files (all files in a project) ───────────────────

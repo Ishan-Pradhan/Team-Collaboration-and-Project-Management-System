@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
+  CalendarDays,
   ChevronDown,
   FolderOpen,
   LayoutDashboard,
@@ -98,6 +99,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       name: 'Members',
       href: currentSlug ? `/org/${currentSlug}/members` : '#',
       icon: Users,
+      disabled: !currentSlug,
+    },
+    {
+      name: 'Calendar',
+      href: currentSlug ? `/org/${currentSlug}/calendar` : '#',
+      icon: CalendarDays,
       disabled: !currentSlug,
     },
   ];
@@ -227,7 +234,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Sidebar Footer */}
         <div className="border-t border-border-subtle p-3">
           <div className="flex items-center justify-between rounded-lg bg-surface-muted p-2.5">
-            <div className="flex items-center gap-2.5 min-w-0">
+            <Link href="/profile" className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-80 transition-opacity">
               {user?.avatarUrl ? (
                 <img
                   src={user.avatarUrl}
@@ -247,7 +254,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   {user?.email || 'user@example.com'}
                 </p>
               </div>
-            </div>
+            </Link>
             <button
               onClick={handleLogout}
               className="rounded p-1.5 text-text-secondary hover:bg-surface-hover hover:text-danger transition-colors"

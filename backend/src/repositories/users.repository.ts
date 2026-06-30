@@ -75,6 +75,12 @@ export const userRepository = {
     return await User.create(userData);
   },
 
+  update: async (id: string, data: Partial<Pick<Users, 'name' | 'avatarUrl'>>): Promise<UserInstance | null> => {
+    const user = await User.findByPk(id);
+    if (!user) return null;
+    return await user.update(data);
+  },
+
   getUsersStats: async () => {
     const totalUsers = await User.count();
     const blockedCount = await User.count({ where: { isActive: false } });

@@ -38,3 +38,14 @@ export const deleteFromCloudinary = async (
 ): Promise<void> => {
   await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
 };
+
+export const getCloudinaryDownloadUrl = (
+  publicId: string,
+  format: string,
+  resourceType: 'image' | 'video' | 'raw' = 'image',
+): string => {
+  return cloudinary.utils.private_download_url(publicId, format, {
+    resource_type: resourceType,
+    expires_at: Math.floor(Date.now() / 1000) + 300,
+  });
+};
