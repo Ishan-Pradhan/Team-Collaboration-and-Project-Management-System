@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   ChevronDown,
-  Folder,
   FolderOpen,
   LayoutDashboard,
   LogOut,
@@ -21,7 +20,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { useLogout } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
-// Helper to determine org avatar background color deterministically
+
 function getOrgColor(name: string): string {
   const colors = [
     '#22302a', // Forest green
@@ -38,8 +37,6 @@ function getOrgColor(name: string): string {
   return colors[Math.abs(hash) % colors.length];
 }
 
-import { useEffect } from 'react';
-
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
@@ -49,7 +46,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
 
 
@@ -66,19 +62,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const activeOrg = orgs?.find((o) => o.slug === currentSlug) || null;
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-
   // Sync workspace store with the URL's current slug
   useEffect(() => {
     if (activeOrg) {
       setCurrentOrg(activeOrg);
     }
   }, [activeOrg, setCurrentOrg]);
-
-  if (!mounted) return null;
 
   const handleOrgSwitch = (org: { slug: string }) => {
     setOrgDropdownOpen(false);
@@ -148,7 +137,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             className="flex w-full items-center justify-between rounded-lg border border-border-subtle bg-surface px-3 py-2 text-left hover:bg-surface-hover transition-colors"
           >
             <div className="flex items-center gap-2.5 min-w-0">
-              {mounted && activeOrg ? (
+              {activeOrg ? (
                 <>
                   <div
                     className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-xs font-semibold text-white"

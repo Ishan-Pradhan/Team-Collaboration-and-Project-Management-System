@@ -1,12 +1,13 @@
 'use client';
 
 import { toast } from 'sonner';
-import { Loader2, UserPlus, X } from 'lucide-react';
+import { Crown, Loader2, UserPlus, X } from 'lucide-react';
 import { parseApiError } from '@/lib/axios';
 import {
   useProjectMembers,
   useAddProjectMember,
   useRemoveProjectMember,
+  useUpdateProjectMemberRole,
 } from '@/hooks/useProject';
 import { useOrganizationMembers } from '@/hooks/useOrganization';
 
@@ -15,6 +16,7 @@ interface Props {
   organizationId: string;
   createdById: string;
   isOpen: boolean;
+  isOrgAdmin: boolean;
   onClose: () => void;
 }
 
@@ -23,6 +25,7 @@ export default function ManageProjectMembersModal({
   organizationId,
   createdById,
   isOpen,
+  isOrgAdmin,
   onClose,
 }: Props) {
   const { data: projectMembers, isLoading: projectMembersLoading } =
@@ -32,6 +35,7 @@ export default function ManageProjectMembersModal({
 
   const addMember = useAddProjectMember(projectId);
   const removeMember = useRemoveProjectMember(projectId);
+  const updateRole = useUpdateProjectMemberRole(projectId);
 
   if (!isOpen) return null;
 
@@ -52,6 +56,22 @@ export default function ManageProjectMembersModal({
     });
   };
 
+  const handleToggleRole = (userId: string, currentRole: 'PROJECT_MANAGER' | 'MEMBER', name: string) => {
+    const newRole = currentRole === 'PROJECT_MANAGER' ? 'MEMBER' : 'PROJECT_MANAGER';
+    updateRole.mutate(
+      { userId, role: newRole },
+      {
+        onSuccess: () =>
+          toast.success(
+            newRole === 'PROJECT_MANAGER'
+              ? `${name} is now a Project Manager`
+              : `${name} is now a regular member`
+          ),
+        onError: (err: unknown) => toast.error(parseApiError(err).message),
+      }
+    );
+  };
+
   const isLoading = projectMembersLoading || orgMembersLoading;
 
   return (
@@ -62,7 +82,7 @@ export default function ManageProjectMembersModal({
           <div>
             <h2 className="text-base font-semibold text-text-primary">Manage Project Members</h2>
             <p className="mt-0.5 text-xs text-text-secondary">
-              Add or remove members from this project.
+              Add or remove members. {isOrgAdmin && 'Assign the Project Manager role to members.'}
             </p>
           </div>
           <button
@@ -90,6 +110,7 @@ export default function ManageProjectMembersModal({
                     const name = member.user?.name ?? 'Unknown User';
                     const email = member.user?.email ?? '';
                     const isCreator = member.userId === createdById;
+                    const isPM = member.role === 'PROJECT_MANAGER';
 
                     return (
                       <li
@@ -101,10 +122,15 @@ export default function ManageProjectMembersModal({
                             {name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-text-primary leading-none">
+                            <p className="flex items-center gap-1.5 text-sm font-medium text-text-primary leading-none">
                               {name}
+                              {isPM && (
+                                <span className="inline-flex items-center gap-0.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                                  <Crown size={9} />PM
+                                </span>
+                              )}
                               {isCreator && (
-                                <span className="ml-2 rounded bg-surface-muted px-1.5 py-0.5 text-xs font-medium text-text-secondary">
+                                <span className="rounded bg-surface-muted px-1.5 py-0.5 text-xs font-medium text-text-secondary">
                                   Creator
                                 </span>
                               )}
@@ -112,16 +138,32 @@ export default function ManageProjectMembersModal({
                             <p className="mt-0.5 text-xs text-text-secondary">{email}</p>
                           </div>
                         </div>
-                        {!isCreator && (
-                          <button
-                            onClick={() => handleRemove(member.userId, name)}
-                            disabled={removeMember.isPending}
-                            className="rounded p-1.5 text-text-secondary hover:bg-danger-soft/20 hover:text-danger transition-colors disabled:opacity-50"
-                            title="Remove from project"
-                          >
-                            <X size={14} />
-                          </button>
-                        )}
+                        <div className="flex items-center gap-1">
+                          {isOrgAdmin && (
+                            <button
+                              onClick={() => handleToggleRole(member.userId, member.role, name)}
+                              disabled={updateRole.isPending}
+                              title={isPM ? 'Remove Project Manager role' : 'Make Project Manager'}
+                              className={`rounded p-1.5 text-xs transition-colors disabled:opacity-50 ${
+                                isPM
+                                  ? 'text-amber-600 hover:bg-amber-50'
+                                  : 'text-text-muted hover:bg-surface-muted hover:text-amber-600'
+                              }`}
+                            >
+                              <Crown size={14} />
+                            </button>
+                          )}
+                          {!isCreator && (
+                            <button
+                              onClick={() => handleRemove(member.userId, name)}
+                              disabled={removeMember.isPending}
+                              className="rounded p-1.5 text-text-secondary hover:bg-danger-soft/20 hover:text-danger transition-colors disabled:opacity-50"
+                              title="Remove from project"
+                            >
+                              <X size={14} />
+                            </button>
+                          )}
+                        </div>
                       </li>
                     );
                   })}

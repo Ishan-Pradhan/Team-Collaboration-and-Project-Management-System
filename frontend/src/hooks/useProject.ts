@@ -6,6 +6,8 @@ import {
   createProject,
   updateProject,
   archiveProject,
+  unarchiveProject,
+  deleteProject,
   getProjectMembers,
   getProjectColumns,
   createColumn,
@@ -19,6 +21,7 @@ import {
   deleteTask,
   addProjectMember,
   removeProjectMember,
+  updateProjectMemberRole,
   getTaskComments,
   createTaskComment,
   deleteTaskComment,
@@ -74,6 +77,27 @@ export const useArchiveProject = (projectId: string, organizationId: string) => 
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['organizations', organizationId, 'projects'] });
       qc.invalidateQueries({ queryKey: ['projects', projectId] });
+    },
+  });
+};
+
+export const useUnarchiveProject = (projectId: string, organizationId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => unarchiveProject(projectId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['organizations', organizationId, 'projects'] });
+      qc.invalidateQueries({ queryKey: ['projects', projectId] });
+    },
+  });
+};
+
+export const useDeleteProject = (projectId: string, organizationId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => deleteProject(projectId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['organizations', organizationId, 'projects'] });
     },
   });
 };
@@ -199,6 +223,15 @@ export const useRemoveProjectMember = (projectId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (userId: string) => removeProjectMember(projectId, userId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['projects', projectId, 'members'] }),
+  });
+};
+
+export const useUpdateProjectMemberRole = (projectId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: 'PROJECT_MANAGER' | 'MEMBER' }) =>
+      updateProjectMemberRole(projectId, userId, role),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['projects', projectId, 'members'] }),
   });
 };

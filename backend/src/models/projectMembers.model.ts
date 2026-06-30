@@ -18,6 +18,11 @@ export const ProjectMember = sequelize.define<ProjectMemberInstance>(
       type: DataTypes.UUID,
       allowNull: false,
     },
+    role: {
+      type: DataTypes.ENUM('PROJECT_MANAGER', 'MEMBER'),
+      defaultValue: 'MEMBER',
+      allowNull: false,
+    },
     addedAt: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,

@@ -20,8 +20,8 @@ export const projectRepository = {
     });
   },
 
-  findByOrgForUser: async (orgId: string, userId: string): Promise<ProjectInstance[]> => {
-    return await Project.findAll({
+  findByOrgForUser: async (orgId: string, userId: string): Promise<(ProjectInstance & { myRole: 'PROJECT_MANAGER' | 'MEMBER' })[]> => {
+    const results = await Project.findAll({
       where: { organizationId: orgId },
       include: [
         {
@@ -29,8 +29,15 @@ export const projectRepository = {
           as: 'members',
           where: { userId },
           required: true,
+          attributes: ['role'],
         },
       ],
+    });
+
+    return results.map((project) => {
+      const members = (project as any).members as Array<{ role: string }> | undefined;
+      const myRole = (members?.[0]?.role ?? 'MEMBER') as 'PROJECT_MANAGER' | 'MEMBER';
+      return Object.assign(project, { myRole });
     });
   },
 
@@ -49,14 +56,43 @@ export const projectRepository = {
     return await project.update({ status: 'ARCHIVED' });
   },
 
-  addMember: async (projectId: string, userId: string): Promise<ProjectMemberInstance> => {
-    return await ProjectMember.create({ projectId, userId });
+  unarchive: async (id: string): Promise<ProjectInstance | null> => {
+    const project = await Project.findByPk(id);
+    if (!project) return null;
+    return await project.update({ status: 'ACTIVE' });
+  },
+
+  delete: async (id: string): Promise<boolean> => {
+    const project = await Project.findByPk(id);
+    if (!project) return false;
+    await project.destroy();
+    return true;
+  },
+
+  addMember: async (
+    projectId: string,
+    userId: string,
+    role: 'PROJECT_MANAGER' | 'MEMBER' = 'MEMBER'
+  ): Promise<ProjectMemberInstance> => {
+    return await ProjectMember.create({ projectId, userId, role });
   },
 
   removeMember: async (projectId: string, userId: string): Promise<number> => {
     return await ProjectMember.destroy({
       where: { projectId, userId },
     });
+  },
+
+  updateMemberRole: async (
+    projectId: string,
+    userId: string,
+    role: 'PROJECT_MANAGER' | 'MEMBER'
+  ): Promise<number> => {
+    const [count] = await ProjectMember.update(
+      { role },
+      { where: { projectId, userId } }
+    );
+    return count;
   },
 
   findMembers: async (projectId: string): Promise<ProjectMemberInstance[]> => {
@@ -79,5 +115,12 @@ export const projectRepository = {
     return await ProjectMember.findOne({
       where: { projectId, userId },
     });
+  },
+
+  isProjectManager: async (projectId: string, userId: string): Promise<boolean> => {
+    const membership = await ProjectMember.findOne({
+      where: { projectId, userId, role: 'PROJECT_MANAGER' },
+    });
+    return !!membership;
   },
 };

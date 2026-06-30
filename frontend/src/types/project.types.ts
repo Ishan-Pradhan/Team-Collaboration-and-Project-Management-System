@@ -1,6 +1,7 @@
 // ─── Project ───────────────────────────────────────────────────
 
 export type ProjectStatus = 'ACTIVE' | 'ARCHIVED';
+export type ProjectMemberRole = 'PROJECT_MANAGER' | 'MEMBER';
 
 export interface Project {
   id: string;
@@ -11,6 +12,7 @@ export interface Project {
   createdById: string;
   createdAt: string;
   updatedAt: string;
+  myRole?: ProjectMemberRole | null;
 }
 
 // ─── Project Member ────────────────────────────────────────────
@@ -19,6 +21,7 @@ export interface ProjectMember {
   id: string;
   projectId: string;
   userId: string;
+  role: ProjectMemberRole;
   createdAt: string;
   user?: {
     id: string;

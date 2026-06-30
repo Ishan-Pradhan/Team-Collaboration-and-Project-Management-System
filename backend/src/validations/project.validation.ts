@@ -48,3 +48,13 @@ export const removeProjectMemberSchema = {
     userId: z.string().uuid('Invalid user ID'),
   }),
 };
+
+export const updateProjectMemberRoleSchema = {
+  params: z.object({
+    projectId: z.string().uuid('Invalid project ID'),
+    userId: z.string().uuid('Invalid user ID'),
+  }),
+  body: z.object({
+    role: z.enum(['PROJECT_MANAGER', 'MEMBER']),
+  }),
+};

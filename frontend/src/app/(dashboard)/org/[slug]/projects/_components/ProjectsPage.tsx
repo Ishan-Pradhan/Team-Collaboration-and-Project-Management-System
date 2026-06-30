@@ -3,11 +3,11 @@
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useOrganizationBySlug, useOrganizationMembers } from '@/hooks/useOrganization';
-import { useOrgProjects, useCreateProject } from '@/hooks/useProject';
+import { useOrgProjects, useCreateProject, useArchiveProject, useUnarchiveProject, useDeleteProject } from '@/hooks/useProject';
 import { useAuthStore } from '@/store/auth.store';
 import { parseApiError } from '@/lib/axios';
 import { toast } from 'sonner';
-import { Archive, FolderPlus, Loader2, Plus, Users, X } from 'lucide-react';
+import { Archive, ArchiveRestore, FolderPlus, Loader2, Plus, Trash2, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -19,11 +19,6 @@ import ManageProjectMembersModal from '@/components/shared/ManageProjectMembersM
 interface Props {
   params: Promise<{ slug: string }>;
 }
-
-const statusColors: Record<Project['status'], string> = {
-  ACTIVE: 'bg-success/10 text-success border-success/20',
-  ARCHIVED: 'bg-surface-muted text-text-muted border-border-subtle',
-};
 
 const PROJECT_COLORS = ['#22302a', '#d4a84f', '#6f8c78', '#a86c58', '#4b7f52', '#c38a2d'];
 
@@ -39,12 +34,14 @@ function getProjectColor(name: string) {
 
 function ProjectCard({
   project,
+  organizationId,
   isAdmin,
   onNavigate,
   onManageMembers,
   archived = false,
 }: {
   project: Project;
+  organizationId: string;
   isAdmin: boolean;
   onNavigate: () => void;
   onManageMembers: () => void;
@@ -52,15 +49,44 @@ function ProjectCard({
 }) {
   const color = getProjectColor(project.name);
   const initials = getProjectInitials(project.name);
+  const archiveMutation = useArchiveProject(project.id, organizationId);
+  const unarchiveMutation = useUnarchiveProject(project.id, organizationId);
+  const deleteMutation = useDeleteProject(project.id, organizationId);
+
+  const handleArchive = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`Archive "${project.name}"? It will be hidden from active projects.`)) return;
+    archiveMutation.mutate(undefined, {
+      onSuccess: () => toast.success(`"${project.name}" archived`),
+      onError: (err: unknown) => toast.error(parseApiError(err).message),
+    });
+  };
+
+  const handleUnarchive = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    unarchiveMutation.mutate(undefined, {
+      onSuccess: () => toast.success(`"${project.name}" restored`),
+      onError: (err: unknown) => toast.error(parseApiError(err).message),
+    });
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`Permanently delete "${project.name}"? This cannot be undone.`)) return;
+    deleteMutation.mutate(undefined, {
+      onSuccess: () => toast.success(`"${project.name}" deleted`),
+      onError: (err: unknown) => toast.error(parseApiError(err).message),
+    });
+  };
 
   return (
     <div
       className={cn(
-        'group relative w-full rounded-xl border bg-white p-5 shadow-card transition-all duration-150 hover:shadow-md hover:border-border',
+        'group relative w-full rounded-xl border bg-white shadow-card transition-all duration-150 hover:shadow-md hover:border-border',
         archived ? 'border-border-subtle opacity-60' : 'border-border-subtle'
       )}
     >
-      <button onClick={onNavigate} className="flex w-full items-start gap-3 text-left">
+      <button onClick={onNavigate} className="flex w-full items-start gap-3 p-5 text-left">
         <div
           className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white"
           style={{ backgroundColor: color }}
@@ -77,21 +103,59 @@ function ProjectCard({
         </div>
       </button>
 
-      <div className="mt-4 flex items-center justify-between">
-        <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide', statusColors[project.status])}>
-          {project.status}
+      <div className="flex items-center justify-between border-t border-border-subtle px-5 py-2.5">
+        <span className="text-[10px] text-text-muted">
+          {new Date(project.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {isAdmin && !archived && (
             <button
               onClick={(e) => { e.stopPropagation(); onManageMembers(); }}
               className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-text-secondary hover:bg-surface-muted transition-colors"
               title="Manage members"
             >
-              <Users size={12} />Members
+              <Users size={12} /> Members
             </button>
           )}
-          <span className="text-[10px] text-text-muted">{new Date(project.createdAt).toLocaleDateString()}</span>
+          {isAdmin && !archived && (
+            <button
+              onClick={handleArchive}
+              disabled={archiveMutation.isPending}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-text-muted hover:bg-danger-soft hover:text-danger transition-colors disabled:opacity-50"
+              title="Archive project"
+            >
+              {archiveMutation.isPending
+                ? <Loader2 size={12} className="animate-spin" />
+                : <Archive size={12} />}
+              Archive
+            </button>
+          )}
+          {isAdmin && archived && (
+            <button
+              onClick={handleUnarchive}
+              disabled={unarchiveMutation.isPending}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-text-muted hover:bg-success-soft hover:text-success transition-colors disabled:opacity-50"
+              title="Restore project"
+            >
+              {unarchiveMutation.isPending
+                ? <Loader2 size={12} className="animate-spin" />
+                : <ArchiveRestore size={12} />}
+              Restore
+            </button>
+          )}
+          {isAdmin && archived && (
+            <button
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-text-muted hover:bg-danger-soft hover:text-danger transition-colors disabled:opacity-50"
+              title="Delete project permanently"
+            >
+              {deleteMutation.isPending
+                ? <Loader2 size={12} className="animate-spin" />
+                : <Trash2 size={12} />}
+              Delete
+            </button>
+          )}
         </div>
       </div>
 
@@ -174,7 +238,7 @@ export default function ProjectsPage({ params }: Props) {
           </div>
           <h2 className="text-base font-semibold text-text-primary">No projects yet</h2>
           <p className="mt-1.5 max-w-xs text-sm text-text-secondary">
-            Create your first project to start organizing your team's work.
+            Create your first project to start organizing your team&apos;s work.
           </p>
           <Button className="mt-6" onClick={() => setShowModal(true)}>
             <Plus size={16} className="mr-1.5" />Create Project
@@ -186,6 +250,7 @@ export default function ProjectsPage({ params }: Props) {
             <ProjectCard
               key={project.id}
               project={project}
+              organizationId={org.id}
               isAdmin={isAdmin}
               onNavigate={() => router.push(`/org/${slug}/projects/${project.id}`)}
               onManageMembers={() => setManagingProject(project)}
@@ -197,13 +262,14 @@ export default function ProjectsPage({ params }: Props) {
       {archivedProjects.length > 0 && (
         <div className="space-y-3">
           <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-text-muted">
-            <Archive size={14} />Archived
+            <Archive size={14} /> Archived
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {archivedProjects.map((project) => (
               <ProjectCard
                 key={project.id}
                 project={project}
+                organizationId={org.id}
                 isAdmin={isAdmin}
                 onNavigate={() => router.push(`/org/${slug}/projects/${project.id}`)}
                 onManageMembers={() => setManagingProject(project)}
@@ -215,7 +281,7 @@ export default function ProjectsPage({ params }: Props) {
       )}
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-md rounded-xl border border-border bg-white p-6 shadow-modal">
             <button
               onClick={() => setShowModal(false)}
@@ -225,7 +291,7 @@ export default function ProjectsPage({ params }: Props) {
             </button>
 
             <h2 className="flex items-center gap-2 text-base font-semibold text-text-primary">
-              <FolderPlus size={18} className="text-brand" />New Project
+              <FolderPlus size={18} className="text-brand" /> New Project
             </h2>
             <p className="mt-1 text-xs text-text-secondary">Create a project to manage tasks and collaborate.</p>
 
@@ -265,7 +331,9 @@ export default function ProjectsPage({ params }: Props) {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={createProject.isPending || !name.trim()}>
-                  {createProject.isPending ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" />Creating...</> : 'Create Project'}
+                  {createProject.isPending
+                    ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" />Creating...</>
+                    : 'Create Project'}
                 </Button>
               </div>
             </form>
@@ -279,6 +347,7 @@ export default function ProjectsPage({ params }: Props) {
           organizationId={org.id}
           createdById={managingProject.createdById}
           isOpen={!!managingProject}
+          isOrgAdmin={isAdmin}
           onClose={() => setManagingProject(null)}
         />
       )}

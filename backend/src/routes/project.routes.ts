@@ -7,9 +7,12 @@ import {
   getProject,
   updateProject,
   archiveProject,
+  unarchiveProject,
+  deleteProject,
   addProjectMember,
   removeProjectMember,
   listProjectMembers,
+  updateProjectMemberRole,
 } from '../controllers/project.controller.js';
 import {
   createProjectSchema,
@@ -18,6 +21,7 @@ import {
   projectParamSchema,
   addProjectMemberSchema,
   removeProjectMemberSchema,
+  updateProjectMemberRoleSchema,
 } from '../validations/project.validation.js';
 
 const router = Router();
@@ -28,7 +32,7 @@ const router = Router();
  *   post:
  *     tags: [Projects]
  *     summary: Create a new project
- *     description: Creates a project and auto-assigns the creator as a member.
+ *     description: Creates a project. Restricted to organization owners and admins. Creator is auto-assigned as Project Manager.
  *     security:
  *       - cookieAuth: []
  *     parameters:
@@ -55,14 +59,12 @@ const router = Router();
  *     responses:
  *       201:
  *         description: Project created successfully
- *       400:
- *         description: Validation error
  *       403:
- *         description: Not an organization member
+ *         description: Not an organization admin/owner
  *   get:
  *     tags: [Projects]
  *     summary: List projects in organization
- *     description: Retrieve all active projects within a specific organization.
+ *     description: Admins/owners see all projects. Members see only their projects (with myRole field).
  *     security:
  *       - cookieAuth: []
  *     parameters:
@@ -88,7 +90,7 @@ router.post(
 router.get(
   '/organizations/:organizationId/projects',
   verifyJWT,
-  validate(orgParamSchema), // params matches organizationId validation
+  validate(orgParamSchema),
   listProjects
 );
 
@@ -117,6 +119,7 @@ router.get(
  *   put:
  *     tags: [Projects]
  *     summary: Update project
+ *     description: Allowed for org admins/owners and project managers.
  *     security:
  *       - cookieAuth: []
  *     parameters:
@@ -154,6 +157,7 @@ router
  *   patch:
  *     tags: [Projects]
  *     summary: Archive project
+ *     description: Allowed for org admins/owners and project managers.
  *     security:
  *       - cookieAuth: []
  *     parameters:
@@ -176,6 +180,59 @@ router.patch(
 
 /**
  * @swagger
+ * /projects/{projectId}/unarchive:
+ *   patch:
+ *     tags: [Projects]
+ *     summary: Restore an archived project
+ *     description: Allowed for org admins/owners and project managers.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Project restored successfully
+ * /projects/{projectId}:
+ *   delete:
+ *     tags: [Projects]
+ *     summary: Permanently delete a project
+ *     description: Irreversible. Restricted to org owners and admins. Cascades to all tasks, columns, members, and files.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Project deleted permanently
+ *       403:
+ *         description: Not an organization admin/owner
+ */
+router.patch(
+  '/projects/:projectId/unarchive',
+  verifyJWT,
+  validate(projectParamSchema),
+  unarchiveProject
+);
+
+router.delete(
+  '/projects/:projectId',
+  verifyJWT,
+  validate(projectParamSchema),
+  deleteProject
+);
+
+/**
+ * @swagger
  * /projects/{projectId}/members:
  *   get:
  *     tags: [Projects]
@@ -191,10 +248,11 @@ router.patch(
  *           format: uuid
  *     responses:
  *       200:
- *         description: Members retrieved
+ *         description: Members retrieved (includes role field)
  *   post:
  *     tags: [Projects]
  *     summary: Add member to project
+ *     description: Allowed for org admins/owners and project managers.
  *     security:
  *       - cookieAuth: []
  *     parameters:
@@ -230,6 +288,7 @@ router
  *   delete:
  *     tags: [Projects]
  *     summary: Remove member from project
+ *     description: Allowed for org admins/owners, project managers, and the member themselves.
  *     security:
  *       - cookieAuth: []
  *     parameters:
@@ -254,6 +313,52 @@ router.delete(
   verifyJWT,
   validate(removeProjectMemberSchema),
   removeProjectMember
+);
+
+/**
+ * @swagger
+ * /projects/{projectId}/members/{userId}/role:
+ *   patch:
+ *     tags: [Projects]
+ *     summary: Update a member's project role
+ *     description: Org owners and admins can promote/demote a member to/from Project Manager.
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: projectId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [role]
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 enum: [PROJECT_MANAGER, MEMBER]
+ *     responses:
+ *       200:
+ *         description: Role updated successfully
+ *       403:
+ *         description: Not an organization admin/owner
+ */
+router.patch(
+  '/projects/:projectId/members/:userId/role',
+  verifyJWT,
+  validate(updateProjectMemberRoleSchema),
+  updateProjectMemberRole
 );
 
 export default router;

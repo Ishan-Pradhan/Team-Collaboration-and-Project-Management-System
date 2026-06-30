@@ -13,6 +13,7 @@ export interface Projects {
   updatedAt?: Date;
   organization?: OrganizationInstance;
   creator?: UserInstance;
+  myRole?: 'PROJECT_MANAGER' | 'MEMBER' | null;
 }
 
 export type ProjectCreationAttributes = Optional<
@@ -27,6 +28,7 @@ export interface ProjectMembers {
   id: string;
   projectId: string;
   userId: string;
+  role: 'PROJECT_MANAGER' | 'MEMBER';
   addedAt?: Date;
 }
 

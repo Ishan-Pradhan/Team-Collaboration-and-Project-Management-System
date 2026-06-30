@@ -2,11 +2,12 @@
 
 import { use, useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
-import { ChevronDown, Download, Eye, File, FileText, Image as ImageIcon, Layout, List, Loader2, Paperclip, Plus, Settings, Users, X } from 'lucide-react';
+import { Archive, ArchiveRestore, ChevronDown, Download, Eye, File, FileText, Image as ImageIcon, Layout, List, Loader2, Paperclip, Plus, Settings, Trash2, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { Task, KanbanColumn, TaskAttachment } from '@/types/project.types';
+import type { Task, KanbanColumn, TaskAttachment, Project } from '@/types/project.types';
+import { useRouter } from 'next/navigation';
 import { PRIORITY, DUE_STATUS, getDueStatus } from '@/constants/task.constants';
 import { KanbanSkeleton } from '@/components/shared/skeletons/KanbanSkeleton';
 import {
@@ -19,6 +20,9 @@ import {
   useMoveTask,
   useProjectMembers,
   useProjectFiles,
+  useArchiveProject,
+  useUnarchiveProject,
+  useDeleteProject,
 } from '@/hooks/useProject';
 import { useOrganizationBySlug, useOrganizationMembers } from '@/hooks/useOrganization';
 import { useAuthStore } from '@/store/auth.store';
@@ -75,7 +79,9 @@ export default function KanbanPage({ params }: Props) {
   const { data: orgMembers } = useOrganizationMembers(org?.id ?? '');
 
   const currentMembership = orgMembers?.find((m) => m.userId === currentUser?.id);
-  const isAdmin = org?.ownerId === currentUser?.id || currentMembership?.role === 'ORG_ADMIN';
+  const myProjectMembership = projectMembers?.find((m) => m.userId === currentUser?.id);
+  const isOrgAdmin = org?.ownerId === currentUser?.id || currentMembership?.role === 'ORG_ADMIN';
+  const isAdmin = isOrgAdmin || myProjectMembership?.role === 'PROJECT_MANAGER';
 
   const moveTask = useMoveTask(projectId);
   const createColumn = useCreateColumn(projectId);
@@ -452,9 +458,7 @@ export default function KanbanPage({ params }: Props) {
       ) : activeTab === 'Files' ? (
         <ProjectFilesView projectId={projectId} currentUserId={currentUser?.id ?? ''} isAdmin={isAdmin} />
       ) : (
-        <div className="flex-1 flex items-center justify-center text-sm text-gray-400">
-          Settings coming soon.
-        </div>
+        <ProjectSettingsView project={project} slug={slug} isAdmin={isAdmin} isOrgAdmin={isOrgAdmin} />
       )}
 
       {isAdmin && addingTaskColumnId && serverColumns && (
@@ -480,9 +484,147 @@ export default function KanbanPage({ params }: Props) {
           organizationId={project.organizationId}
           createdById={project.createdById}
           isOpen={showMembersModal}
+          isOrgAdmin={isOrgAdmin}
           onClose={() => setShowMembersModal(false)}
         />
       )}
+    </div>
+  );
+}
+
+// ─── Project Settings View ────────────────────────────────────
+
+function ProjectSettingsView({
+  project,
+  slug,
+  isAdmin,
+  isOrgAdmin,
+}: {
+  project: Project;
+  slug: string;
+  isAdmin: boolean;
+  isOrgAdmin: boolean;
+}) {
+  const router = useRouter();
+  const archiveMutation = useArchiveProject(project.id, project.organizationId);
+  const unarchiveMutation = useUnarchiveProject(project.id, project.organizationId);
+  const deleteMutation = useDeleteProject(project.id, project.organizationId);
+
+  const handleArchive = () => {
+    if (!confirm(`Archive "${project.name}"? It will be hidden from active projects and no new tasks can be added.`)) return;
+    archiveMutation.mutate(undefined, {
+      onSuccess: () => {
+        toast.success(`"${project.name}" has been archived`);
+        router.push(`/org/${slug}/projects`);
+      },
+      onError: () => toast.error('Failed to archive project'),
+    });
+  };
+
+  const handleUnarchive = () => {
+    unarchiveMutation.mutate(undefined, {
+      onSuccess: () => toast.success(`"${project.name}" is now active`),
+      onError: () => toast.error('Failed to restore project'),
+    });
+  };
+
+  const handleDelete = () => {
+    if (!confirm(`Permanently delete "${project.name}"? This cannot be undone — all tasks, columns, and files will be lost.`)) return;
+    deleteMutation.mutate(undefined, {
+      onSuccess: () => {
+        toast.success(`"${project.name}" has been deleted`);
+        router.push(`/org/${slug}/projects`);
+      },
+      onError: () => toast.error('Failed to delete project'),
+    });
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto p-8">
+      <div className="mx-auto max-w-xl space-y-6">
+
+        {/* Project info */}
+        <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-card">
+          <h2 className="text-sm font-semibold text-gray-900 mb-4">Project Info</h2>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Name</span>
+              <span className="font-medium text-gray-800">{project.name}</span>
+            </div>
+            {project.description && (
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-500 shrink-0">Description</span>
+                <span className="text-gray-700 text-right">{project.description}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-gray-500">Status</span>
+              <span className={cn(
+                'rounded-full px-2 py-0.5 text-[11px] font-semibold',
+                project.status === 'ACTIVE' ? 'bg-success-soft text-success' : 'bg-surface-muted text-text-muted'
+              )}>
+                {project.status}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Created</span>
+              <span className="font-medium text-gray-800">
+                {new Date(project.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Danger zone */}
+        {isAdmin && (
+          <div className="rounded-xl border border-danger/20 bg-danger-soft/30 p-6 space-y-3">
+            <div>
+              <h2 className="text-sm font-semibold text-danger mb-1">Danger Zone</h2>
+              <p className="text-xs text-gray-500">
+                {project.status === 'ACTIVE'
+                  ? 'Archiving hides the project from active view. All data is preserved and can be restored.'
+                  : 'This project is archived. You can restore it to active, or delete it permanently.'}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {project.status === 'ACTIVE' && (
+                <button
+                  onClick={handleArchive}
+                  disabled={archiveMutation.isPending}
+                  className="flex items-center gap-2 rounded-lg border border-danger/30 bg-white px-4 py-2 text-sm font-medium text-danger hover:bg-danger-soft transition-colors disabled:opacity-50"
+                >
+                  {archiveMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Archive size={14} />}
+                  Archive project
+                </button>
+              )}
+              {project.status === 'ARCHIVED' && (
+                <button
+                  onClick={handleUnarchive}
+                  disabled={unarchiveMutation.isPending}
+                  className="flex items-center gap-2 rounded-lg border border-success/30 bg-white px-4 py-2 text-sm font-medium text-success hover:bg-success-soft transition-colors disabled:opacity-50"
+                >
+                  {unarchiveMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <ArchiveRestore size={14} />}
+                  Restore project
+                </button>
+              )}
+              {isOrgAdmin && (
+                <button
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                  className="flex items-center gap-2 rounded-lg border border-danger/30 bg-white px-4 py-2 text-sm font-medium text-danger hover:bg-danger-soft transition-colors disabled:opacity-50"
+                >
+                  {deleteMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                  Delete permanently
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!isAdmin && (
+          <p className="text-center text-sm text-gray-400">Only admins can modify project settings.</p>
+        )}
+      </div>
     </div>
   );
 }

@@ -49,6 +49,15 @@ export async function archiveProject(projectId: string): Promise<Project> {
   return res.data.data;
 }
 
+export async function unarchiveProject(projectId: string): Promise<Project> {
+  const res = await api.patch<ProjectResponse>(`/projects/${projectId}/unarchive`);
+  return res.data.data;
+}
+
+export async function deleteProject(projectId: string): Promise<void> {
+  await api.delete(`/projects/${projectId}`);
+}
+
 export async function getProjectMembers(projectId: string) {
   const res = await api.get<ProjectMembersResponse>(`/projects/${projectId}/members`);
   return res.data.data;
@@ -154,6 +163,14 @@ export async function addProjectMember(projectId: string, userId: string) {
 
 export async function removeProjectMember(projectId: string, userId: string): Promise<void> {
   await api.delete(`/projects/${projectId}/members/${userId}`);
+}
+
+export async function updateProjectMemberRole(
+  projectId: string,
+  userId: string,
+  role: 'PROJECT_MANAGER' | 'MEMBER',
+): Promise<void> {
+  await api.patch(`/projects/${projectId}/members/${userId}/role`, { role });
 }
 
 // ─── Comments ──────────────────────────────────────────────────
