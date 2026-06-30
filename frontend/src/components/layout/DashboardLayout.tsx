@@ -239,9 +239,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="border-t border-border-subtle p-3">
           <div className="flex items-center justify-between rounded-lg bg-surface-muted p-2.5">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary text-white font-medium text-sm">
-                {user?.name?.charAt(0).toUpperCase() || 'U'}
-              </div>
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={user.name}
+                  className="h-8 w-8 flex-shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary text-white font-medium text-sm">
+                  {user?.name?.charAt(0).toUpperCase() || 'U'}
+                </div>
+              )}
               <div className="min-w-0">
                 <p className="truncate text-xs font-semibold text-text-primary">
                   {user?.name || 'User'}

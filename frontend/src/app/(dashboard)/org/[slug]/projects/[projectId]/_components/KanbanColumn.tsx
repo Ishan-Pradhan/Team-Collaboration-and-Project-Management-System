@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Calendar, GripVertical, MoreHorizontal, Pencil, Plus, Trash2, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Task, KanbanColumn } from '@/types/project.types';
-import { PRIORITY } from '@/constants/task.constants';
+import { PRIORITY, DUE_STATUS, getDueStatus } from '@/constants/task.constants';
 import { useUpdateColumn } from '@/hooks/useProject';
 
 import {
@@ -26,11 +26,13 @@ function getMemberColor(name: string) {
 // ─── KanbanCard ───────────────────────────────────────────────
 export function KanbanCard({
   task,
+  columnName,
   isAdmin = true,
   onEdit,
   overlay = false,
 }: {
   task: Task;
+  columnName?: string;
   isAdmin?: boolean;
   onEdit?: () => void;
   overlay?: boolean;
@@ -42,7 +44,7 @@ export function KanbanCard({
   });
 
   const p = PRIORITY[task.priority];
-  const overdue = task.dueDate && !overlay && new Date(task.dueDate) < new Date();
+  const dueStatus = overlay ? null : getDueStatus(task.dueDate, columnName);
 
   return (
     <div
@@ -101,9 +103,14 @@ export function KanbanCard({
 
         <div className="flex items-center gap-1.5">
           {task.dueDate && (
-            <span className={cn('flex items-center gap-1 text-[11px]', overdue ? 'text-red-500 font-medium' : 'text-gray-400')}>
+            <span className="flex items-center gap-1 text-[11px] text-gray-400">
               <Calendar size={10} />
               {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </span>
+          )}
+          {dueStatus && (
+            <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-semibold', DUE_STATUS[dueStatus].chip)}>
+              {DUE_STATUS[dueStatus].label}
             </span>
           )}
           <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-semibold', p.chip)}>{p.label}</span>
@@ -116,11 +123,13 @@ export function KanbanCard({
 // ─── ColumnTaskArea ───────────────────────────────────────────
 function ColumnTaskArea({
   columnId,
+  columnName,
   tasks,
   isAdmin,
   onEditTask,
 }: {
   columnId: string;
+  columnName: string;
   tasks: Task[];
   isAdmin: boolean;
   onEditTask: (t: Task) => void;
@@ -141,7 +150,7 @@ function ColumnTaskArea({
         )}
       >
         {tasks.map((task) => (
-          <KanbanCard key={task.id} task={task} isAdmin={isAdmin} onEdit={() => onEditTask(task)} />
+          <KanbanCard key={task.id} task={task} columnName={columnName} isAdmin={isAdmin} onEdit={() => onEditTask(task)} />
         ))}
       </div>
     </SortableContext>
@@ -272,14 +281,14 @@ function KanbanColumnInner({
         )}
       </div>
 
-      <ColumnTaskArea columnId={column.id} tasks={tasks} isAdmin={isAdmin} onEditTask={onEditTask} />
+      <ColumnTaskArea columnId={column.id} columnName={column.name} tasks={tasks} isAdmin={isAdmin} onEditTask={onEditTask} />
 
       {isAdmin && (
         <button
           onClick={() => onAddTask(column.id)}
           className="mx-2 mb-2 flex items-center gap-2 rounded-lg px-2 py-2 text-[13px] text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
         >
-          <Plus size={14} /> Add a card
+          <Plus size={14} /> Add a Task
         </button>
       )}
     </div>

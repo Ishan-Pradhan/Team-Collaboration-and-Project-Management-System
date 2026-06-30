@@ -194,9 +194,17 @@ export default function MembersPage({ params }: Props) {
                     <tr key={member.id} className="hover:bg-surface-hover/30 transition-colors">
                       <td className="whitespace-nowrap px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/5 text-primary font-semibold text-sm">
-                            {name.charAt(0).toUpperCase()}
-                          </div>
+                          {member.user?.avatarUrl ? (
+                            <img
+                              src={member.user.avatarUrl}
+                              alt={name}
+                              className="h-8 w-8 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/5 text-primary font-semibold text-sm">
+                              {name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
                           <span className="font-medium text-text-primary">{name}</span>
                         </div>
                       </td>

@@ -5,13 +5,13 @@ import { toast } from 'sonner';
 import {
   Calendar, ChevronDown, Loader2, User, X, Plus, Trash2,
   Check, MessageSquare, CheckSquare, Paperclip, ChevronRight,
-  FileText, Image as ImageIcon, File, Download, Send,
+  Eye, FileText, Image as ImageIcon, File, Download, Send,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { Task, TaskComment, Subtask, TaskAttachment } from '@/types/project.types';
-import { PRIORITY } from '@/constants/task.constants';
+import { PRIORITY, DUE_STATUS, getDueStatus } from '@/constants/task.constants';
 import {
   useUpdateTask, useDeleteTask, useProjectMembers,
   useTaskComments, useCreateComment, useDeleteComment,
@@ -62,10 +62,11 @@ interface Props {
   task: Task;
   projectId: string;
   isAdmin: boolean;
+  columnName?: string;
   onClose: () => void;
 }
 
-export function TaskDrawer({ task, projectId, isAdmin, onClose }: Props) {
+export function TaskDrawer({ task, projectId, isAdmin, columnName, onClose }: Props) {
   const { user: currentUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState<Tab>('details');
 
@@ -116,7 +117,7 @@ export function TaskDrawer({ task, projectId, isAdmin, onClose }: Props) {
         {/* Tab content */}
         <div className="flex-1 overflow-y-auto">
           {activeTab === 'details' && (
-            <DetailsTab task={task} projectId={projectId} isAdmin={isAdmin} onClose={onClose} />
+            <DetailsTab task={task} projectId={projectId} isAdmin={isAdmin} columnName={columnName} onClose={onClose} />
           )}
           {activeTab === 'subtasks' && (
             <SubtasksTab task={task} projectId={projectId} isAdmin={isAdmin} currentUserId={currentUser?.id ?? ''} />
@@ -134,8 +135,8 @@ export function TaskDrawer({ task, projectId, isAdmin, onClose }: Props) {
 }
 
 // ─── Details Tab ─────────────────────────────────────────────
-function DetailsTab({ task, projectId, isAdmin, onClose }: {
-  task: Task; projectId: string; isAdmin: boolean; onClose: () => void;
+function DetailsTab({ task, projectId, isAdmin, columnName, onClose }: {
+  task: Task; projectId: string; isAdmin: boolean; columnName?: string; onClose: () => void;
 }) {
   const { data: projectMembers } = useProjectMembers(projectId);
   const updateTask = useUpdateTask(projectId, task.id);
@@ -181,7 +182,7 @@ function DetailsTab({ task, projectId, isAdmin, onClose }: {
   };
 
   const p = PRIORITY[task.priority];
-  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date();
+  const dueStatus = getDueStatus(task.dueDate, columnName);
 
   return (
     <div className="flex flex-col h-full">
@@ -248,12 +249,19 @@ function DetailsTab({ task, projectId, isAdmin, onClose }: {
                 className="text-sm"
               />
             ) : (
-              <p className={cn('text-sm flex items-center gap-1.5', isOverdue ? 'text-red-500 font-medium' : 'text-gray-700')}>
-                <Calendar size={13} />
-                {task.dueDate
-                  ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                  : <span className="text-gray-400 italic">None</span>}
-              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-sm flex items-center gap-1.5 text-gray-700">
+                  <Calendar size={13} />
+                  {task.dueDate
+                    ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    : <span className="text-gray-400 italic">None</span>}
+                </p>
+                {dueStatus && (
+                  <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-semibold', DUE_STATUS[dueStatus].chip)}>
+                    {DUE_STATUS[dueStatus].label}
+                  </span>
+                )}
+              </div>
             )}
           </Field>
         </div>
@@ -600,12 +608,78 @@ function CommentsTab({ task, projectId, currentUserId, isAdmin }: {
           <button
             onClick={handleSend}
             disabled={!text.trim() || createComment.isPending}
-            className="shrink-0 flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-[12px] font-semibold text-white disabled:opacity-40 hover:bg-blue-700 transition-colors"
+            className="shrink-0 flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-[12px] font-semibold text-primary-text disabled:opacity-40 hover:bg-primary-hover transition-colors"
           >
             {createComment.isPending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
             Send
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── File Preview Modal ───────────────────────────────────────
+
+function FilePreviewModal({ file, onClose }: { file: TaskAttachment; onClose: () => void }) {
+  const isImage = file.fileType.startsWith('image/');
+  const isPdf = file.fileType === 'application/pdf';
+  const isVideo = file.fileType.startsWith('video/');
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85" onClick={onClose}>
+      <div className="relative mx-4 flex w-full max-w-4xl flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <p className="truncate text-sm font-medium text-white">{file.fileName}</p>
+          <div className="flex shrink-0 items-center gap-2">
+            <a
+              href={file.fileUrl}
+              download={file.fileName}
+              className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+              title="Download"
+            >
+              <Download size={16} />
+            </a>
+            <button
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+        {isImage ? (
+          <img
+            src={file.fileUrl}
+            alt={file.fileName}
+            className="max-h-[80vh] w-full rounded-xl object-contain"
+          />
+        ) : isPdf ? (
+          <iframe
+            src={file.fileUrl}
+            title={file.fileName}
+            className="w-full rounded-xl"
+            style={{ height: '80vh' }}
+          />
+        ) : isVideo ? (
+          <video
+            src={file.fileUrl}
+            controls
+            className="max-h-[80vh] w-full rounded-xl"
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center rounded-xl bg-gray-900 p-16 text-gray-400">
+            <File size={48} className="mb-4 opacity-30" />
+            <p className="text-sm">Preview not available for this file type</p>
+            <a
+              href={file.fileUrl}
+              download={file.fileName}
+              className="mt-4 flex items-center gap-1.5 text-sm text-brand hover:text-brand-hover"
+            >
+              <Download size={14} /> Download instead
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -621,6 +695,7 @@ function FilesTab({ task, projectId, currentUserId, isAdmin }: {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const [previewFile, setPreviewFile] = useState<TaskAttachment | null>(null);
 
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -634,6 +709,9 @@ function FilesTab({ task, projectId, currentUserId, isAdmin }: {
 
   return (
     <div className="px-5 py-4 space-y-4">
+      {previewFile && (
+        <FilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
+      )}
       {/* Drop zone */}
       <div
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
@@ -695,13 +773,18 @@ function FilesTab({ task, projectId, currentUserId, isAdmin }: {
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => setPreviewFile(a)}
+                  className="rounded-md p-1.5 text-gray-400 hover:text-primary hover:bg-brand-soft transition-colors"
+                  title="Preview"
+                >
+                  <Eye size={14} />
+                </button>
                 <a
                   href={a.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   download={a.fileName}
                   onClick={(e) => e.stopPropagation()}
-                  className="rounded-md p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                  className="rounded-md p-1.5 text-gray-400 hover:text-primary hover:bg-brand-soft transition-colors"
                   title="Download"
                 >
                   <Download size={14} />

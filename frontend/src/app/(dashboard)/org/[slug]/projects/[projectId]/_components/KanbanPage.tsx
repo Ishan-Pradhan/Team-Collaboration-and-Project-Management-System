@@ -2,12 +2,12 @@
 
 import { use, useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
-import { ChevronDown, Download, File, FileText, Image as ImageIcon, Layout, List, Loader2, Paperclip, Plus, Settings, Users } from 'lucide-react';
+import { ChevronDown, Download, Eye, File, FileText, Image as ImageIcon, Layout, List, Loader2, Paperclip, Plus, Settings, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { Task, KanbanColumn, TaskAttachment } from '@/types/project.types';
-import { PRIORITY } from '@/constants/task.constants';
+import { PRIORITY, DUE_STATUS, getDueStatus } from '@/constants/task.constants';
 import { KanbanSkeleton } from '@/components/shared/skeletons/KanbanSkeleton';
 import {
   useProject,
@@ -271,7 +271,16 @@ export default function KanbanPage({ params }: Props) {
             <div className="flex -space-x-2">
               {projectMembers.slice(0, 4).map((m) => {
                 const name = m.user?.name ?? '?';
-                return (
+                const avatarUrl = m.user?.avatarUrl;
+                return avatarUrl ? (
+                  <img
+                    key={m.id}
+                    src={avatarUrl}
+                    alt={name}
+                    title={name}
+                    className="h-7 w-7 rounded-full ring-2 ring-white object-cover"
+                  />
+                ) : (
                   <div
                     key={m.id}
                     title={name}
@@ -395,17 +404,21 @@ export default function KanbanPage({ params }: Props) {
         <div className="flex-1 overflow-y-auto p-8">
           <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
             <div className="grid grid-cols-12 gap-4 border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              <div className="col-span-5">Title</div>
-              <div className="col-span-3">Status</div>
+              <div className="col-span-4">Title</div>
+              <div className="col-span-2">Column</div>
               <div className="col-span-2">Priority</div>
+              <div className="col-span-2">Due Status</div>
               <div className="col-span-2 text-right">Due Date</div>
             </div>
             <div className="divide-y divide-gray-100">
-              {allTasks.map((task) => (
+              {allTasks.map((task) => {
+                const colName = localColumns.find((c) => c.id === task.columnId)?.name;
+                const dueStatus = getDueStatus(task.dueDate, colName);
+                return (
                 <div key={task.id} onClick={() => setEditingTask(task)}
                   className="grid grid-cols-12 gap-4 px-5 py-3.5 text-sm items-center hover:bg-gray-50 cursor-pointer transition-colors">
-                  <div className="col-span-5 font-medium text-gray-900 truncate">{task.title}</div>
-                  <div className="col-span-3">
+                  <div className="col-span-4 font-medium text-gray-900 truncate">{task.title}</div>
+                  <div className="col-span-2">
                     <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs font-medium">
                       {localColumns.find((c) => c.id === task.columnId)?.name || '—'}
                     </span>
@@ -415,11 +428,21 @@ export default function KanbanPage({ params }: Props) {
                       {PRIORITY[task.priority].label}
                     </span>
                   </div>
+                  <div className="col-span-2">
+                    {dueStatus ? (
+                      <span className={cn('px-2 py-0.5 rounded-full text-xs font-semibold', DUE_STATUS[dueStatus].chip)}>
+                        {DUE_STATUS[dueStatus].label}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-xs">—</span>
+                    )}
+                  </div>
                   <div className="col-span-2 text-right text-gray-400 text-xs">
                     {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '—'}
                   </div>
                 </div>
-              ))}
+                );
+              })}
               {allTasks.length === 0 && (
                 <div className="py-12 text-center text-sm text-gray-400">No cards yet.</div>
               )}
@@ -445,6 +468,7 @@ export default function KanbanPage({ params }: Props) {
       {editingTask && (
         <TaskDrawer
           task={editingTask}
+          columnName={localColumns.find((c) => c.id === editingTask.columnId)?.name}
           projectId={projectId}
           isAdmin={isAdmin}
           onClose={() => setEditingTask(null)}
@@ -459,6 +483,72 @@ export default function KanbanPage({ params }: Props) {
           onClose={() => setShowMembersModal(false)}
         />
       )}
+    </div>
+  );
+}
+
+// ─── File Preview Modal ───────────────────────────────────────
+
+function FilePreviewModal({ file, onClose }: { file: TaskAttachment; onClose: () => void }) {
+  const isImage = file.fileType.startsWith('image/');
+  const isPdf = file.fileType === 'application/pdf';
+  const isVideo = file.fileType.startsWith('video/');
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85" onClick={onClose}>
+      <div className="relative mx-4 flex w-full max-w-5xl flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <p className="truncate text-sm font-medium text-white">{file.fileName}</p>
+          <div className="flex shrink-0 items-center gap-2">
+            <a
+              href={file.fileUrl}
+              download={file.fileName}
+              className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+              title="Download"
+            >
+              <Download size={16} />
+            </a>
+            <button
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+        {isImage ? (
+          <img
+            src={file.fileUrl}
+            alt={file.fileName}
+            className="max-h-[82vh] w-full rounded-xl object-contain"
+          />
+        ) : isPdf ? (
+          <iframe
+            src={file.fileUrl}
+            title={file.fileName}
+            className="w-full rounded-xl"
+            style={{ height: '82vh' }}
+          />
+        ) : isVideo ? (
+          <video
+            src={file.fileUrl}
+            controls
+            className="max-h-[82vh] w-full rounded-xl"
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center rounded-xl bg-gray-900 p-16 text-gray-400">
+            <File size={48} className="mb-4 opacity-30" />
+            <p className="text-sm">Preview not available for this file type</p>
+            <a
+              href={file.fileUrl}
+              download={file.fileName}
+              className="mt-4 flex items-center gap-1.5 text-sm text-brand hover:text-brand-hover"
+            >
+              <Download size={14} /> Download instead
+            </a>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -488,6 +578,7 @@ function ProjectFilesView({
 }) {
   const { data: files = [], isLoading } = useProjectFiles(projectId);
   const [search, setSearch] = useState('');
+  const [previewFile, setPreviewFile] = useState<TaskAttachment | null>(null);
 
   const filtered = files.filter((f: TaskAttachment) =>
     f.fileName.toLowerCase().includes(search.toLowerCase()) ||
@@ -503,6 +594,9 @@ function ProjectFilesView({
 
   return (
     <div className="flex-1 overflow-y-auto p-8">
+      {previewFile && (
+        <FilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
+      )}
       <div className="mb-5 flex items-center justify-between">
         <div>
           <h2 className="text-base font-semibold text-gray-900">Project Files</h2>
@@ -559,12 +653,17 @@ function ProjectFilesView({
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => setPreviewFile(f)}
+                          className="rounded-md p-1.5 text-gray-400 hover:text-primary hover:bg-brand-soft transition-colors"
+                          title="Preview"
+                        >
+                          <Eye size={15} />
+                        </button>
                         <a
                           href={f.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
                           download={f.fileName}
-                          className="rounded-md p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                          className="rounded-md p-1.5 text-gray-400 hover:text-primary hover:bg-brand-soft transition-colors"
                           title="Download"
                         >
                           <Download size={15} />
