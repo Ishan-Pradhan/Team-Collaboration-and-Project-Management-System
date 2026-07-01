@@ -469,3 +469,116 @@ body {
 @utility surface-muted {
   background: var(--color-surface-muted);
 }
+
+/* ==========================================================================
+   react-big-calendar overrides — match design tokens
+   ========================================================================== */
+
+.rbc-calendar {
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: #161616;
+}
+
+.rbc-month-view {
+  border: none;
+}
+
+.rbc-header {
+  padding: 10px 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8b8b8b;
+  border-color: #ebe7e1;
+}
+
+.rbc-header + .rbc-header {
+  border-left-color: #ebe7e1;
+}
+
+.rbc-month-row + .rbc-month-row {
+  border-top-color: #ebe7e1;
+}
+
+.rbc-day-bg + .rbc-day-bg {
+  border-left-color: #ebe7e1;
+}
+
+.rbc-off-range-bg {
+  background: #f4f2ee;
+}
+
+.rbc-day-bg.rbc-today {
+  background-color: #ffffff;
+}
+
+.rbc-date-cell {
+  padding: 6px 8px;
+}
+
+.rbc-date-cell a {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #5d5d5d;
+}
+
+.rbc-date-cell.rbc-now a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #22302a;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.rbc-date-cell.rbc-off-range a {
+  color: #8b8b8b;
+}
+
+.rbc-show-more {
+  color: #8b8b8b;
+  font-size: 0.75rem;
+  font-weight: 400;
+  padding-left: 4px;
+  background: transparent;
+}
+
+.rbc-show-more:hover {
+  color: #161616;
+}
+
+.rbc-event {
+  border-radius: 4px !important;
+  border: none !important;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.rbc-event:focus,
+.rbc-event.rbc-selected {
+  outline: none;
+  box-shadow: none;
+}
+
+.rbc-overlay {
+  border: 1px solid #ebe7e1;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  padding: 0;
+  overflow: hidden;
+}
+
+.rbc-overlay-header {
+  border-bottom: 1px solid #ebe7e1;
+  padding: 10px 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #161616;
+}

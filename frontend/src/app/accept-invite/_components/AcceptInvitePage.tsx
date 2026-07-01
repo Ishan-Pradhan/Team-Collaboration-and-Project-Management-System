@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { useAcceptInvite } from '@/hooks/useOrganization';
@@ -21,6 +21,9 @@ function AcceptInviteContent() {
   const { setCurrentOrg } = useOrgStore();
   const acceptInviteMutation = useAcceptInvite();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (!token) {
@@ -40,6 +43,17 @@ function AcceptInviteContent() {
       });
     }
   }, [token, isAuthenticated, router, setCurrentOrg]);
+
+  // Defer auth-dependent rendering until client has hydrated from localStorage.
+  // Without this, the server (isAuthenticated=false) and client (isAuthenticated=true)
+  // render different branches, causing a hydration mismatch.
+  if (!mounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="animate-spin text-muted-foreground" size={24} />
+      </div>
+    );
+  }
 
   if (!token) {
     return (

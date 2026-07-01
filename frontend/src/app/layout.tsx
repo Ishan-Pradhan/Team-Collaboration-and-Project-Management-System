@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Arbyte Flow",
+  title: "capms",
   description: "Team Collaboration & Project Management System",
 };
 
