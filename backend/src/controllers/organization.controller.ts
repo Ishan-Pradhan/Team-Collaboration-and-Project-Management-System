@@ -7,9 +7,44 @@ import {
   organizationRepository,
   organizationMemberRepository,
   organizationInviteRepository,
+  dashboardRepository,
 } from '../repositories/organization.repository.js';
 import { userRepository } from '../repositories/users.repository.js';
+import { Notification } from '../models/index.js';
 import crypto from 'crypto';
+
+async function notifyAdminsOfMemberLeave(
+  organizationId: string,
+  ownerId: string,
+  orgName: string,
+  leavingUserId: string,
+  leavingUserName: string,
+  wasRemoved: boolean,
+) {
+  const adminIds = await organizationMemberRepository.findAdminIds(organizationId, ownerId);
+  const recipients = adminIds.filter((id) => id !== leavingUserId);
+  if (recipients.length === 0) return;
+
+  const title = wasRemoved
+    ? `${leavingUserName} was removed from ${orgName}`
+    : `${leavingUserName} left ${orgName}`;
+  const body = wasRemoved
+    ? `A member was removed from your workspace.`
+    : `A member has left your workspace.`;
+
+  await Promise.all(
+    recipients.map((userId) =>
+      Notification.create({
+        userId,
+        type: 'member_left',
+        title,
+        body,
+        entityType: 'organization',
+        entityId: organizationId,
+      })
+    )
+  );
+}
 
 const generateSlug = async (name: string): Promise<string> => {
   const baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -274,9 +309,62 @@ export const removeOrganizationMember = asyncHandler(
       throw new ApiError(404, 'Member not found in organization');
     }
 
+    const memberUser = await userRepository.findById(userId);
     await member.destroy();
 
+    notifyAdminsOfMemberLeave(
+      organizationId, org.ownerId, org.name,
+      userId, memberUser?.name ?? 'A member', true,
+    ).catch(() => {});
+
     return ok(res, null, 'Member removed successfully');
+  }
+);
+
+// Leave Organization (any member except owner)
+export const leaveOrganization = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { organizationId } = req.params as { organizationId: string };
+    const user = req.user;
+    if (!user) throw new ApiError(401, 'Unauthorized');
+
+    const org = await organizationRepository.findById(organizationId);
+    if (!org) throw new ApiError(404, 'Organization not found');
+
+    if (org.ownerId === user.id) {
+      throw new ApiError(400, 'Organization owner cannot leave. Transfer ownership or delete the organization.');
+    }
+
+    const member = await organizationMemberRepository.findOne({ organizationId, userId: user.id });
+    if (!member) throw new ApiError(404, 'You are not a member of this organization');
+
+    await member.destroy();
+
+    notifyAdminsOfMemberLeave(
+      organizationId, org.ownerId, org.name,
+      user.id, user.name, false,
+    ).catch(() => {});
+
+    return ok(res, null, 'You have left the organization');
+  }
+);
+
+// Delete Organization (owner only)
+export const deleteOrganization = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { organizationId } = req.params as { organizationId: string };
+    const user = req.user;
+    if (!user) throw new ApiError(401, 'Unauthorized');
+
+    const org = await organizationRepository.findById(organizationId);
+    if (!org) throw new ApiError(404, 'Organization not found');
+
+    if (org.ownerId !== user.id) {
+      throw new ApiError(403, 'Only the organization owner can delete the organization');
+    }
+
+    await organizationRepository.delete(organizationId);
+    return ok(res, null, 'Organization deleted successfully');
   }
 );
 
@@ -419,5 +507,20 @@ export const updateOrganization = asyncHandler(
     });
 
     return ok(res, updatedOrg, 'Organization updated successfully');
+  }
+);
+
+// GET /organizations/:organizationId/dashboard
+export const getOrgDashboard = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { organizationId } = req.params as { organizationId: string };
+    const user = req.user;
+    if (!user) throw new ApiError(401, 'Unauthorized');
+
+    const org = await organizationRepository.findById(organizationId);
+    if (!org) throw new ApiError(404, 'Organization not found');
+
+    const data = await dashboardRepository.getDashboardData(organizationId, user.id);
+    return ok(res, data, 'Dashboard data retrieved');
   }
 );

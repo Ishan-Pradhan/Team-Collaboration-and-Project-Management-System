@@ -68,16 +68,10 @@ export const listProjects = asyncHandler(
 
     if (!user) throw new ApiError(401, 'Unauthorized');
 
-    const { org, orgMembership, isOrgPrivileged } = await getOrgContext(organizationId, user.id);
+    const { org, orgMembership } = await getOrgContext(organizationId, user.id);
 
     if (!orgMembership && org?.ownerId !== user.id) {
       throw new ApiError(403, 'Unauthorized access to organization projects');
-    }
-
-    if (isOrgPrivileged) {
-      const rawProjects = await projectRepository.findByOrg(organizationId);
-      const projects = rawProjects.map((p) => ({ ...p.toJSON(), myRole: null }));
-      return ok(res, projects, 'Projects retrieved successfully');
     }
 
     const projects = await projectRepository.findByOrgForUser(organizationId, user.id);

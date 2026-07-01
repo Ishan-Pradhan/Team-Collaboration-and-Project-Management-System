@@ -1,45 +1,107 @@
 'use client';
 
-import { use, useEffect } from 'react';
+import { use } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useOrganizationBySlug, useOrganizationMembers, useUpdateOrganization } from '@/hooks/useOrganization';
-import { useOrgProjects } from '@/hooks/useProject';
-import { parseApiError } from '@/lib/axios';
-import { useOrgStore } from '@/store/org.store';
+import { useOrganizationBySlug } from '@/hooks/useOrganization';
+import { useOrgDashboard } from '@/hooks/useProject';
 import { useAuthStore } from '@/store/auth.store';
-import { updateOrgSchema, UpdateOrgInput } from '@/schemas/organization.schema';
-import { toast } from 'sonner';
-import {
-  ArrowRight, Archive, Building2, CalendarDays,
-  Crown, FolderOpen, Loader2, Lock, Save, Shield, Users,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { OrgOverviewSkeleton } from '@/components/shared/skeletons/OrgOverviewSkeleton';
+import {
+  FolderOpen, CheckSquare, AlertTriangle, Clock,
+  ArrowRight, MessageSquare, CalendarDays, Plus, ArrowRightLeft, UserPlus,
+} from 'lucide-react';
 import { ErrorState } from '@/components/shared/ErrorState';
+import type { DashboardData } from '@/types/project.types';
+
+// ─── Colors ──────────────────────────────────────────────────
+
+const PROJECT_COLORS = [
+  { bg: '#FFE4D6', text: '#C4532A' },
+  { bg: '#E8E0FF', text: '#5B4FB5' },
+  { bg: '#D4F5E4', text: '#1D7A4E' },
+  { bg: '#D9EEFF', text: '#2D72B8' },
+  { bg: '#FFF3D6', text: '#A67C00' },
+  { bg: '#FFD6E8', text: '#B52D6B' },
+];
 
 const MEMBER_COLORS = ['#22302a', '#d4a84f', '#6f8c78', '#a86c58', '#4b7f52', '#c38a2d'];
-function getMemberColor(name: string) {
+
+const PRIORITY_STYLES: Record<string, string> = {
+  LOW: 'bg-success-soft text-success',
+  MEDIUM: 'bg-warning-soft text-warning',
+  HIGH: 'bg-danger-soft text-danger',
+  CRITICAL: 'bg-[#e8c0c0] text-[#8e2f2f]',
+};
+
+// ─── Helpers ─────────────────────────────────────────────────
+
+function getMemberColor(name: string): string {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
   return MEMBER_COLORS[Math.abs(h) % MEMBER_COLORS.length];
 }
 
-function MemberAvatar({ name, url, size = 8 }: { name: string; url?: string | null; size?: number }) {
-  const cls = `h-${size} w-${size} rounded-full object-cover`;
-  if (url) return <img src={url} alt={name} className={cls} />;
+function getDueDateInfo(dueDate: string | null) {
+  if (!dueDate) return null;
+  const due = new Date(dueDate + 'T12:00:00');
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((due.getTime() - now.getTime()) / 86400000);
+  if (diffDays < 0) return { label: `${Math.abs(diffDays)}d overdue`, className: 'text-danger' };
+  if (diffDays === 0) return { label: 'Due today', className: 'text-warning' };
+  if (diffDays === 1) return { label: 'Due tomorrow', className: 'text-warning' };
+  return { label: `${diffDays}d left`, className: 'text-text-muted' };
+}
+
+function formatRelativeTime(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}d ago`;
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// ─── Avatar ──────────────────────────────────────────────────
+
+function Avatar({ name, url, size = 8 }: { name: string; url?: string | null; size?: number }) {
+  const sz = `h-${size} w-${size}`;
+  if (url) return <img src={url} alt={name} className={cn(sz, 'rounded-full object-cover shrink-0')} />;
   return (
     <div
-      className={cn(cls, 'flex shrink-0 items-center justify-center text-white font-bold')}
-      style={{ backgroundColor: getMemberColor(name), fontSize: size * 1.5 }}
+      className={cn(sz, 'rounded-full flex shrink-0 items-center justify-center text-white font-semibold')}
+      style={{ backgroundColor: getMemberColor(name), fontSize: size * 1.75 }}
     >
       {name.charAt(0).toUpperCase()}
     </div>
   );
 }
+
+// ─── Skeleton ────────────────────────────────────────────────
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="h-24 rounded-2xl bg-surface-muted" />
+      <div className="grid grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => <div key={i} className="h-24 rounded-xl bg-surface-muted" />)}
+      </div>
+      <div className="grid gap-6 lg:grid-cols-5">
+        <div className="lg:col-span-3 h-72 rounded-xl bg-surface-muted" />
+        <div className="lg:col-span-2 h-72 rounded-xl bg-surface-muted" />
+      </div>
+      <div className="grid gap-6 lg:grid-cols-5">
+        <div className="lg:col-span-3 h-72 rounded-xl bg-surface-muted" />
+        <div className="lg:col-span-2 h-72 rounded-xl bg-surface-muted" />
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ───────────────────────────────────────────────
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -49,138 +111,125 @@ export default function OrgOverviewPage({ params }: Props) {
   const { slug } = use(params);
   const router = useRouter();
   const { user } = useAuthStore();
-  const { setCurrentOrg } = useOrgStore();
 
-  const { data: org, isLoading, error, refetch } = useOrganizationBySlug(slug);
-  const { data: members = [] } = useOrganizationMembers(org?.id ?? '');
-  const { data: projects = [] } = useOrgProjects(org?.id ?? '');
-  const updateOrg = useUpdateOrganization(org?.id ?? '');
+  const { data: org } = useOrganizationBySlug(slug);
+  const { data: dashboard, isLoading, error, refetch } = useOrgDashboard(org?.id ?? '');
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<UpdateOrgInput>({
-    resolver: zodResolver(updateOrgSchema),
-    defaultValues: { name: '', description: '' },
-  });
+  if (isLoading || !org) return <DashboardSkeleton />;
 
-  useEffect(() => {
-    if (org) {
-      reset({ name: org.name, description: org.description ?? '' });
-    }
-  }, [org, reset]);
-
-  if (isLoading) return <OrgOverviewSkeleton />;
-
-  if (error || !org) {
+  if (error || !dashboard) {
     return (
       <ErrorState
-        title="Failed to load workspace"
-        message="The workspace may not exist, or you might not have access to it."
+        title="Failed to load dashboard"
+        message="Something went wrong while fetching your dashboard data."
         onRetry={() => refetch()}
       />
     );
   }
 
-  const isAdmin = org.ownerId === user?.id || members.some((m) => m.userId === user?.id && m.role === 'ORG_ADMIN');
-  const owner = members.find((m) => m.userId === org.ownerId);
-  const activeProjects = projects.filter((p) => p.status === 'ACTIVE');
-  const archivedProjects = projects.filter((p) => p.status === 'ARCHIVED');
-  const admins = members.filter((m) => m.role === 'ORG_ADMIN' || m.userId === org.ownerId);
-
-  const onSubmit = handleSubmit((data) => {
-    updateOrg.mutate(
-      { name: data.name, description: data.description || null },
-      {
-        onSuccess: (updated) => {
-          toast.success('Workspace updated');
-          setCurrentOrg(updated);
-          if (updated.slug !== slug) {
-            router.push(`/org/${updated.slug}`);
-          }
-        },
-        onError: (err) => toast.error(parseApiError(err).message),
-      }
-    );
-  });
+  const firstName = user?.name?.split(' ')[0] ?? 'there';
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
   return (
     <div className="space-y-6">
 
-      {/* ── Hero header ───────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl bg-primary px-8 py-8 text-primary-text shadow-md">
-        {/* decorative blobs */}
+      {/* ── Welcome banner ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-primary px-8 py-7 text-primary-text">
         <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-brand/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-10 left-1/3 h-40 w-40 rounded-full bg-brand/10 blur-2xl" />
-
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-5">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/10 text-primary-text ring-1 ring-white/20">
-              {org.logoUrl
-                ? <img src={org.logoUrl} alt={org.name} className="h-14 w-14 rounded-xl object-cover" />
-                : <Building2 size={26} />
-              }
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold tracking-tight">{org.name}</h1>
-                {isAdmin && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-brand/20 px-2 py-0.5 text-[11px] font-semibold text-brand">
-                    <Shield size={10} /> Admin
-                  </span>
-                )}
-              </div>
-              <p className="mt-0.5 text-xs text-primary-text/60">/{org.slug}</p>
-              {org.description && (
-                <p className="mt-1.5 max-w-lg text-sm text-primary-text/80 leading-relaxed">{org.description}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => router.push(`/org/${slug}/projects`)}
-              className="flex items-center gap-1.5 rounded-lg bg-white/10 px-3.5 py-2 text-xs font-medium text-primary-text hover:bg-white/20 transition-colors"
-            >
-              <FolderOpen size={13} /> Projects
-            </button>
-            <button
-              onClick={() => router.push(`/org/${slug}/members`)}
-              className="flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-2 text-xs font-semibold text-primary hover:bg-brand-hover transition-colors"
-            >
-              <Users size={13} /> Members
-            </button>
-          </div>
+        <div className="relative">
+          <p className="text-sm font-medium text-primary-text/60">{greeting},</p>
+          <h1 className="mt-0.5 text-2xl font-bold tracking-tight">{firstName}!</h1>
+          <p className="mt-1 text-sm text-primary-text/70">
+            Here&apos;s what&apos;s happening in <span className="font-semibold text-primary-text/90">{org.name}</span>
+          </p>
         </div>
       </div>
 
-      {/* ── Stats row ─────────────────────────────────────── */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      {/* ── Stats ── */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard
-          label="Total Members"
-          value={members.length}
-          icon={<Users size={16} className="text-brand" />}
-          sub={`${admins.length} admin${admins.length !== 1 ? 's' : ''}`}
-        />
-        <StatCard
-          label="Active Projects"
-          value={activeProjects.length}
-          icon={<FolderOpen size={16} className="text-brand" />}
-          sub="currently running"
+          label="My Projects"
+          value={dashboard.stats.projectCount}
+          icon={<FolderOpen size={18} className="text-brand" />}
           onClick={() => router.push(`/org/${slug}/projects`)}
         />
         <StatCard
-          label="Archived"
-          value={archivedProjects.length}
-          icon={<Archive size={16} className="text-brand" />}
-          sub="completed projects"
+          label="Assigned Tasks"
+          value={dashboard.stats.assignedTaskCount}
+          icon={<CheckSquare size={18} className="text-primary" />}
+        />
+        <StatCard
+          label="Overdue"
+          value={dashboard.stats.overdueCount}
+          icon={<AlertTriangle size={18} className="text-danger" />}
+          highlight={dashboard.stats.overdueCount > 0}
+        />
+        <StatCard
+          label="Due This Week"
+          value={dashboard.stats.dueSoonCount}
+          icon={<Clock size={18} className="text-warning" />}
         />
       </div>
 
-      {/* ── Projects + Members ────────────────────────────── */}
+      {/* ── Assigned Tasks + My Projects ── */}
       <div className="grid gap-6 lg:grid-cols-5">
 
-        {/* Recent active projects — 3/5 */}
+        {/* Assigned Tasks — 3/5 */}
         <div className="lg:col-span-3 rounded-xl border border-border-subtle bg-white shadow-card overflow-hidden">
           <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
-            <h2 className="text-sm font-semibold text-text-primary">Active Projects</h2>
+            <h2 className="text-sm font-semibold text-text-primary">Assigned Tasks</h2>
+            <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-text-muted">
+              {dashboard.assignedTasks.length}
+            </span>
+          </div>
+
+          {dashboard.assignedTasks.length === 0 ? (
+            <EmptyState icon={<CheckSquare size={28} />} message="No tasks assigned to you" />
+          ) : (
+            <ul className="divide-y divide-border-subtle">
+              {dashboard.assignedTasks.map((task) => {
+                const due = getDueDateInfo(task.dueDate);
+                return (
+                  <li key={task.id}>
+                    <button
+                      onClick={() => router.push(`/org/${slug}/projects/${task.projectId}?taskId=${task.id}`)}
+                      className="group flex w-full items-start gap-3 px-5 py-3.5 text-left hover:bg-surface-muted transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate text-sm font-medium text-text-primary group-hover:text-primary transition-colors">
+                          {task.title}
+                        </p>
+                        <div className="mt-1 flex items-center gap-2 flex-wrap">
+                          <span className="text-[11px] text-text-muted">{task.projectName}</span>
+                          <span className="text-text-muted/40">·</span>
+                          <span className="text-[11px] text-text-muted">{task.columnName}</span>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase', PRIORITY_STYLES[task.priority])}>
+                          {task.priority}
+                        </span>
+                        {due && (
+                          <span className={cn('flex items-center gap-1 text-[11px] font-medium', due.className)}>
+                            <CalendarDays size={11} />
+                            {due.label}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        {/* My Projects — 2/5 */}
+        <div className="lg:col-span-2 rounded-xl border border-border-subtle bg-white shadow-card overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
+            <h2 className="text-sm font-semibold text-text-primary">My Projects</h2>
             <button
               onClick={() => router.push(`/org/${slug}/projects`)}
               className="flex items-center gap-1 text-[11px] font-medium text-brand hover:text-brand-hover transition-colors"
@@ -189,45 +238,69 @@ export default function OrgOverviewPage({ params }: Props) {
             </button>
           </div>
 
-          {activeProjects.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-14 text-text-muted">
-              <FolderOpen size={32} className="mb-3 opacity-20" />
-              <p className="text-sm font-medium">No active projects yet</p>
-              <p className="text-xs mt-0.5">Create your first project to get started</p>
-            </div>
+          {dashboard.myProjects.length === 0 ? (
+            <EmptyState icon={<FolderOpen size={28} />} message="Not a member of any project yet" />
           ) : (
-            <ul className="divide-y divide-border-subtle">
-              {activeProjects.slice(0, 6).map((p) => (
-                <li key={p.id}>
+            <div className="grid grid-cols-2 gap-3 p-4">
+              {dashboard.myProjects.slice(0, 6).map((project, idx) => {
+                const color = PROJECT_COLORS[idx % PROJECT_COLORS.length];
+                return (
                   <button
-                    onClick={() => router.push(`/org/${slug}/projects/${p.id}`)}
-                    className="group flex w-full items-center gap-4 px-5 py-3.5 text-left hover:bg-surface-muted transition-colors"
+                    key={project.id}
+                    onClick={() => router.push(`/org/${slug}/projects/${project.id}`)}
+                    className="group flex flex-col gap-2.5 rounded-lg border border-border-subtle p-3 text-left hover:border-border-muted hover:shadow-card transition-all"
                   >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/5 text-primary">
-                      <FolderOpen size={15} />
+                    <div
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-sm font-bold"
+                      style={{ backgroundColor: color.bg, color: color.text }}
+                    >
+                      {project.name.charAt(0).toUpperCase()}
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-text-primary">{p.name}</p>
-                      {p.description && (
-                        <p className="truncate text-[11px] text-text-muted mt-0.5">{p.description}</p>
-                      )}
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-text-primary leading-snug">
+                        {project.name}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-text-muted">
+                        {project.dueSoonCount > 0
+                          ? `${project.dueSoonCount} task${project.dueSoonCount !== 1 ? 's' : ''} due soon`
+                          : 'No tasks due soon'}
+                      </p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1.5 text-[11px] text-text-muted">
-                      <CalendarDays size={11} />
-                      {new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </div>
-                    <ArrowRight size={13} className="shrink-0 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
                   </button>
-                </li>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Recent Activity + Team ── */}
+      <div className="grid gap-6 lg:grid-cols-5">
+
+        {/* Recent Activity — 3/5 */}
+        <div className="lg:col-span-3 rounded-xl border border-border-subtle bg-white shadow-card overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
+            <h2 className="text-sm font-semibold text-text-primary">Recent Activity</h2>
+          </div>
+
+          {dashboard.recentActivity.length === 0 ? (
+            <EmptyState icon={<MessageSquare size={28} />} message="No recent activity in your projects" />
+          ) : (
+            <ul className="divide-y divide-border-subtle max-h-[340px] overflow-y-auto">
+              {dashboard.recentActivity.map((item) => (
+                <ActivityItem key={item.id} item={item} slug={slug} router={router} />
               ))}
             </ul>
           )}
         </div>
 
-        {/* Member roster — 2/5 */}
+        {/* Team Members — 2/5 */}
         <div className="lg:col-span-2 rounded-xl border border-border-subtle bg-white shadow-card overflow-hidden">
           <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
-            <h2 className="text-sm font-semibold text-text-primary">Team</h2>
+            <h2 className="text-sm font-semibold text-text-primary">
+              People
+              <span className="ml-1.5 text-text-muted font-normal">({dashboard.members.length})</span>
+            </h2>
             <button
               onClick={() => router.push(`/org/${slug}/members`)}
               className="flex items-center gap-1 text-[11px] font-medium text-brand hover:text-brand-hover transition-colors"
@@ -236,121 +309,21 @@ export default function OrgOverviewPage({ params }: Props) {
             </button>
           </div>
 
-          {members.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-14 text-text-muted">
-              <Users size={32} className="mb-3 opacity-20" />
-              <p className="text-sm">No members yet</p>
-            </div>
+          {dashboard.members.length === 0 ? (
+            <EmptyState icon={<FolderOpen size={28} />} message="No members yet" />
           ) : (
-            <ul className="divide-y divide-border-subtle">
-              {members.slice(0, 7).map((m) => {
-                const name = m.user?.name ?? 'Unknown';
-                const isOwner = m.userId === org.ownerId;
-                const isOrgAdmin = m.role === 'ORG_ADMIN';
-                return (
-                  <li key={m.id} className="flex items-center gap-3 px-5 py-3">
-                    <MemberAvatar name={name} url={m.user?.avatarUrl} size={8} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-text-primary">
-                        {name}
-                        {m.userId === user?.id && (
-                          <span className="ml-1.5 text-[10px] text-text-muted font-normal">(you)</span>
-                        )}
-                      </p>
-                      <p className="truncate text-[11px] text-text-muted">{m.user?.email}</p>
-                    </div>
-                    {isOwner ? (
-                      <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand">
-                        <Crown size={9} /> Owner
-                      </span>
-                    ) : isOrgAdmin ? (
-                      <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-primary/8 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                        <Shield size={9} /> Admin
-                      </span>
-                    ) : (
-                      <span className="shrink-0 rounded-full bg-surface-muted px-2 py-0.5 text-[10px] font-medium text-text-muted">
-                        Member
-      </span>
-                    )}
-                  </li>
-                );
-              })}
-              {members.length > 7 && (
-                <li className="px-5 py-3 text-[11px] text-text-muted">
-                  +{members.length - 7} more member{members.length - 7 !== 1 ? 's' : ''}
-                </li>
-              )}
-            </ul>
+            <div className="grid grid-cols-3 gap-3 p-4 max-h-[340px] overflow-y-auto">
+              {dashboard.members.map((member) => (
+                <div key={member.id} className="flex flex-col items-center gap-1.5 rounded-lg border border-border-subtle p-3 text-center">
+                  <Avatar name={member.name} url={member.avatarUrl} size={10} />
+                  <div className="w-full min-w-0">
+                    <p className="truncate text-[11px] font-semibold text-text-primary">{member.name}</p>
+                    <p className="truncate text-[10px] text-text-muted">{member.email}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
-        </div>
-      </div>
-
-      {/* ── Workspace settings ────────────────────────────── */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 rounded-xl border border-border-subtle bg-white p-6 shadow-card">
-          <h2 className="mb-5 flex items-center gap-2 text-sm font-semibold text-text-primary">
-            Workspace Settings
-            {!isAdmin && (
-              <span className="inline-flex items-center gap-1 rounded bg-surface-muted px-1.5 py-0.5 text-[10px] font-medium text-text-muted">
-                <Lock size={10} /> Read Only
-              </span>
-            )}
-          </h2>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <label htmlFor="org-name" className="text-xs font-semibold text-text-secondary">Name</label>
-              <Input
-                id="org-name"
-                disabled={!isAdmin || updateOrg.isPending}
-                className="max-w-md"
-                {...register('name')}
-              />
-              {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="org-description" className="text-xs font-semibold text-text-secondary">Description</label>
-              <textarea
-                id="org-description"
-                disabled={!isAdmin || updateOrg.isPending}
-                placeholder="Optional description"
-                rows={3}
-                className="w-full max-w-md rounded-md border border-border-subtle bg-white px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:border-brand focus:outline-none disabled:opacity-50 resize-none"
-                {...register('description')}
-              />
-            </div>
-            {isAdmin && (
-              <Button type="submit" disabled={updateOrg.isPending}>
-                {updateOrg.isPending
-                  ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
-                  : <><Save size={14} className="mr-2" />Save Changes</>
-                }
-              </Button>
-            )}
-          </form>
-        </div>
-
-        {/* About card */}
-        <div className="rounded-xl border border-border-subtle bg-white p-6 shadow-card space-y-5">
-          <h3 className="text-sm font-semibold text-text-primary">About</h3>
-          <InfoRow label="Created">
-            {new Date(org.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-          </InfoRow>
-          <InfoRow label="Owner">
-            {owner?.user ? (
-              <div className="flex items-center gap-2 mt-1">
-                <MemberAvatar name={owner.user.name} url={owner.user.avatarUrl} size={6} />
-                <span>{owner.user.name}{owner.userId === user?.id ? ' (you)' : ''}</span>
-              </div>
-            ) : (
-              org.ownerId === user?.id ? 'You' : '—'
-            )}
-          </InfoRow>
-          <InfoRow label="Slug">/{org.slug}</InfoRow>
-          <InfoRow label="Status">
-            <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[11px] font-semibold text-success">
-              Active
-            </span>
-          </InfoRow>
         </div>
       </div>
     </div>
@@ -360,38 +333,140 @@ export default function OrgOverviewPage({ params }: Props) {
 // ─── Sub-components ───────────────────────────────────────────
 
 function StatCard({
-  label, value, icon, sub, onClick,
+  label, value, icon, onClick, highlight,
 }: {
   label: string;
   value: number;
   icon: React.ReactNode;
-  sub?: string;
   onClick?: () => void;
+  highlight?: boolean;
 }) {
   const Tag = onClick ? 'button' : 'div';
   return (
     <Tag
       onClick={onClick}
       className={cn(
-        'group rounded-xl border border-border-subtle bg-white p-5 shadow-card text-left w-full',
+        'group rounded-xl border bg-white p-5 shadow-card text-left w-full',
+        highlight ? 'border-danger/30 bg-danger-soft/20' : 'border-border-subtle',
         onClick && 'hover:border-brand/40 hover:shadow-md transition-all cursor-pointer',
       )}
     >
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-text-muted uppercase tracking-wide">{label}</span>
+        <span className="text-[11px] font-medium text-text-muted uppercase tracking-wide">{label}</span>
         {icon}
       </div>
-      <p className="mt-3 text-3xl font-bold text-text-primary">{value}</p>
-      {sub && <p className="mt-1 text-[11px] text-text-muted">{sub}</p>}
+      <p className={cn('mt-3 text-3xl font-bold', highlight ? 'text-danger' : 'text-text-primary')}>
+        {value}
+      </p>
     </Tag>
   );
 }
 
-function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
+function EmptyState({ icon, message }: { icon: React.ReactNode; message: string }) {
   return (
-    <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">{label}</p>
-      <div className="mt-1 text-sm font-medium text-text-secondary">{children}</div>
+    <div className="flex flex-col items-center justify-center py-12 text-text-muted">
+      <div className="mb-3 opacity-20">{icon}</div>
+      <p className="text-sm">{message}</p>
     </div>
+  );
+}
+
+const ACTIVITY_META: Record<string, { icon: React.ReactNode; color: string }> = {
+  task_created: { icon: <Plus size={11} />, color: 'text-success bg-success-soft' },
+  task_moved: { icon: <ArrowRightLeft size={11} />, color: 'text-brand bg-brand-soft' },
+  task_deleted: { icon: <AlertTriangle size={11} />, color: 'text-danger bg-danger-soft' },
+  comment_added: { icon: <MessageSquare size={11} />, color: 'text-primary bg-surface-muted' },
+  member_added: { icon: <UserPlus size={11} />, color: 'text-info bg-info-soft' },
+};
+
+function activityLabel(item: DashboardData['recentActivity'][number]): React.ReactNode {
+  const { metadata } = item;
+  const taskLink = metadata.taskId ? (
+    <span className="font-semibold text-text-primary">{metadata.taskTitle}</span>
+  ) : null;
+
+  switch (item.type) {
+    case 'task_created':
+      return <>created task {taskLink}</>;
+    case 'task_moved':
+      return (
+        <>
+          moved {taskLink}{' '}
+          {metadata.fromColumn && metadata.toColumn && (
+            <span className="text-text-muted">
+              {metadata.fromColumn} → {metadata.toColumn}
+            </span>
+          )}
+        </>
+      );
+    case 'comment_added':
+      return (
+        <>
+          commented on {taskLink}
+          {metadata.content && (
+            <span className="block mt-0.5 text-text-secondary line-clamp-1 font-normal">
+              &ldquo;{metadata.content}&rdquo;
+            </span>
+          )}
+        </>
+      );
+    case 'task_deleted':
+      return (
+        <>
+          deleted task{' '}
+          <span className="font-semibold text-text-primary line-through">{metadata.taskTitle}</span>
+        </>
+      );
+    case 'member_added':
+      return <>joined the project</>;
+    default:
+      return null;
+  }
+}
+
+function ActivityItem({
+  item,
+  slug,
+  router,
+}: {
+  item: DashboardData['recentActivity'][number];
+  slug: string;
+  router: ReturnType<typeof useRouter>;
+}) {
+  const meta = ACTIVITY_META[item.type] ?? ACTIVITY_META['task_created'];
+  const taskId = item.type !== 'task_deleted' ? item.metadata.taskId : undefined;
+
+  return (
+    <li className="px-5 py-3.5">
+      <div className="mb-2 flex items-center gap-1.5 text-[11px] text-text-muted">
+        <FolderOpen size={11} />
+        <button
+          onClick={() => router.push(`/org/${slug}/projects/${item.projectId}`)}
+          className="font-medium hover:text-primary transition-colors"
+        >
+          {item.projectName}
+        </button>
+      </div>
+      <div className="flex items-start gap-2.5">
+        <Avatar name={item.actor.name} url={item.actor.avatarUrl} size={7} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+            <span className="text-xs font-semibold text-text-primary">{item.actor.name}</span>
+            <span
+              className={cn('inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium', meta.color)}
+            >
+              {meta.icon}
+            </span>
+            <span
+              className="text-xs text-text-secondary cursor-pointer hover:text-primary transition-colors"
+              onClick={() => taskId && router.push(`/org/${slug}/projects/${item.projectId}?taskId=${taskId}`)}
+            >
+              {activityLabel(item)}
+            </span>
+          </div>
+          <p className="mt-0.5 text-[11px] text-text-muted">{formatRelativeTime(item.createdAt)}</p>
+        </div>
+      </div>
+    </li>
   );
 }

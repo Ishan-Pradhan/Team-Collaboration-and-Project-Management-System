@@ -20,6 +20,7 @@ import {
 } from '@/hooks/useProject';
 import { useAuthStore } from '@/store/auth.store';
 import { parseApiError } from '@/lib/axios';
+import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 
 // ─── helpers ──────────────────────────────────────────────────
 const COLORS = ['#22302a', '#d4a84f', '#6f8c78', '#a86c58', '#4b7f52', '#c38a2d'];
@@ -155,6 +156,7 @@ function DetailsTab({ task, projectId, isAdmin, columnName, onClose }: {
   const [assigneeIds, setAssigneeIds] = useState<string[]>((task.assignees ?? []).map((a) => a.id));
   const [saving, setSaving] = useState(false);
   const [showAssigneePicker, setShowAssigneePicker] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const assigneeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -179,8 +181,9 @@ function DetailsTab({ task, projectId, isAdmin, columnName, onClose }: {
     );
   };
 
-  const handleDelete = () => {
-    if (!confirm('Delete this task? This cannot be undone.')) return;
+  const handleDelete = () => setShowDeleteConfirm(true);
+
+  const confirmDelete = () => {
     deleteTask.mutate(task.id, {
       onSuccess: () => { toast.success('Task deleted'); onClose(); },
       onError: (err: unknown) => toast.error(parseApiError(err).message),
@@ -400,6 +403,16 @@ function DetailsTab({ task, projectId, isAdmin, columnName, onClose }: {
           <Button variant="outline" size="sm" onClick={onClose} className="ml-auto">Close</Button>
         )}
       </div>
+      <ConfirmationDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDelete}
+        title="Delete Task"
+        description="Delete this task? This cannot be undone."
+        confirmText="Delete"
+        isDestructive
+        isLoading={deleteTask.isPending}
+      />
     </div>
   );
 }
@@ -632,7 +645,7 @@ function FilePreviewModal({ file, onClose }: { file: TaskAttachment; onClose: ()
   const isVideo = file.fileType.startsWith('video/');
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85" onClick={onClose}>
+    <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/85" onClick={onClose}>
       <div className="relative mx-4 flex w-full max-w-4xl flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between gap-4">
           <p className="truncate text-sm font-medium text-white">{file.fileName}</p>

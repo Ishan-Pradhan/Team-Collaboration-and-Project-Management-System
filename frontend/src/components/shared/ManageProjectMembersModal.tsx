@@ -17,6 +17,7 @@ interface Props {
   createdById: string;
   isOpen: boolean;
   isOrgAdmin: boolean;
+  canManageMembers: boolean;
   onClose: () => void;
 }
 
@@ -26,6 +27,7 @@ export default function ManageProjectMembersModal({
   createdById,
   isOpen,
   isOrgAdmin,
+  canManageMembers,
   onClose,
 }: Props) {
   const { data: projectMembers, isLoading: projectMembersLoading } =
@@ -174,7 +176,7 @@ export default function ManageProjectMembersModal({
             </div>
 
             {/* Add Members Section */}
-            <div className="px-6 py-4">
+            {canManageMembers && <div className="px-6 py-4">
               <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-secondary">
                 Add Members ({addableMembers.length} available)
               </h3>
@@ -217,7 +219,7 @@ export default function ManageProjectMembersModal({
                   All organization members are already in this project.
                 </p>
               )}
-            </div>
+            </div>}
           </div>
         )}
       </div>

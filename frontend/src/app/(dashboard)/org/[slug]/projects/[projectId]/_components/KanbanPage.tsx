@@ -26,6 +26,7 @@ import {
 } from '@/hooks/useProject';
 import { useOrganizationBySlug, useOrganizationMembers } from '@/hooks/useOrganization';
 import { useAuthStore } from '@/store/auth.store';
+import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 
 import {
   DndContext,
@@ -95,6 +96,9 @@ export default function KanbanPage({ params }: Props) {
   const [activeDrag, setActiveDrag] = useState<ActiveDrag>(null);
   const [pendingMutations, setPendingMutations] = useState(0);
   const isMutating = pendingMutations > 0;
+
+  const [showDeleteColumnConfirm, setShowDeleteColumnConfirm] = useState(false);
+  const [deletingColumnId, setDeletingColumnId] = useState<string | null>(null);
 
   const [addingTaskColumnId, setAddingTaskColumnId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -248,10 +252,23 @@ export default function KanbanPage({ params }: Props) {
   };
 
   const handleDeleteColumn = (colId: string) => {
-    if (!confirm('Delete this column and all its cards?')) return;
-    deleteColumn.mutate(colId, {
-      onSuccess: () => toast.success('Column deleted'),
-      onError: () => toast.error('Failed to delete column'),
+    setDeletingColumnId(colId);
+    setShowDeleteColumnConfirm(true);
+  };
+
+  const confirmDeleteColumn = () => {
+    if (!deletingColumnId) return;
+    deleteColumn.mutate(deletingColumnId, {
+      onSuccess: () => {
+        toast.success('Column deleted');
+        setShowDeleteColumnConfirm(false);
+        setDeletingColumnId(null);
+      },
+      onError: () => {
+        toast.error('Failed to delete column');
+        setShowDeleteColumnConfirm(false);
+        setDeletingColumnId(null);
+      },
     });
   };
 
@@ -507,9 +524,20 @@ export default function KanbanPage({ params }: Props) {
           createdById={project.createdById}
           isOpen={showMembersModal}
           isOrgAdmin={isOrgAdmin}
+          canManageMembers={isAdmin}
           onClose={() => setShowMembersModal(false)}
         />
       )}
+      <ConfirmationDialog
+        isOpen={showDeleteColumnConfirm}
+        onClose={() => { setShowDeleteColumnConfirm(false); setDeletingColumnId(null); }}
+        onConfirm={confirmDeleteColumn}
+        title="Delete Column"
+        description="Delete this column and all its cards?"
+        confirmText="Delete"
+        isDestructive
+        isLoading={deleteColumn.isPending}
+      />
     </div>
   );
 }
@@ -532,11 +560,16 @@ function ProjectSettingsView({
   const unarchiveMutation = useUnarchiveProject(project.id, project.organizationId);
   const deleteMutation = useDeleteProject(project.id, project.organizationId);
 
-  const handleArchive = () => {
-    if (!confirm(`Archive "${project.name}"? It will be hidden from active projects and no new tasks can be added.`)) return;
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleArchive = () => setShowArchiveConfirm(true);
+
+  const confirmArchive = () => {
     archiveMutation.mutate(undefined, {
       onSuccess: () => {
         toast.success(`"${project.name}" has been archived`);
+        setShowArchiveConfirm(false);
         router.push(`/org/${slug}/projects`);
       },
       onError: () => toast.error('Failed to archive project'),
@@ -550,11 +583,13 @@ function ProjectSettingsView({
     });
   };
 
-  const handleDelete = () => {
-    if (!confirm(`Permanently delete "${project.name}"? This cannot be undone — all tasks, columns, and files will be lost.`)) return;
+  const handleDelete = () => setShowDeleteConfirm(true);
+
+  const confirmDelete = () => {
     deleteMutation.mutate(undefined, {
       onSuccess: () => {
         toast.success(`"${project.name}" has been deleted`);
+        setShowDeleteConfirm(false);
         router.push(`/org/${slug}/projects`);
       },
       onError: () => toast.error('Failed to delete project'),
@@ -647,6 +682,26 @@ function ProjectSettingsView({
           <p className="text-center text-sm text-gray-400">Only admins can modify project settings.</p>
         )}
       </div>
+
+      <ConfirmationDialog
+        isOpen={showArchiveConfirm}
+        onClose={() => setShowArchiveConfirm(false)}
+        onConfirm={confirmArchive}
+        title="Archive Project"
+        description={`Archive "${project.name}"? It will be hidden from active projects and no new tasks can be added.`}
+        confirmText="Archive"
+        isLoading={archiveMutation.isPending}
+      />
+      <ConfirmationDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDelete}
+        title="Delete Project"
+        description={`Permanently delete "${project.name}"? This cannot be undone — all tasks, columns, and files will be lost.`}
+        confirmText="Delete"
+        isDestructive
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   );
 }

@@ -15,6 +15,7 @@ import type { Project } from '@/types/project.types';
 import { ProjectsSkeleton } from '@/components/shared/skeletons/ProjectsSkeleton';
 import { ErrorState } from '@/components/shared/ErrorState';
 import ManageProjectMembersModal from '@/components/shared/ManageProjectMembersModal';
+import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -53,11 +54,20 @@ function ProjectCard({
   const unarchiveMutation = useUnarchiveProject(project.id, organizationId);
   const deleteMutation = useDeleteProject(project.id, organizationId);
 
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   const handleArchive = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm(`Archive "${project.name}"? It will be hidden from active projects.`)) return;
+    setShowArchiveConfirm(true);
+  };
+
+  const handleConfirmArchive = () => {
     archiveMutation.mutate(undefined, {
-      onSuccess: () => toast.success(`"${project.name}" archived`),
+      onSuccess: () => {
+        toast.success(`"${project.name}" archived`);
+        setShowArchiveConfirm(false);
+      },
       onError: (err: unknown) => toast.error(parseApiError(err).message),
     });
   };
@@ -72,9 +82,15 @@ function ProjectCard({
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm(`Permanently delete "${project.name}"? This cannot be undone.`)) return;
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = () => {
     deleteMutation.mutate(undefined, {
-      onSuccess: () => toast.success(`"${project.name}" deleted`),
+      onSuccess: () => {
+        toast.success(`"${project.name}" deleted`);
+        setShowDeleteConfirm(false);
+      },
       onError: (err: unknown) => toast.error(parseApiError(err).message),
     });
   };
@@ -88,7 +104,7 @@ function ProjectCard({
     >
       <button onClick={onNavigate} className="flex w-full items-start gap-3 p-5 text-left">
         <div
-          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white"
           style={{ backgroundColor: color }}
         >
           {initials}
@@ -162,6 +178,26 @@ function ProjectCard({
       <span
         className="absolute inset-y-0 left-0 w-1 rounded-l-xl opacity-0 transition-opacity duration-150 group-hover:opacity-100"
         style={{ backgroundColor: color }}
+      />
+
+      <ConfirmationDialog
+        isOpen={showArchiveConfirm}
+        onClose={() => setShowArchiveConfirm(false)}
+        onConfirm={handleConfirmArchive}
+        title="Archive Project"
+        description={`Archive "${project.name}"? It will be hidden from active projects.`}
+        confirmText="Archive"
+        isLoading={archiveMutation.isPending}
+      />
+      <ConfirmationDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Project"
+        description={`Permanently delete "${project.name}"? This cannot be undone.`}
+        confirmText="Delete"
+        isDestructive
+        isLoading={deleteMutation.isPending}
       />
     </div>
   );
@@ -348,6 +384,7 @@ export default function ProjectsPage({ params }: Props) {
           createdById={managingProject.createdById}
           isOpen={!!managingProject}
           isOrgAdmin={isAdmin}
+          canManageMembers={isAdmin || managingProject.myRole === 'PROJECT_MANAGER'}
           onClose={() => setManagingProject(null)}
         />
       )}

@@ -9,6 +9,8 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Plus,
+  Settings,
   Users,
   X,
 } from 'lucide-react';
@@ -19,6 +21,7 @@ import { useMyOrganizations } from '@/hooks/useOrganization';
 import { useOrgStore } from '@/store/org.store';
 import { useAuthStore } from '@/store/auth.store';
 import { useLogout } from '@/hooks/useAuth';
+import { useOrgProjects } from '@/hooks/useProject';
 import { cn } from '@/lib/utils';
 
 
@@ -30,6 +33,24 @@ function getOrgColor(name: string): string {
     '#a86c58', // Terracotta
     '#4b7f52', // Success green
     '#c38a2d', // Warning amber
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function getProjectColor(name: string): string {
+  const colors = [
+    '#8B5CF6', // Purple/Violet
+    '#F97316', // Orange
+    '#F59E0B', // Amber
+    '#10B981', // Emerald
+    '#3B82F6', // Blue
+    '#EC4899', // Pink
+    '#EF4444', // Red
+    '#06B6D4', // Cyan
   ];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
@@ -62,6 +83,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const logout = useLogout();
 
   const activeOrg = orgs?.find((o) => o.slug === currentSlug) || null;
+  const { data: projects, isLoading: projectsLoading } = useOrgProjects(activeOrg?.id || '');
 
   // Sync workspace store with the URL's current slug
   useEffect(() => {
@@ -90,12 +112,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       exact: true,
     },
     {
-      name: 'Projects',
-      href: currentSlug ? `/org/${currentSlug}/projects` : '#',
-      icon: FolderOpen,
-      disabled: !currentSlug,
-    },
-    {
       name: 'Members',
       href: currentSlug ? `/org/${currentSlug}/members` : '#',
       icon: Users,
@@ -107,6 +123,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: CalendarDays,
       disabled: !currentSlug,
     },
+    ...(activeOrg?.ownerId === user?.id
+      ? [{
+          name: 'Settings',
+          href: `/org/${currentSlug}/settings`,
+          icon: Settings,
+          disabled: false,
+        }]
+      : []),
   ];
 
   return (
@@ -122,7 +146,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border-subtle bg-white transition-transform duration-200 ease-in-out lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-border-subtle bg-primary transition-transform duration-200 ease-in-out lg:static lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
@@ -130,7 +154,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="flex h-14 items-center justify-between border-b border-border-subtle px-4">
           <Logo />
           <button
-            className="rounded p-1 text-text-secondary hover:bg-surface-muted lg:hidden"
+            className="rounded p-1 text-white hover:bg-surface-muted lg:hidden"
             onClick={() => setSidebarOpen(false)}
           >
             <X size={18} />
@@ -147,7 +171,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               {activeOrg ? (
                 <>
                   <div
-                    className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded text-xs font-semibold text-white"
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-xs font-semibold text-white"
                     style={{ backgroundColor: getOrgColor(activeOrg.name) }}
                   >
                     {activeOrg.name.charAt(0).toUpperCase()}
@@ -157,7 +181,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   </span>
                 </>
               ) : (
-                <span className="text-sm font-medium text-text-secondary">
+                <span className="text-sm font-medium text-white">
                   {currentSlug || 'Choose Workspace'}
                 </span>
               )}
@@ -187,7 +211,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                       >
                         {org.name.charAt(0).toUpperCase()}
                       </div>
-                      <span className="truncate text-text-primary">{org.name}</span>
+                      <span className="truncate text-primary">{org.name}</span>
                     </button>
                   ))}
                   <div className="my-1 border-t border-border-subtle" />
@@ -207,28 +231,87 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
 
         {/* Sidebar Navigation */}
-        <nav className="flex-1 space-y-1 p-3">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = item.href !== '#' && (item.exact ? pathname === item.href : pathname.startsWith(item.href));
-            if (item.disabled) return null;
+        <nav className="flex-1 space-y-6 p-3 overflow-y-auto">
+          {/* Main Navigation */}
+          <div className="space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const active = item.href !== '#' && (item.exact ? pathname === item.href : pathname.startsWith(item.href));
+              if (item.disabled) return null;
 
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all',
-                  active
-                    ? 'bg-primary/5 text-primary font-medium'
-                    : 'text-text-secondary hover:bg-surface-muted hover:text-text-primary'
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all',
+                    active
+                      ? 'bg-white text-primary font-medium'
+                      : 'text-white hover:bg-primary-foreground  hover:text-primary'
+                  )}
+                >
+                  <Icon size={18} />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Projects Section */}
+          {currentSlug && (
+            <div className="space-y-1.5">
+              <div className="px-3 py-1">
+                <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+                  Projects
+                </span>
+              </div>
+              <div className="space-y-1">
+                {projectsLoading ? (
+                  <span className="block px-3 py-1.5 text-xs text-text-muted">Loading projects...</span>
+                ) : (
+                  <>
+                    {projects && projects.slice(0, 4).map((project) => {
+                      const projectHref = `/org/${currentSlug}/projects/${project.id}`;
+                      const isProjectActive = pathname.startsWith(projectHref);
+                      const color = getProjectColor(project.name);
+                      return (
+                        <Link
+                          key={project.id}
+                          href={projectHref}
+                          className={cn(
+                            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all truncate',
+                            isProjectActive
+                              ? 'bg-primary-foreground text-primary   font-medium'
+                              : 'text-white hover:bg-surface-muted hover:text-text-primary'
+                          )}
+                        >
+                          <div
+                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[10px] font-semibold text-white uppercase"
+                            style={{ backgroundColor: color }}
+                          >
+                            {project.name.charAt(0)}
+                          </div>
+                          <span className="truncate">{project.name}</span>
+                        </Link>
+                      );
+                    })}
+                    {(!projects || projects.length === 0) && (
+                      <span className="block px-3 py-1.5 text-xs text-text-muted italic">
+                        No projects yet
+                      </span>
+                    )}
+                    <Link
+                      href={`/org/${currentSlug}/projects`}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium hover:text-primary text-white hover:bg-surface-muted transition-all group"
+                    >
+                      <Plus size={16} className="text-white group-hover:text-primary transition-all" />
+                      <span>View all projects</span>
+                    </Link>
+                  </>
                 )}
-              >
-                <Icon size={18} />
-                <span>{item.name}</span>
-              </Link>
-            );
-          })}
+              </div>
+            </div>
+          )}
         </nav>
 
         {/* Sidebar Footer */}
@@ -257,7 +340,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </Link>
             <button
               onClick={handleLogout}
-              className="rounded p-1.5 text-text-secondary hover:bg-surface-hover hover:text-danger transition-colors"
+              className="rounded p-1.5 text-primary cursor-pointer hover:bg-surface-hover hover:text-danger transition-colors"
               title="Logout"
             >
               <LogOut size={16} />
@@ -272,14 +355,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <header className="flex h-14 items-center justify-between border-b border-border-subtle bg-white px-4 lg:px-6">
           <div className="flex items-center gap-4">
             <button
-              className="rounded p-1 text-text-secondary hover:bg-surface-muted lg:hidden"
+              className="rounded p-1 text-primary hover:bg-surface-muted lg:hidden"
               onClick={() => setSidebarOpen(true)}
             >
               <Menu size={20} />
             </button>
             <div className="text-xs text-text-muted">
               {currentOrg ? (
-                <span className="font-medium text-text-secondary">{currentOrg.name}</span>
+                <span className="font-medium text-primary">{currentOrg.name}</span>
               ) : (
                 'Dashboard'
               )}

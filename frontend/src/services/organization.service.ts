@@ -80,3 +80,11 @@ export async function changeMemberRole(
   );
   return res.data.data;
 }
+
+export async function leaveOrganization(organizationId: string): Promise<void> {
+  await api.delete(`/organizations/${organizationId}/members/me`);
+}
+
+export async function deleteOrganization(organizationId: string): Promise<void> {
+  await api.delete(`/organizations/${organizationId}`);
+}

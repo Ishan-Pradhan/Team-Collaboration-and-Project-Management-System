@@ -159,3 +159,57 @@ export interface TaskResponse {
   message: string;
   data: Task;
 }
+
+// ─── Dashboard ─────────────────────────────────────────────────
+
+export interface DashboardData {
+  stats: {
+    projectCount: number;
+    assignedTaskCount: number;
+    overdueCount: number;
+    dueSoonCount: number;
+  };
+  myProjects: {
+    id: string;
+    name: string;
+    description: string | null;
+    myRole: string;
+    dueSoonCount: number;
+  }[];
+  assignedTasks: {
+    id: string;
+    title: string;
+    priority: TaskPriority;
+    dueDate: string | null;
+    projectId: string;
+    projectName: string;
+    columnName: string;
+  }[];
+  recentActivity: {
+    id: string;
+    type: 'task_created' | 'task_moved' | 'task_deleted' | 'comment_added' | 'member_added';
+    createdAt: string;
+    projectId: string;
+    projectName: string;
+    metadata: {
+      taskTitle?: string;
+      taskId?: string;
+      fromColumn?: string | null;
+      toColumn?: string | null;
+      content?: string;
+      commentId?: string;
+    };
+    actor: {
+      id: string;
+      name: string;
+      avatarUrl: string | null;
+    };
+  }[];
+  members: {
+    id: string;
+    name: string;
+    email: string;
+    avatarUrl: string | null;
+    role: string;
+  }[];
+}

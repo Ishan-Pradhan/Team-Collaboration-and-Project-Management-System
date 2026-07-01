@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Task } from '@/types/project.types';
 import {
+  getOrgDashboard,
   getOrgProjects,
   getProject,
   createProject,
@@ -34,6 +35,15 @@ import {
   deleteTaskAttachment,
   getProjectFiles,
 } from '@/services/project.service';
+
+// ─── Dashboard ───────────────────────────────────────────────
+
+export const useOrgDashboard = (organizationId: string) =>
+  useQuery({
+    queryKey: ['organizations', organizationId, 'dashboard'],
+    queryFn: () => getOrgDashboard(organizationId),
+    enabled: !!organizationId,
+  });
 
 // ─── Projects ────────────────────────────────────────────────
 

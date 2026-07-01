@@ -12,7 +12,15 @@ import type {
   TaskComment,
   Subtask,
   TaskAttachment,
+  DashboardData,
 } from '@/types/project.types';
+
+export async function getOrgDashboard(organizationId: string): Promise<DashboardData> {
+  const res = await api.get<{ success: boolean; data: DashboardData }>(
+    `/organizations/${organizationId}/dashboard`
+  );
+  return res.data.data;
+}
 
 export async function getOrgProjects(organizationId: string): Promise<Project[]> {
   const res = await api.get<ProjectsResponse>(`/organizations/${organizationId}/projects`);

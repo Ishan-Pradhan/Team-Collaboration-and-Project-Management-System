@@ -1,22 +1,28 @@
 'use client';
 
 import { use, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   useOrganizationBySlug,
   useOrganizationMembers,
   useInviteUser,
   useRemoveMember,
+  useLeaveOrganization,
+  useDeleteOrganization,
   usePendingInvites,
   useRevokeInvite,
   useChangeMemberRole,
 } from '@/hooks/useOrganization';
 import { useAuthStore } from '@/store/auth.store';
+import { useOrgStore } from '@/store/org.store';
 import { parseApiError } from '@/lib/axios';
 import { toast } from 'sonner';
 import {
+  AlertTriangle,
   ChevronDown,
   Clock,
   Loader2,
+  LogOut,
   Mail,
   Shield,
   Trash2,
@@ -29,6 +35,7 @@ import { Input } from '@/components/ui/input';
 import { MembersSkeleton } from '@/components/shared/skeletons/MembersSkeleton';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { cn } from '@/lib/utils';
+import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -36,7 +43,9 @@ interface Props {
 
 export default function MembersPage({ params }: Props) {
   const { slug } = use(params);
+  const router = useRouter();
   const { user: currentUser } = useAuthStore();
+  const { clearCurrentOrg } = useOrgStore();
   const { data: org, isLoading: orgLoading } = useOrganizationBySlug(slug);
   const { data: members, isLoading: membersLoading } = useOrganizationMembers(org?.id ?? '');
   const { data: pendingInvites, isLoading: invitesLoading } = usePendingInvites(org?.id ?? '');
@@ -49,8 +58,13 @@ export default function MembersPage({ params }: Props) {
 
   const inviteMutation = useInviteUser(org?.id ?? '');
   const removeMutation = useRemoveMember(org?.id ?? '');
+  const leaveMutation = useLeaveOrganization(org?.id ?? '');
+  const deleteMutation = useDeleteOrganization();
   const revokeInviteMutation = useRevokeInvite(org?.id ?? '');
   const changeRoleMutation = useChangeMemberRole(org?.id ?? '');
+
+  const [activeConfirm, setActiveConfirm] = useState<'remove' | 'revoke' | 'leave' | 'delete' | null>(null);
+  const [confirmPayload, setConfirmPayload] = useState<any>(null);
 
   if (orgLoading || membersLoading) return <MembersSkeleton />;
 
@@ -84,17 +98,35 @@ export default function MembersPage({ params }: Props) {
   };
 
   const handleRemoveMember = (userId: string, name: string) => {
-    if (!confirm(`Are you sure you want to remove ${name} from this workspace?`)) return;
-    removeMutation.mutate(userId, {
-      onSuccess: () => toast.success(`${name} removed successfully`),
+    setActiveConfirm('remove');
+    setConfirmPayload({ userId, name });
+  };
+
+  const confirmRemoveMember = () => {
+    if (!confirmPayload) return;
+    removeMutation.mutate(confirmPayload.userId, {
+      onSuccess: () => {
+        toast.success(`${confirmPayload.name} removed successfully`);
+        setActiveConfirm(null);
+        setConfirmPayload(null);
+      },
       onError: (err: unknown) => toast.error(parseApiError(err).message),
     });
   };
 
   const handleRevokeInvite = (inviteId: string, email: string) => {
-    if (!confirm(`Revoke invitation for ${email}?`)) return;
-    revokeInviteMutation.mutate(inviteId, {
-      onSuccess: () => toast.success('Invitation revoked'),
+    setActiveConfirm('revoke');
+    setConfirmPayload({ inviteId, email });
+  };
+
+  const confirmRevokeInvite = () => {
+    if (!confirmPayload) return;
+    revokeInviteMutation.mutate(confirmPayload.inviteId, {
+      onSuccess: () => {
+        toast.success('Invitation revoked');
+        setActiveConfirm(null);
+        setConfirmPayload(null);
+      },
       onError: (err: unknown) => toast.error(parseApiError(err).message),
     });
   };
@@ -110,6 +142,23 @@ export default function MembersPage({ params }: Props) {
       }
     );
   };
+
+  const handleLeave = () => {
+    setActiveConfirm('leave');
+  };
+
+  const confirmLeave = () => {
+    leaveMutation.mutate(undefined, {
+      onSuccess: () => {
+        toast.success(`You have left ${org?.name}`);
+        clearCurrentOrg();
+        setActiveConfirm(null);
+        router.push('/auth/workspace');
+      },
+      onError: (err: unknown) => toast.error(parseApiError(err).message),
+    });
+  };
+
 
   return (
     <div className="space-y-6">
@@ -179,7 +228,7 @@ export default function MembersPage({ params }: Props) {
                   <th className="px-6 py-4">User</th>
                   <th className="px-6 py-4">Email</th>
                   <th className="px-6 py-4">Role</th>
-                  {isAdmin && <th className="px-6 py-4 text-right">Actions</th>}
+                  <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-subtle">
@@ -263,19 +312,29 @@ export default function MembersPage({ params }: Props) {
                           </span>
                         )}
                       </td>
-                      {isAdmin && (
-                        <td className="whitespace-nowrap px-6 py-4 text-right">
-                          {!isOwner && !isSelf && (
-                            <button
-                              onClick={() => handleRemoveMember(member.userId, name)}
-                              className="rounded p-1.5 text-text-secondary hover:bg-danger-soft/20 hover:text-danger transition-colors"
-                              title="Remove Member"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          )}
-                        </td>
-                      )}
+                      <td className="whitespace-nowrap px-6 py-4 text-right">
+                        {isSelf && !isOwner && (
+                          <button
+                            onClick={handleLeave}
+                            disabled={leaveMutation.isPending}
+                            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-text-secondary hover:bg-danger-soft/20 hover:text-danger transition-colors disabled:opacity-50"
+                            title="Leave organization"
+                          >
+                            <LogOut size={13} />
+                            Leave
+                          </button>
+                        )}
+                        {isAdmin && !isOwner && !isSelf && (
+                          <button
+                            onClick={() => handleRemoveMember(member.userId, name)}
+                            disabled={removeMutation.isPending}
+                            className="rounded p-1.5 text-text-secondary hover:bg-danger-soft/20 hover:text-danger transition-colors disabled:opacity-50"
+                            title="Remove member"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
@@ -447,6 +506,43 @@ export default function MembersPage({ params }: Props) {
           onClick={() => setOpenRoleDropdown(null)}
         />
       )}
+
+
+
+      <ConfirmationDialog
+        isOpen={activeConfirm === 'remove'}
+        onClose={() => { setActiveConfirm(null); setConfirmPayload(null); }}
+        onConfirm={confirmRemoveMember}
+        title="Remove Member"
+        description={`Are you sure you want to remove ${confirmPayload?.name} from this workspace?`}
+        confirmText="Remove"
+        isDestructive
+        isLoading={removeMutation.isPending}
+      />
+
+      <ConfirmationDialog
+        isOpen={activeConfirm === 'revoke'}
+        onClose={() => { setActiveConfirm(null); setConfirmPayload(null); }}
+        onConfirm={confirmRevokeInvite}
+        title="Revoke Invitation"
+        description={`Revoke invitation for ${confirmPayload?.email}?`}
+        confirmText="Revoke"
+        isDestructive
+        isLoading={revokeInviteMutation.isPending}
+      />
+
+      <ConfirmationDialog
+        isOpen={activeConfirm === 'leave'}
+        onClose={() => setActiveConfirm(null)}
+        onConfirm={confirmLeave}
+        title="Leave Workspace"
+        description={`Are you sure you want to leave ${org?.name}? You will lose access to all projects.`}
+        confirmText="Leave"
+        isDestructive
+        isLoading={leaveMutation.isPending}
+      />
+
+
     </div>
   );
 }

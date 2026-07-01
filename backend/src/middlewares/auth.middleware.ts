@@ -55,6 +55,28 @@ export const isAdmin = async (
 
 export const isSuperAdmin = isAdmin;
 
+export const isOrganizationOwner = async (
+  req: AuthRequest,
+  _res: Response,
+  next: NextFunction,
+) => {
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  const organizationId = req.params.organizationId as string;
+  if (!organizationId) throw new ApiError(400, 'Organization ID is required');
+
+  const { Organization } = await import('../models/index.js');
+  const org = await Organization.findByPk(organizationId);
+  if (!org) throw new ApiError(404, 'Organization not found');
+
+  if (org.ownerId !== user.id) {
+    throw new ApiError(403, 'Only the organization owner can perform this action');
+  }
+
+  next();
+};
+
 export const isOrganizationAdmin = async (
   req: AuthRequest,
   _res: Response,

@@ -29,7 +29,7 @@ export default function Logo({
           <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
         </svg>
       </div>
-      <span className={`font-semibold text-foreground tracking-tight ${textSize}`}>
+      <span className={`font-semibold text-brand tracking-tight ${textSize}`}>
         capms
       </span>
     </div>

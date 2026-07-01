@@ -13,6 +13,7 @@ import { TaskAttachment } from './taskAttachments.model.js';
 import { Subtask } from './subtasks.model.js';
 import { ChatMessage } from './chatMessages.model.js';
 import { Notification } from './notifications.model.js';
+import { ActivityLog } from './activityLog.model.js';
 
 // Setup associations
 
@@ -77,6 +78,10 @@ Invitation.belongsTo(User, { as: 'invitedBy', foreignKey: 'invitedById' });
 // Notifications
 Notification.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
+// Activity Logs
+ActivityLog.belongsTo(Project, { foreignKey: 'projectId', as: 'project' });
+ActivityLog.belongsTo(User, { foreignKey: 'actorId', as: 'actor' });
+
 // User ↔ Verification (if still needed)
 User.hasMany(Verification, { foreignKey: 'userId', as: 'verifications' });
 Verification.belongsTo(User, { foreignKey: 'userId', as: 'user' });
@@ -97,5 +102,6 @@ export {
   Subtask,
   ChatMessage,
   Notification,
+  ActivityLog,
 };
 

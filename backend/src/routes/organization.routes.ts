@@ -3,6 +3,7 @@ import {
   verifyJWT,
   isOrganizationAdmin,
   isOrganizationMember,
+  isOrganizationOwner,
 } from '../middlewares/auth.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
 import {
@@ -12,11 +13,14 @@ import {
   acceptOrganizationInvitation,
   listOrganizationMembers,
   removeOrganizationMember,
+  leaveOrganization,
+  deleteOrganization,
   getOrganizationBySlug,
   updateOrganization,
   listPendingInvites,
   revokeInvite,
   changeMemberRole,
+  getOrgDashboard,
 } from '../controllers/organization.controller.js';
 import {
   createOrganizationSchema,
@@ -236,6 +240,10 @@ router
  *         description: Not organization admin
  */
 router
+  .route('/:organizationId/members/me')
+  .delete(verifyJWT, isOrganizationMember, validate(organizationParamSchema), leaveOrganization);
+
+router
   .route('/:organizationId/members/:userId')
   .delete(
     verifyJWT,
@@ -328,11 +336,15 @@ router
  */
 router
   .route('/:organizationId')
-  .put(
-    verifyJWT,
-    isOrganizationAdmin,
-    validate(updateOrganizationSchema),
-    updateOrganization
-  );
+  .put(verifyJWT, isOrganizationAdmin, validate(updateOrganizationSchema), updateOrganization)
+  .delete(verifyJWT, isOrganizationOwner, validate(organizationParamSchema), deleteOrganization);
+
+router.get(
+  '/:organizationId/dashboard',
+  verifyJWT,
+  isOrganizationMember,
+  validate(organizationParamSchema),
+  getOrgDashboard,
+);
 
 export default router;

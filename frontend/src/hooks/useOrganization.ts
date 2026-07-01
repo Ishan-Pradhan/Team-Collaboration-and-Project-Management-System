@@ -8,6 +8,8 @@ import {
   inviteUser,
   acceptInvite,
   removeMember,
+  leaveOrganization,
+  deleteOrganization,
   listPendingInvites,
   revokeInvite,
   changeMemberRole,
@@ -88,5 +90,21 @@ export const useChangeMemberRole = (organizationId: string) => {
     mutationFn: ({ userId, role }: { userId: string; role: 'ORG_ADMIN' | 'MEMBER' }) =>
       changeMemberRole(organizationId, userId, role),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['organizations', organizationId, 'members'] }),
+  });
+};
+
+export const useLeaveOrganization = (organizationId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => leaveOrganization(organizationId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['organizations'] }),
+  });
+};
+
+export const useDeleteOrganization = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (organizationId: string) => deleteOrganization(organizationId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['organizations'] }),
   });
 };

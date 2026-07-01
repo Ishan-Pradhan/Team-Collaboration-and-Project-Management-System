@@ -11,6 +11,7 @@ import { taskAttachmentRepository } from '../repositories/taskAttachment.reposit
 import { subtaskRepository } from '../repositories/subtask.repository.js';
 import { uploadToCloudinary, deleteFromCloudinary } from '../services/cloudinary.service.js';
 import { organizationMemberRepository } from '../repositories/organization.repository.js';
+import { activityLogRepository } from '../repositories/activityLog.repository.js';
 function cloudinaryResourceType(mimeType: string): 'image' | 'video' | 'raw' {
   if (mimeType.startsWith('image/') || mimeType === 'application/pdf') return 'image';
   if (mimeType.startsWith('video/')) return 'video';
@@ -86,6 +87,16 @@ export const createTask = asyncHandler(
     }
 
     const created = await taskRepository.findById(task.id);
+
+    activityLogRepository.log({
+      projectId,
+      actorId: user.id,
+      type: 'task_created',
+      entityType: 'task',
+      entityId: task.id,
+      metadata: { taskTitle: task.title, taskId: task.id },
+    }).catch(() => {});
+
     return res.status(201).json({ success: true, message: 'Task created successfully', data: created });
   }
 );
@@ -162,7 +173,22 @@ export const moveTask = asyncHandler(
     const colExists = columns.some((c) => c.id === columnId);
     if (!colExists) throw new ApiError(400, 'Column does not belong to this project');
 
+    const fromColumnId = task.columnId;
     const updated = await taskRepository.move(taskId, columnId, position ?? 0);
+
+    if (fromColumnId !== columnId) {
+      const fromCol = columns.find((c) => c.id === fromColumnId)?.name;
+      const toCol = columns.find((c) => c.id === columnId)?.name;
+      activityLogRepository.log({
+        projectId,
+        actorId: user.id,
+        type: 'task_moved',
+        entityType: 'task',
+        entityId: taskId,
+        metadata: { taskTitle: task.title, taskId, fromColumn: fromCol ?? null, toColumn: toCol ?? null },
+      }).catch(() => {});
+    }
+
     return ok(res, updated, 'Task moved successfully');
   }
 );
@@ -191,7 +217,18 @@ export const deleteTask = asyncHandler(
     if (!isOrgAdmin && !isCreator)
       throw new ApiError(403, 'Only the task creator or org admins can delete tasks');
 
+    const taskTitle = task.title;
     await taskRepository.delete(taskId);
+
+    activityLogRepository.log({
+      projectId,
+      actorId: user.id,
+      type: 'task_deleted',
+      entityType: 'task',
+      entityId: taskId,
+      metadata: { taskTitle, taskId },
+    }).catch(() => {});
+
     return ok(res, null, 'Task deleted successfully');
   }
 );
@@ -339,6 +376,16 @@ export const createComment = asyncHandler(async (req: AuthRequest, res: Response
   if (!task || task.projectId !== projectId) throw new ApiError(404, 'Task not found');
 
   const comment = await taskCommentRepository.create({ taskId, authorId: user.id, content: content.trim() });
+
+  activityLogRepository.log({
+    projectId,
+    actorId: user.id,
+    type: 'comment_added',
+    entityType: 'task',
+    entityId: taskId,
+    metadata: { taskTitle: task.title, taskId, commentId: comment.id, content: content.trim() },
+  }).catch(() => {});
+
   return res.status(201).json({ success: true, message: 'Comment added', data: comment });
 });
 
