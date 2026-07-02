@@ -2,25 +2,39 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, Send } from 'lucide-react';
+import { Loader2, Send, Smile, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react';
 import { parseApiError } from '@/lib/axios';
-import { useChannelMessages, useSendMessage } from '@/hooks/useChannel';
+import {
+  useChannelMessages,
+  useSendMessage,
+  useAddReaction,
+  useRemoveReaction,
+  useDeleteMessage,
+} from '@/hooks/useChannel';
 import { getMessages } from '@/services/channel.service';
 import { useAuthStore } from '@/store/auth.store';
+import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 import type { Channel, Message } from '@/types/channel.types';
 
 interface Props {
   channel: Channel;
+  isAdmin: boolean;
 }
 
-export default function MessagePane({ channel }: Props) {
+export default function MessagePane({ channel, isAdmin }: Props) {
   const { user } = useAuthStore();
   const qc = useQueryClient();
   const { data: messages, isLoading } = useChannelMessages(channel.id);
   const sendMessage = useSendMessage(channel.id);
+  const addReaction = useAddReaction(channel.id);
+  const removeReaction = useRemoveReaction(channel.id);
+  const deleteMessage = useDeleteMessage(channel.id);
   const [content, setContent] = useState('');
   const [loadingMore, setLoadingMore] = useState(false);
+  const [openPickerFor, setOpenPickerFor] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,6 +66,38 @@ export default function MessagePane({ channel }: Props) {
     }
   };
 
+  const handleToggleReaction = (message: Message, emoji: string) => {
+    const reaction = message.reactions.find((r) => r.emoji === emoji);
+    const alreadyReacted = !!user && !!reaction?.userIds.includes(user.id);
+    if (alreadyReacted) {
+      removeReaction.mutate(
+        { messageId: message.id, emoji },
+        { onError: (err: unknown) => toast.error(parseApiError(err).message) }
+      );
+    } else {
+      addReaction.mutate(
+        { messageId: message.id, emoji },
+        { onError: (err: unknown) => toast.error(parseApiError(err).message) }
+      );
+    }
+  };
+
+  const handlePickEmoji = (message: Message, emojiData: EmojiClickData) => {
+    addReaction.mutate(
+      { messageId: message.id, emoji: emojiData.emoji },
+      { onError: (err: unknown) => toast.error(parseApiError(err).message) }
+    );
+    setOpenPickerFor(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return;
+    deleteMessage.mutate(deleteTarget, {
+      onSuccess: () => setDeleteTarget(null),
+      onError: (err: unknown) => toast.error(parseApiError(err).message),
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -79,11 +125,11 @@ export default function MessagePane({ channel }: Props) {
                 {message.content}
               </p>
             ) : (
-              <div key={message.id} className="flex items-start gap-2.5">
+              <div key={message.id} className="group relative flex items-start gap-2.5">
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                   {(message.sender?.name ?? '?').charAt(0).toUpperCase()}
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2">
                     <span className="text-sm font-medium text-text-primary">
                       {message.sender?.id === user?.id ? 'You' : message.sender?.name ?? 'Unknown'}
@@ -92,8 +138,63 @@ export default function MessagePane({ channel }: Props) {
                       {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
-                  <p className="text-sm text-text-primary">{message.content}</p>
+
+                  {message.deletedAt ? (
+                    <p className="text-sm italic text-text-secondary">This message was deleted</p>
+                  ) : (
+                    <>
+                      <p className="text-sm text-text-primary">{message.content}</p>
+
+                      {message.reactions.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {message.reactions.map((reaction) => {
+                            const reacted = !!user && reaction.userIds.includes(user.id);
+                            return (
+                              <button
+                                key={reaction.emoji}
+                                onClick={() => handleToggleReaction(message, reaction.emoji)}
+                                className={`rounded-full border px-1.5 py-0.5 text-xs transition-colors ${
+                                  reacted
+                                    ? 'border-primary bg-primary/10 text-primary'
+                                    : 'border-border-subtle text-text-secondary hover:bg-surface-muted'
+                                }`}
+                              >
+                                {reaction.emoji} {reaction.userIds.length}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
+
+                {!message.deletedAt && (
+                  <div className="absolute -top-3 right-2 hidden items-center gap-0.5 rounded-lg border border-border-subtle bg-white p-0.5 shadow-sm group-hover:flex">
+                    <button
+                      onClick={() => setOpenPickerFor(openPickerFor === message.id ? null : message.id)}
+                      className="rounded p-1 text-text-secondary hover:bg-surface-muted transition-colors"
+                      title="Add reaction"
+                    >
+                      <Smile size={14} />
+                    </button>
+                    {(message.sender?.id === user?.id || isAdmin) && (
+                      <button
+                        onClick={() => setDeleteTarget(message.id)}
+                        className="rounded p-1 text-text-secondary hover:bg-danger-soft/20 hover:text-danger transition-colors"
+                        title="Delete message"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {openPickerFor === message.id && (
+                  <div className="absolute right-2 top-6 z-20">
+                    <EmojiPicker onEmojiClick={(emojiData) => handlePickEmoji(message, emojiData)} />
+                  </div>
+                )}
               </div>
             )
           )
@@ -119,6 +220,17 @@ export default function MessagePane({ channel }: Props) {
           <Send size={15} />
         </button>
       </form>
+
+      <ConfirmationDialog
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Message"
+        description="Delete this message? This cannot be undone."
+        confirmText="Delete"
+        isDestructive
+        isLoading={deleteMessage.isPending}
+      />
     </div>
   );
 }

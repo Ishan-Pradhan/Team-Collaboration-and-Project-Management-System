@@ -59,7 +59,7 @@ export default function ChannelView({ channel, organizationId, isAdmin, onLeftOr
       </div>
 
       <div className="flex-1 overflow-hidden">
-        <MessagePane channel={channel} />
+        <MessagePane channel={channel} isAdmin={isAdmin} />
       </div>
 
       {showMembersModal && (
