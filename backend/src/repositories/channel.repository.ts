@@ -69,6 +69,30 @@ export const channelMemberRepository = {
   removeMember: async (channelId: string, userId: string): Promise<number> => {
     return await ChannelMember.destroy({ where: { channelId, userId } });
   },
+
+  findChannelIdsForUserInOrg: async (organizationId: string, userId: string): Promise<string[]> => {
+    const channels = await Channel.findAll({ where: { organizationId }, attributes: ['id'] });
+    const orgChannelIds = channels.map((c) => c.id);
+    if (orgChannelIds.length === 0) return [];
+    const memberships = await ChannelMember.findAll({
+      where: { userId, channelId: { [Op.in]: orgChannelIds } },
+      attributes: ['channelId'],
+    });
+    return memberships.map((m) => m.channelId);
+  },
+
+  addUserToAllPublicChannels: async (organizationId: string, userId: string): Promise<string[]> => {
+    const publicChannels = await Channel.findAll({
+      where: { organizationId, type: 'PUBLIC' },
+      attributes: ['id'],
+    });
+    if (publicChannels.length === 0) return [];
+    await ChannelMember.bulkCreate(
+      publicChannels.map((c) => ({ channelId: c.id, userId })),
+      { ignoreDuplicates: true },
+    );
+    return publicChannels.map((c) => c.id);
+  },
 };
 
 export const messageRepository = {

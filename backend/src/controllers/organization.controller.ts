@@ -12,6 +12,7 @@ import {
 import { userRepository } from '../repositories/users.repository.js';
 import { Notification } from '../models/index.js';
 import crypto from 'crypto';
+import { cascadeRemoveUserFromOrgChannels, autoJoinUserToPublicChannels } from './channel.controller.js';
 
 async function notifyAdminsOfMemberLeave(
   organizationId: string,
@@ -260,6 +261,7 @@ export const acceptOrganizationInvitation = asyncHandler(
       user.id,
       { role: 'MEMBER' }
     );
+    await autoJoinUserToPublicChannels(invite.organizationId, user.id);
 
     // Mark invite as accepted
     invite.status = 'ACCEPTED';
@@ -311,6 +313,7 @@ export const removeOrganizationMember = asyncHandler(
 
     const memberUser = await userRepository.findById(userId);
     await member.destroy();
+    await cascadeRemoveUserFromOrgChannels(organizationId, userId, memberUser?.name ?? 'A member');
 
     notifyAdminsOfMemberLeave(
       organizationId, org.ownerId, org.name,
@@ -339,6 +342,7 @@ export const leaveOrganization = asyncHandler(
     if (!member) throw new ApiError(404, 'You are not a member of this organization');
 
     await member.destroy();
+    await cascadeRemoveUserFromOrgChannels(organizationId, user.id, user.name);
 
     notifyAdminsOfMemberLeave(
       organizationId, org.ownerId, org.name,

@@ -195,3 +195,25 @@ export const listMessages = asyncHandler(async (req: AuthRequest, res: Response)
 
   return ok(res, messages, 'Messages retrieved successfully');
 });
+
+export async function cascadeRemoveUserFromOrgChannels(
+  organizationId: string,
+  userId: string,
+  actorName: string,
+): Promise<void> {
+  const channelIds = await channelMemberRepository.findChannelIdsForUserInOrg(organizationId, userId);
+  for (const channelId of channelIds) {
+    await removeMemberAndNotify(channelId, userId, actorName, 'removed');
+  }
+}
+
+export async function autoJoinUserToPublicChannels(
+  organizationId: string,
+  userId: string,
+): Promise<void> {
+  const channelIds = await channelMemberRepository.addUserToAllPublicChannels(organizationId, userId);
+  const io = getIO();
+  channelIds.forEach((channelId) => {
+    io.in(`user:${userId}`).socketsJoin(`channel:${channelId}`);
+  });
+}
