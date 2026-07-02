@@ -43,13 +43,50 @@ export interface Messages {
   type: 'TEXT' | 'SYSTEM';
   content: string;
   createdAt?: Date;
+  deletedAt?: Date | null;
+  deletedBy?: string | null;
   sender?: UserInstance;
 }
 
 export type MessageCreationAttributes = Optional<
   Messages,
-  'id' | 'senderId' | 'type' | 'createdAt'
+  'id' | 'senderId' | 'type' | 'createdAt' | 'deletedAt' | 'deletedBy'
 >;
 
 export interface MessageInstance
   extends Model<Messages, MessageCreationAttributes>, Messages {}
+
+export interface MessageReactions {
+  id: string;
+  messageId: string;
+  userId: string;
+  emoji: string;
+  createdAt?: Date;
+  user?: UserInstance;
+}
+
+export type MessageReactionCreationAttributes = Optional<
+  MessageReactions,
+  'id' | 'createdAt'
+>;
+
+export interface MessageReactionInstance
+  extends Model<MessageReactions, MessageReactionCreationAttributes>, MessageReactions {}
+
+export interface ReactionSummary {
+  emoji: string;
+  userIds: string[];
+}
+
+export interface MessageWithReactions {
+  id: string;
+  channelId: string;
+  senderId: string | null;
+  type: 'TEXT' | 'SYSTEM';
+  content: string;
+  createdAt: Date;
+  deletedAt: Date | null;
+  deletedBy: string | null;
+  sender?: { id: string; name: string; avatarUrl: string | null } | null;
+  reactions: ReactionSummary[];
+}

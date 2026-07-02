@@ -14,6 +14,7 @@ import { Subtask } from './subtasks.model.js';
 import { Channel } from './channels.model.js';
 import { ChannelMember } from './channelMembers.model.js';
 import { Message } from './messages.model.js';
+import { MessageReaction } from './messageReactions.model.js';
 import { Notification } from './notifications.model.js';
 import { ActivityLog } from './activityLog.model.js';
 
@@ -79,6 +80,10 @@ ChannelMember.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 Channel.hasMany(Message, { foreignKey: 'channelId', onDelete: 'CASCADE', as: 'messages' });
 Message.belongsTo(Channel, { foreignKey: 'channelId', as: 'channel' });
 Message.belongsTo(User, { as: 'sender', foreignKey: 'senderId' });
+Message.belongsTo(User, { as: 'deleter', foreignKey: 'deletedBy' });
+Message.hasMany(MessageReaction, { foreignKey: 'messageId', onDelete: 'CASCADE', as: 'reactions' });
+MessageReaction.belongsTo(Message, { foreignKey: 'messageId', as: 'message' });
+MessageReaction.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 // Invitations
 Invitation.belongsTo(Organization, { foreignKey: 'organizationId', as: 'organization' });
@@ -112,6 +117,7 @@ export {
   Channel,
   ChannelMember,
   Message,
+  MessageReaction,
   Notification,
   ActivityLog,
 };
