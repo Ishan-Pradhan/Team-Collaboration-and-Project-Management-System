@@ -40,17 +40,32 @@ export interface Messages {
   id: string;
   channelId: string;
   senderId: string | null;
-  type: 'TEXT' | 'SYSTEM';
+  type: 'TEXT' | 'SYSTEM' | 'FILE';
   content: string;
   createdAt?: Date;
   deletedAt?: Date | null;
   deletedBy?: string | null;
+  fileName?: string | null;
+  fileUrl?: string | null;
+  cloudinaryPublicId?: string | null;
+  fileType?: string | null;
+  fileSize?: number | null;
   sender?: UserInstance;
 }
 
 export type MessageCreationAttributes = Optional<
   Messages,
-  'id' | 'senderId' | 'type' | 'createdAt' | 'deletedAt' | 'deletedBy'
+  | 'id'
+  | 'senderId'
+  | 'type'
+  | 'createdAt'
+  | 'deletedAt'
+  | 'deletedBy'
+  | 'fileName'
+  | 'fileUrl'
+  | 'cloudinaryPublicId'
+  | 'fileType'
+  | 'fileSize'
 >;
 
 export interface MessageInstance
@@ -82,11 +97,16 @@ export interface MessageWithReactions {
   id: string;
   channelId: string;
   senderId: string | null;
-  type: 'TEXT' | 'SYSTEM';
+  type: 'TEXT' | 'SYSTEM' | 'FILE';
   content: string;
   createdAt: Date;
   deletedAt: Date | null;
   deletedBy: string | null;
+  fileName: string | null;
+  fileUrl: string | null;
+  cloudinaryPublicId: string | null;
+  fileType: string | null;
+  fileSize: number | null;
   sender?: { id: string; name: string; avatarUrl: string | null } | null;
   reactions: ReactionSummary[];
 }

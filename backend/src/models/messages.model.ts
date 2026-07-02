@@ -19,7 +19,7 @@ export const Message = sequelize.define<MessageInstance>(
       allowNull: true,
     },
     type: {
-      type: DataTypes.ENUM('TEXT', 'SYSTEM'),
+      type: DataTypes.ENUM('TEXT', 'SYSTEM', 'FILE'),
       allowNull: false,
       defaultValue: 'TEXT',
     },
@@ -33,6 +33,26 @@ export const Message = sequelize.define<MessageInstance>(
     },
     deletedBy: {
       type: DataTypes.UUID,
+      allowNull: true,
+    },
+    fileName: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+    },
+    fileUrl: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    cloudinaryPublicId: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+    },
+    fileType: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+    },
+    fileSize: {
+      type: DataTypes.INTEGER,
       allowNull: true,
     },
   },
