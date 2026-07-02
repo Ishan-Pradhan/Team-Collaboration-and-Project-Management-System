@@ -175,3 +175,61 @@ export const isOrganizationMember = async (
 
   next();
 };
+
+export const isChannelOrgAdmin = async (
+  req: AuthRequest,
+  _res: Response,
+  next: NextFunction,
+) => {
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  const channelId = req.params.channelId as string;
+  if (!channelId) throw new ApiError(400, 'Channel ID is required');
+
+  const { Channel, Organization, OrganizationMember } = await import('../models/index.js');
+
+  const channel = await Channel.findByPk(channelId);
+  if (!channel) throw new ApiError(404, 'Channel not found');
+
+  const org = await Organization.findByPk(channel.organizationId);
+  if (!org) throw new ApiError(404, 'Organization not found');
+
+  if (org.ownerId === user.id) {
+    return next();
+  }
+
+  const member = await OrganizationMember.findOne({
+    where: { organizationId: channel.organizationId, userId: user.id },
+  });
+
+  if (!member || member.role !== 'ORG_ADMIN') {
+    throw new ApiError(403, 'Unauthorized request. Organization Admin role required.');
+  }
+
+  next();
+};
+
+export const isChannelMember = async (
+  req: AuthRequest,
+  _res: Response,
+  next: NextFunction,
+) => {
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  const channelId = req.params.channelId as string;
+  if (!channelId) throw new ApiError(400, 'Channel ID is required');
+
+  const { Channel, ChannelMember } = await import('../models/index.js');
+
+  const channel = await Channel.findByPk(channelId);
+  if (!channel) throw new ApiError(404, 'Channel not found');
+
+  const membership = await ChannelMember.findOne({ where: { channelId, userId: user.id } });
+  if (!membership) {
+    throw new ApiError(403, 'Unauthorized request. Channel membership required.');
+  }
+
+  next();
+};
