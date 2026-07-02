@@ -21,6 +21,9 @@ import {
   revokeInvite,
   changeMemberRole,
   getOrgDashboard,
+  banOrganizationMember,
+  unbanOrganizationMember,
+  listOrganizationBans,
 } from '../controllers/organization.controller.js';
 import {
   createOrganizationSchema,
@@ -255,6 +258,18 @@ router
 router
   .route('/:organizationId/members/:userId/role')
   .patch(verifyJWT, isOrganizationAdmin, validate(changeMemberRoleSchema), changeMemberRole);
+
+router
+  .route('/:organizationId/members/:userId/ban')
+  .post(verifyJWT, isOrganizationAdmin, validate(memberParamSchema), banOrganizationMember);
+
+router
+  .route('/:organizationId/bans/:userId')
+  .delete(verifyJWT, isOrganizationAdmin, validate(memberParamSchema), unbanOrganizationMember);
+
+router
+  .route('/:organizationId/bans')
+  .get(verifyJWT, isOrganizationAdmin, validate(organizationParamSchema), listOrganizationBans);
 
 /**
  * @swagger

@@ -7,8 +7,10 @@ import {
   organizationRepository,
   organizationMemberRepository,
   organizationInviteRepository,
+  organizationBanRepository,
   dashboardRepository,
 } from '../repositories/organization.repository.js';
+import type { OrganizationInstance } from '../types/organizations.types.js';
 import { userRepository } from '../repositories/users.repository.js';
 import { Notification } from '../models/index.js';
 import crypto from 'crypto';
@@ -155,6 +157,11 @@ export const inviteUserToOrganization = asyncHandler(
       if (isMember) {
         throw new ApiError(400, 'User is already a member of this organization');
       }
+
+      const ban = await organizationBanRepository.findOne(organizationId, existingMemberUser.id);
+      if (ban) {
+        throw new ApiError(400, 'This user is banned from this organization');
+      }
     }
 
     // Check if there is already a pending invite
@@ -255,6 +262,11 @@ export const acceptOrganizationInvitation = asyncHandler(
       throw new ApiError(403, 'This organization has been suspended');
     }
 
+    const ban = await organizationBanRepository.findOne(invite.organizationId, user.id);
+    if (ban) {
+      throw new ApiError(400, 'This user is banned from this organization');
+    }
+
     // Add user as member
     const [member] = await organizationMemberRepository.findOrCreate(
       invite.organizationId,
@@ -282,6 +294,20 @@ export const listOrganizationMembers = asyncHandler(
   }
 );
 
+async function removeMemberFromOrg(org: OrganizationInstance, userId: string): Promise<void> {
+  const member = await organizationMemberRepository.findOne({ organizationId: org.id, userId });
+  if (!member) throw new ApiError(404, 'Member not found in organization');
+
+  const memberUser = await userRepository.findById(userId);
+  await member.destroy();
+  await cascadeRemoveUserFromOrgChannels(org.id, userId, memberUser?.name ?? 'A member');
+
+  notifyAdminsOfMemberLeave(
+    org.id, org.ownerId, org.name,
+    userId, memberUser?.name ?? 'A member', true,
+  ).catch(() => {});
+}
+
 // Remove Member from Organization
 export const removeOrganizationMember = asyncHandler(
   async (req: AuthRequest, res: Response) => {
@@ -302,23 +328,7 @@ export const removeOrganizationMember = asyncHandler(
       throw new ApiError(400, 'Cannot remove the organization owner');
     }
 
-    const member = await organizationMemberRepository.findOne({
-      organizationId,
-      userId,
-    });
-
-    if (!member) {
-      throw new ApiError(404, 'Member not found in organization');
-    }
-
-    const memberUser = await userRepository.findById(userId);
-    await member.destroy();
-    await cascadeRemoveUserFromOrgChannels(organizationId, userId, memberUser?.name ?? 'A member');
-
-    notifyAdminsOfMemberLeave(
-      organizationId, org.ownerId, org.name,
-      userId, memberUser?.name ?? 'A member', true,
-    ).catch(() => {});
+    await removeMemberFromOrg(org, userId);
 
     return ok(res, null, 'Member removed successfully');
   }
@@ -526,5 +536,54 @@ export const getOrgDashboard = asyncHandler(
 
     const data = await dashboardRepository.getDashboardData(organizationId, user.id);
     return ok(res, data, 'Dashboard data retrieved');
+  }
+);
+
+// Ban Member from Organization
+export const banOrganizationMember = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const organizationId = req.params.organizationId as string;
+    const userId = req.params.userId as string;
+    const user = req.user;
+    if (!user) throw new ApiError(401, 'Unauthorized');
+
+    const org = await organizationRepository.findById(organizationId);
+    if (!org) throw new ApiError(404, 'Organization not found');
+
+    if (org.ownerId === userId) {
+      throw new ApiError(400, 'Cannot ban the organization owner');
+    }
+
+    const existingBan = await organizationBanRepository.findOne(organizationId, userId);
+    if (existingBan) {
+      throw new ApiError(400, 'User is already banned from this organization');
+    }
+
+    await removeMemberFromOrg(org, userId);
+    await organizationBanRepository.create(organizationId, userId, user.id);
+
+    return ok(res, null, 'Member banned successfully');
+  }
+);
+
+// Unban Member
+export const unbanOrganizationMember = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const organizationId = req.params.organizationId as string;
+    const userId = req.params.userId as string;
+
+    const deleted = await organizationBanRepository.delete(organizationId, userId);
+    if (deleted === 0) throw new ApiError(404, 'No active ban found for this user');
+
+    return ok(res, null, 'Member unbanned successfully');
+  }
+);
+
+// List Banned Users
+export const listOrganizationBans = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const organizationId = req.params.organizationId as string;
+    const bans = await organizationBanRepository.findAllByOrg(organizationId);
+    return ok(res, bans, 'Banned users retrieved successfully');
   }
 );

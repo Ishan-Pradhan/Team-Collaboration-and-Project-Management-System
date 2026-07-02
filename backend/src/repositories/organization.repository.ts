@@ -3,6 +3,7 @@ import {
   Organization,
   OrganizationMember,
   Invitation,
+  OrganizationBan,
   User,
   Project,
   ProjectMember,
@@ -17,6 +18,7 @@ import type {
   OrganizationMemberInstance,
   OrganizationInviteCreationAttributes,
   OrganizationInviteInstance,
+  OrganizationBanInstance,
 } from '../types/organizations.types.js';
 
 export const organizationRepository = {
@@ -366,6 +368,31 @@ export const dashboardRepository = {
         role: m.role as string,
       })),
     };
+  },
+};
+
+export const organizationBanRepository = {
+  create: async (organizationId: string, userId: string, bannedBy: string): Promise<OrganizationBanInstance> => {
+    return await OrganizationBan.create({ organizationId, userId, bannedBy });
+  },
+
+  findOne: async (organizationId: string, userId: string): Promise<OrganizationBanInstance | null> => {
+    return await OrganizationBan.findOne({ where: { organizationId, userId } });
+  },
+
+  findAllByOrg: async (organizationId: string): Promise<OrganizationBanInstance[]> => {
+    return await OrganizationBan.findAll({
+      where: { organizationId },
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatarUrl'] },
+        { model: User, as: 'bannedByUser', attributes: ['id', 'name'] },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+  },
+
+  delete: async (organizationId: string, userId: string): Promise<number> => {
+    return await OrganizationBan.destroy({ where: { organizationId, userId } });
   },
 };
 
