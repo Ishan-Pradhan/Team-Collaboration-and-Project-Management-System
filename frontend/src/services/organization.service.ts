@@ -9,6 +9,8 @@ import type {
   AcceptInviteResponse,
   PendingInvite,
   PendingInvitesResponse,
+  OrganizationBan,
+  OrganizationBansResponse,
 } from '@/types/organization.types';
 
 export async function getMyOrganizations(): Promise<Organization[]> {
@@ -87,4 +89,17 @@ export async function leaveOrganization(organizationId: string): Promise<void> {
 
 export async function deleteOrganization(organizationId: string): Promise<void> {
   await api.delete(`/organizations/${organizationId}`);
+}
+
+export async function getOrganizationBans(organizationId: string): Promise<OrganizationBan[]> {
+  const res = await api.get<OrganizationBansResponse>(`/organizations/${organizationId}/bans`);
+  return res.data.data;
+}
+
+export async function banMember(organizationId: string, userId: string): Promise<void> {
+  await api.post(`/organizations/${organizationId}/members/${userId}/ban`);
+}
+
+export async function unbanMember(organizationId: string, userId: string): Promise<void> {
+  await api.delete(`/organizations/${organizationId}/bans/${userId}`);
 }

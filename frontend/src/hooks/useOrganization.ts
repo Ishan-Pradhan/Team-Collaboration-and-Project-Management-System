@@ -13,6 +13,9 @@ import {
   listPendingInvites,
   revokeInvite,
   changeMemberRole,
+  getOrganizationBans,
+  banMember,
+  unbanMember,
 } from '@/services/organization.service';
 
 export const useMyOrganizations = () =>
@@ -106,5 +109,31 @@ export const useDeleteOrganization = () => {
   return useMutation({
     mutationFn: (organizationId: string) => deleteOrganization(organizationId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['organizations'] }),
+  });
+};
+
+export const useOrganizationBans = (organizationId: string) =>
+  useQuery({
+    queryKey: ['organizations', organizationId, 'bans'],
+    queryFn: () => getOrganizationBans(organizationId),
+    enabled: !!organizationId,
+  });
+
+export const useBanMember = (organizationId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => banMember(organizationId, userId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['organizations', organizationId, 'members'] });
+      qc.invalidateQueries({ queryKey: ['organizations', organizationId, 'bans'] });
+    },
+  });
+};
+
+export const useUnbanMember = (organizationId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => unbanMember(organizationId, userId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['organizations', organizationId, 'bans'] }),
   });
 };

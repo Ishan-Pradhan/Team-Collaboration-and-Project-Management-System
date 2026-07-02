@@ -96,3 +96,29 @@ export interface AcceptInviteResponse {
   message: string;
   data: OrganizationMember;
 }
+
+// ─── Ban ───────────────────────────────────────────────────────
+
+export interface OrganizationBan {
+  id: string;
+  organizationId: string;
+  userId: string;
+  bannedBy: string | null;
+  createdAt: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    avatarUrl: string | null;
+  };
+  bannedByUser?: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface OrganizationBansResponse {
+  success: boolean;
+  message: string;
+  data: OrganizationBan[];
+}
