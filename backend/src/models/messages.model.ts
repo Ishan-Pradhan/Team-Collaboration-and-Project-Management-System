@@ -1,22 +1,27 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../config/db.js';
-import type { ChatMessageInstance } from '../types/chatMessages.types.js';
+import type { MessageInstance } from '../types/channels.types.js';
 
-export const ChatMessage = sequelize.define<ChatMessageInstance>(
-  'ChatMessage',
+export const Message = sequelize.define<MessageInstance>(
+  'Message',
   {
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
     },
-    projectId: {
+    channelId: {
       type: DataTypes.UUID,
       allowNull: false,
     },
     senderId: {
       type: DataTypes.UUID,
+      allowNull: true,
+    },
+    type: {
+      type: DataTypes.ENUM('TEXT', 'SYSTEM'),
       allowNull: false,
+      defaultValue: 'TEXT',
     },
     content: {
       type: DataTypes.TEXT,
@@ -24,8 +29,8 @@ export const ChatMessage = sequelize.define<ChatMessageInstance>(
     },
   },
   {
-    tableName: 'chat_messages',
+    tableName: 'messages',
     timestamps: true,
-    updatedAt: false, // Schema only requires createdAt for chat messages
-  }
+    updatedAt: false,
+  },
 );

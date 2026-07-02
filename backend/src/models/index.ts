@@ -11,7 +11,9 @@ import { TaskAssignee } from './taskAssignees.model.js';
 import { TaskComment } from './taskComments.model.js';
 import { TaskAttachment } from './taskAttachments.model.js';
 import { Subtask } from './subtasks.model.js';
-import { ChatMessage } from './chatMessages.model.js';
+import { Channel } from './channels.model.js';
+import { ChannelMember } from './channelMembers.model.js';
+import { Message } from './messages.model.js';
 import { Notification } from './notifications.model.js';
 import { ActivityLog } from './activityLog.model.js';
 
@@ -67,9 +69,16 @@ TaskAttachment.belongsTo(User, { as: 'uploadedBy', foreignKey: 'uploadedById' })
 Subtask.belongsTo(Task, { foreignKey: 'taskId', as: 'task' });
 Subtask.belongsTo(User, { as: 'createdBy', foreignKey: 'createdById' });
 
-// Chat Messages
-ChatMessage.belongsTo(Project, { foreignKey: 'projectId', as: 'project' });
-ChatMessage.belongsTo(User, { as: 'sender', foreignKey: 'senderId' });
+// Channels
+Organization.hasMany(Channel, { foreignKey: 'organizationId', onDelete: 'CASCADE', as: 'channels' });
+Channel.belongsTo(Organization, { foreignKey: 'organizationId', as: 'organization' });
+Channel.belongsTo(User, { as: 'creator', foreignKey: 'createdBy' });
+Channel.hasMany(ChannelMember, { foreignKey: 'channelId', onDelete: 'CASCADE', as: 'members' });
+ChannelMember.belongsTo(Channel, { foreignKey: 'channelId', as: 'channel' });
+ChannelMember.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+Channel.hasMany(Message, { foreignKey: 'channelId', onDelete: 'CASCADE', as: 'messages' });
+Message.belongsTo(Channel, { foreignKey: 'channelId', as: 'channel' });
+Message.belongsTo(User, { as: 'sender', foreignKey: 'senderId' });
 
 // Invitations
 Invitation.belongsTo(Organization, { foreignKey: 'organizationId', as: 'organization' });
@@ -100,8 +109,9 @@ export {
   TaskComment,
   TaskAttachment,
   Subtask,
-  ChatMessage,
+  Channel,
+  ChannelMember,
+  Message,
   Notification,
   ActivityLog,
 };
-
