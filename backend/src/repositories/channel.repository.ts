@@ -154,6 +154,14 @@ export const messageRepository = {
     );
     return plain.reverse().map((m) => ({ ...m, reactions: groupReactions(m.reactions) }));
   },
+
+  delete: async (id: string, deletedBy: string): Promise<void> => {
+    await Message.update(
+      { content: '', deletedAt: new Date(), deletedBy },
+      { where: { id } },
+    );
+    await MessageReaction.destroy({ where: { messageId: id } });
+  },
 };
 
 export const messageReactionRepository = {

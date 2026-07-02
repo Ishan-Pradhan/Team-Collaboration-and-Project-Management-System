@@ -19,6 +19,7 @@ import {
   listMessages,
   addReaction,
   removeReaction,
+  deleteMessage,
 } from '../controllers/channel.controller.js';
 import {
   createChannelSchema,
@@ -30,6 +31,7 @@ import {
   listMessagesSchema,
   addReactionSchema,
   removeReactionSchema,
+  messageParamSchema,
 } from '../validations/channel.validation.js';
 
 const router = Router();
@@ -68,5 +70,9 @@ router
 router
   .route('/channels/:channelId/messages/:messageId/reactions/:emoji')
   .delete(verifyJWT, isChannelMember, validate(removeReactionSchema), removeReaction);
+
+router
+  .route('/channels/:channelId/messages/:messageId')
+  .delete(verifyJWT, isChannelMember, validate(messageParamSchema), deleteMessage);
 
 export default router;

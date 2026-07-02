@@ -237,6 +237,45 @@ export const removeReaction = asyncHandler(async (req: AuthRequest, res: Respons
   return ok(res, null, 'Reaction removed');
 });
 
+export const deleteMessage = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const channelId = req.params.channelId as string;
+  const messageId = req.params.messageId as string;
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  const message = await messageRepository.findById(messageId);
+  if (!message || message.channelId !== channelId) throw new ApiError(404, 'Message not found');
+  if (message.type !== 'TEXT') throw new ApiError(400, 'Cannot delete a system message');
+  if (message.deletedAt) throw new ApiError(400, 'Message already deleted');
+
+  const isSender = message.senderId === user.id;
+  let isAdmin = false;
+  if (!isSender) {
+    const channel = await channelRepository.findById(channelId);
+    if (channel) {
+      const org = await organizationRepository.findById(channel.organizationId);
+      if (org?.ownerId === user.id) {
+        isAdmin = true;
+      } else {
+        const membership = await organizationMemberRepository.findOne({
+          organizationId: channel.organizationId,
+          userId: user.id,
+        });
+        isAdmin = membership?.role === 'ORG_ADMIN';
+      }
+    }
+  }
+  if (!isSender && !isAdmin) {
+    throw new ApiError(403, 'Unauthorized request. Only the sender or an organization admin can delete this message.');
+  }
+
+  await messageRepository.delete(messageId, user.id);
+
+  getIO().to(`channel:${channelId}`).emit('message:deleted', { messageId, channelId });
+
+  return ok(res, null, 'Message deleted successfully');
+});
+
 export async function cascadeRemoveUserFromOrgChannels(
   organizationId: string,
   userId: string,
