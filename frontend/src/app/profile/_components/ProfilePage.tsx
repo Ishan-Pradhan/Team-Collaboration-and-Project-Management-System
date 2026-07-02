@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useAuthStore } from '@/store/auth.store';
-import { useUpdateProfile, useUploadAvatar, useChangePassword } from '@/hooks/useAuth';
+import { useUpdateProfile, useUploadAvatar, useChangePassword, useCurrentUserProfile } from '@/hooks/useAuth';
 import { parseApiError } from '@/lib/axios';
 import { toast } from 'sonner';
 import { Camera, CheckCircle2, Loader2, Lock, Mail, Shield, User } from 'lucide-react';
@@ -19,15 +19,25 @@ function getAvatarColor(name: string) {
 
 export default function ProfilePage() {
   const { user } = useAuthStore();
+  const { data: currentUserProfile } = useCurrentUserProfile();
   const updateProfile = useUpdateProfile();
   const uploadAvatar = useUploadAvatar();
   const changePassword = useChangePassword();
 
   const [name, setName] = useState(user?.name ?? '');
+  const [bio, setBio] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
+  const [bioLoaded, setBioLoaded] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  if (currentUserProfile && !bioLoaded) {
+    setBio(currentUserProfile.bio ?? '');
+    setJobTitle(currentUserProfile.jobTitle ?? '');
+    setBioLoaded(true);
+  }
 
   if (!user) return null;
 
@@ -46,9 +56,9 @@ export default function ProfilePage() {
 
   const handleNameSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || name.trim() === user.name) return;
-    updateProfile.mutate({ name: name.trim() }, {
-      onSuccess: () => toast.success('Name updated'),
+    if (!name.trim()) return;
+    updateProfile.mutate({ name: name.trim(), bio: bio.trim(), jobTitle: jobTitle.trim() }, {
+      onSuccess: () => toast.success('Profile updated'),
       onError: (err) => toast.error(parseApiError(err).message),
     });
   };
@@ -140,7 +150,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Name */}
+        {/* Name, job title, bio */}
         <form onSubmit={handleNameSave} className="space-y-3">
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-text-secondary">Display Name</label>
@@ -152,6 +162,26 @@ export default function ProfilePage() {
             />
           </div>
           <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-text-secondary">Job Title</label>
+            <Input
+              value={jobTitle}
+              onChange={(e) => setJobTitle(e.target.value)}
+              placeholder="e.g. Product Designer"
+              maxLength={100}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-text-secondary">Bio</label>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="A short bio about yourself"
+              maxLength={300}
+              rows={3}
+              className="w-full rounded-lg border border-border-subtle bg-white px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:border-primary focus:outline-none"
+            />
+          </div>
+          <div className="space-y-1.5">
             <label className="text-xs font-semibold text-text-secondary">Email</label>
             <Input value={user.email} disabled className="opacity-60" />
             <p className="text-[11px] text-text-muted">Email address cannot be changed.</p>
@@ -159,7 +189,7 @@ export default function ProfilePage() {
           <div className="flex justify-end">
             <Button
               type="submit"
-              disabled={updateProfile.isPending || !name.trim() || name.trim() === user.name}
+              disabled={updateProfile.isPending || !name.trim()}
             >
               {updateProfile.isPending ? <><Loader2 size={14} className="mr-1.5 animate-spin" />Saving...</> : 'Save Changes'}
             </Button>
