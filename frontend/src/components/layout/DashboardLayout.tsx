@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  MessageSquare,
   Plus,
   Settings,
   Users,
@@ -121,6 +122,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       name: 'Calendar',
       href: currentSlug ? `/org/${currentSlug}/calendar` : '#',
       icon: CalendarDays,
+      disabled: !currentSlug,
+    },
+    {
+      name: 'Chat',
+      href: currentSlug ? `/org/${currentSlug}/chat` : '#',
+      icon: MessageSquare,
       disabled: !currentSlug,
     },
     ...(activeOrg?.ownerId === user?.id
