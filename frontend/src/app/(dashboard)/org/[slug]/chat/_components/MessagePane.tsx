@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, Send, Smile, Trash2 } from 'lucide-react';
+import { Loader2, Paperclip, Send, Smile, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react';
 import { parseApiError } from '@/lib/axios';
@@ -12,10 +12,12 @@ import {
   useAddReaction,
   useRemoveReaction,
   useDeleteMessage,
+  useUploadFile,
 } from '@/hooks/useChannel';
 import { getMessages } from '@/services/channel.service';
 import { useAuthStore } from '@/store/auth.store';
 import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
+import { FileAttachmentCard } from './fileDisplay';
 import type { Channel, Message } from '@/types/channel.types';
 
 interface Props {
@@ -31,11 +33,13 @@ export default function MessagePane({ channel, isAdmin }: Props) {
   const addReaction = useAddReaction(channel.id);
   const removeReaction = useRemoveReaction(channel.id);
   const deleteMessage = useDeleteMessage(channel.id);
+  const uploadFile = useUploadFile(channel.id);
   const [content, setContent] = useState('');
   const [loadingMore, setLoadingMore] = useState(false);
   const [openPickerFor, setOpenPickerFor] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -98,6 +102,15 @@ export default function MessagePane({ channel, isAdmin }: Props) {
     });
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    uploadFile.mutate(file, {
+      onError: (err: unknown) => toast.error(parseApiError(err).message),
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -143,7 +156,11 @@ export default function MessagePane({ channel, isAdmin }: Props) {
                     <p className="text-sm italic text-text-secondary">This message was deleted</p>
                   ) : (
                     <>
-                      <p className="text-sm text-text-primary">{message.content}</p>
+                      {message.type === 'FILE' ? (
+                        <FileAttachmentCard message={message} channelId={channel.id} />
+                      ) : (
+                        <p className="text-sm text-text-primary">{message.content}</p>
+                      )}
 
                       {message.reactions.length > 0 && (
                         <div className="mt-1 flex flex-wrap gap-1">
@@ -205,6 +222,16 @@ export default function MessagePane({ channel, isAdmin }: Props) {
       </div>
 
       <form onSubmit={handleSend} className="flex items-center gap-2 border-t border-border-subtle p-3">
+        <input ref={fileInputRef} type="file" onChange={handleFileSelect} className="hidden" />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploadFile.isPending}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-text-secondary hover:bg-surface-muted transition-colors disabled:opacity-50"
+          title="Attach a file"
+        >
+          <Paperclip size={16} />
+        </button>
         <input
           value={content}
           onChange={(e) => setContent(e.target.value)}

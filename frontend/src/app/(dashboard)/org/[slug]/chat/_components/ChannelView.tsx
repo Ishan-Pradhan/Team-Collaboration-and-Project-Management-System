@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Hash, Lock, LogOut, Trash2, Users } from 'lucide-react';
+import { Hash, Lock, LogOut, Paperclip, Trash2, Users } from 'lucide-react';
 import { parseApiError } from '@/lib/axios';
 import { useChannelMembers, useLeaveChannel, useDeleteChannel } from '@/hooks/useChannel';
 import ManageChannelMembersModal from '@/components/shared/ManageChannelMembersModal';
 import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 import type { Channel } from '@/types/channel.types';
 import MessagePane from './MessagePane';
+import FileList from './FileList';
 
 interface Props {
   channel: Channel;
@@ -25,6 +26,7 @@ export default function ChannelView({ channel, organizationId, isAdmin, onLeftOr
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [activeView, setActiveView] = useState<'messages' | 'files'>('messages');
 
   return (
     <div className="flex h-full flex-col">
@@ -35,6 +37,14 @@ export default function ChannelView({ channel, organizationId, isAdmin, onLeftOr
           <span className="text-xs text-text-secondary">{members?.length ?? 0} members</span>
         </div>
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => setActiveView(activeView === 'files' ? 'messages' : 'files')}
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+              activeView === 'files' ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:bg-surface-muted'
+            }`}
+          >
+            <Paperclip size={13} /> Files
+          </button>
           <button
             onClick={() => setShowMembersModal(true)}
             className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-muted transition-colors"
@@ -59,7 +69,11 @@ export default function ChannelView({ channel, organizationId, isAdmin, onLeftOr
       </div>
 
       <div className="flex-1 overflow-hidden">
-        <MessagePane channel={channel} isAdmin={isAdmin} />
+        {activeView === 'files' ? (
+          <FileList channel={channel} />
+        ) : (
+          <MessagePane channel={channel} isAdmin={isAdmin} />
+        )}
       </div>
 
       {showMembersModal && (
