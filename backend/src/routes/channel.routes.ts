@@ -17,6 +17,8 @@ import {
   removeChannelMember,
   sendMessage,
   listMessages,
+  addReaction,
+  removeReaction,
 } from '../controllers/channel.controller.js';
 import {
   createChannelSchema,
@@ -26,6 +28,8 @@ import {
   channelMemberParamSchema,
   sendMessageSchema,
   listMessagesSchema,
+  addReactionSchema,
+  removeReactionSchema,
 } from '../validations/channel.validation.js';
 
 const router = Router();
@@ -56,5 +60,13 @@ router
   .route('/channels/:channelId/messages')
   .get(verifyJWT, isChannelMember, validate(listMessagesSchema), listMessages)
   .post(verifyJWT, isChannelMember, validate(sendMessageSchema), sendMessage);
+
+router
+  .route('/channels/:channelId/messages/:messageId/reactions')
+  .post(verifyJWT, isChannelMember, validate(addReactionSchema), addReaction);
+
+router
+  .route('/channels/:channelId/messages/:messageId/reactions/:emoji')
+  .delete(verifyJWT, isChannelMember, validate(removeReactionSchema), removeReaction);
 
 export default router;

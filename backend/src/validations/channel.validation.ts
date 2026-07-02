@@ -56,3 +56,25 @@ export const listMessagesSchema = {
     limit: z.coerce.number().int().min(1).max(100).optional(),
   }),
 };
+
+export const messageParamSchema = {
+  params: z.object({
+    channelId: z.string().uuid('Invalid channel ID'),
+    messageId: z.string().uuid('Invalid message ID'),
+  }),
+};
+
+export const addReactionSchema = {
+  params: messageParamSchema.params,
+  body: z.object({
+    emoji: z.string().min(1, 'Emoji is required').max(64, 'Invalid emoji'),
+  }),
+};
+
+export const removeReactionSchema = {
+  params: z.object({
+    channelId: z.string().uuid('Invalid channel ID'),
+    messageId: z.string().uuid('Invalid message ID'),
+    emoji: z.string().min(1, 'Emoji is required').max(64, 'Invalid emoji'),
+  }),
+};

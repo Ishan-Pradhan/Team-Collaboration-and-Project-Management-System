@@ -3,7 +3,7 @@ import type { AuthRequest } from '../types/auth.types.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ok } from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/AsyncHandler.js';
-import { channelRepository, channelMemberRepository, messageRepository } from '../repositories/channel.repository.js';
+import { channelRepository, channelMemberRepository, messageRepository, messageReactionRepository } from '../repositories/channel.repository.js';
 import { organizationMemberRepository } from '../repositories/organization.repository.js';
 import { userRepository } from '../repositories/users.repository.js';
 import { organizationRepository } from '../repositories/organization.repository.js';
@@ -194,6 +194,47 @@ export const listMessages = asyncHandler(async (req: AuthRequest, res: Response)
   });
 
   return ok(res, messages, 'Messages retrieved successfully');
+});
+
+export const addReaction = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const channelId = req.params.channelId as string;
+  const messageId = req.params.messageId as string;
+  const { emoji } = req.body as { emoji: string };
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  const message = await messageRepository.findById(messageId);
+  if (!message || message.channelId !== channelId) throw new ApiError(404, 'Message not found');
+  if (message.type !== 'TEXT') throw new ApiError(400, 'Cannot react to a system message');
+  if (message.deletedAt) throw new ApiError(400, 'Cannot react to a deleted message');
+
+  await messageReactionRepository.add(messageId, user.id, emoji);
+
+  getIO().to(`channel:${channelId}`).emit('reaction:added', { messageId, channelId, emoji, userId: user.id });
+
+  return res.status(201).json({
+    success: true,
+    message: 'Reaction added',
+    data: null,
+  });
+});
+
+export const removeReaction = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const channelId = req.params.channelId as string;
+  const messageId = req.params.messageId as string;
+  const emoji = req.params.emoji as string;
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  const message = await messageRepository.findById(messageId);
+  if (!message || message.channelId !== channelId) throw new ApiError(404, 'Message not found');
+
+  const removed = await messageReactionRepository.remove(messageId, user.id, emoji);
+  if (removed === 0) throw new ApiError(404, 'Reaction not found');
+
+  getIO().to(`channel:${channelId}`).emit('reaction:removed', { messageId, channelId, emoji, userId: user.id });
+
+  return ok(res, null, 'Reaction removed');
 });
 
 export async function cascadeRemoveUserFromOrgChannels(

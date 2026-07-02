@@ -1,12 +1,27 @@
 import { Op } from 'sequelize';
-import { Channel, ChannelMember, Message, User } from '../models/index.js';
+import { Channel, ChannelMember, Message, MessageReaction, User } from '../models/index.js';
 import type {
   ChannelCreationAttributes,
   ChannelInstance,
   ChannelMemberInstance,
   MessageCreationAttributes,
   MessageInstance,
+  MessageWithReactions,
+  ReactionSummary,
 } from '../types/channels.types.js';
+
+function groupReactions(rows: { emoji: string; userId: string }[]): ReactionSummary[] {
+  const map = new Map<string, string[]>();
+  for (const row of rows) {
+    const existing = map.get(row.emoji);
+    if (existing) {
+      existing.push(row.userId);
+    } else {
+      map.set(row.emoji, [row.userId]);
+    }
+  }
+  return Array.from(map.entries()).map(([emoji, userIds]) => ({ emoji, userIds }));
+}
 
 export const channelRepository = {
   create: async (data: ChannelCreationAttributes): Promise<ChannelInstance> => {
@@ -100,26 +115,53 @@ export const messageRepository = {
     return await Message.create(data);
   },
 
-  findById: async (id: string): Promise<MessageInstance | null> => {
-    return await Message.findByPk(id, {
-      include: [{ model: User, as: 'sender', attributes: ['id', 'name', 'avatarUrl'] }],
+  findById: async (id: string): Promise<MessageWithReactions | null> => {
+    const message = await Message.findByPk(id, {
+      include: [
+        { model: User, as: 'sender', attributes: ['id', 'name', 'avatarUrl'] },
+        { model: MessageReaction, as: 'reactions', attributes: ['emoji', 'userId'] },
+      ],
     });
+    if (!message) return null;
+    const plain = message.get({ plain: true }) as MessageWithReactions & {
+      reactions: { emoji: string; userId: string }[];
+    };
+    return { ...plain, reactions: groupReactions(plain.reactions) };
   },
 
   findByChannel: async (
     channelId: string,
     options: { before?: string; limit: number },
-  ): Promise<MessageInstance[]> => {
+  ): Promise<MessageWithReactions[]> => {
     const where: Record<string, unknown> = { channelId };
     if (options.before) {
       where.createdAt = { [Op.lt]: options.before };
     }
     const messages = await Message.findAll({
       where,
-      include: [{ model: User, as: 'sender', attributes: ['id', 'name', 'avatarUrl'] }],
+      include: [
+        { model: User, as: 'sender', attributes: ['id', 'name', 'avatarUrl'] },
+        { model: MessageReaction, as: 'reactions', attributes: ['emoji', 'userId'] },
+      ],
       order: [['createdAt', 'DESC']],
       limit: options.limit,
     });
-    return messages.reverse();
+    const plain = messages.map(
+      (m) =>
+        m.get({ plain: true }) as MessageWithReactions & {
+          reactions: { emoji: string; userId: string }[];
+        },
+    );
+    return plain.reverse().map((m) => ({ ...m, reactions: groupReactions(m.reactions) }));
+  },
+};
+
+export const messageReactionRepository = {
+  add: async (messageId: string, userId: string, emoji: string): Promise<void> => {
+    await MessageReaction.findOrCreate({ where: { messageId, userId, emoji } });
+  },
+
+  remove: async (messageId: string, userId: string, emoji: string): Promise<number> => {
+    return await MessageReaction.destroy({ where: { messageId, userId, emoji } });
   },
 };
