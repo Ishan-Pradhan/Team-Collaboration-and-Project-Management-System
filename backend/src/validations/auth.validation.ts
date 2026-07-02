@@ -54,6 +54,8 @@ export const changePasswordSchema = {
 export const updateProfileSchema = {
   body: z.object({
     name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
+    bio: z.string().max(300, 'Bio must be 300 characters or less').optional(),
+    jobTitle: z.string().max(100, 'Job title must be 100 characters or less').optional(),
   }),
 };
 

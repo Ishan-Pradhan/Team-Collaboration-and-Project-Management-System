@@ -29,6 +29,8 @@ export const getCurrentUser = asyncHandler(
         avatarUrl: user.avatarUrl,
         isVerified: user.isVerified,
         role: user.role,
+        bio: user.bio,
+        jobTitle: user.jobTitle,
       },
       'Current user retrieved successfully',
     );

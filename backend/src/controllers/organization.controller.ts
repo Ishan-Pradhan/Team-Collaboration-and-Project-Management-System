@@ -587,3 +587,32 @@ export const listOrganizationBans = asyncHandler(
     return ok(res, bans, 'Banned users retrieved successfully');
   }
 );
+
+// Get a member's profile (bio, job title, org role) — any org member can view
+export const getMemberProfile = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { organizationId, userId } = req.params as { organizationId: string; userId: string };
+
+    const org = await organizationRepository.findById(organizationId);
+    if (!org) throw new ApiError(404, 'Organization not found');
+
+    const membership = await organizationMemberRepository.findOne({ organizationId, userId });
+    if (!membership) throw new ApiError(404, 'User is not a member of this organization');
+
+    const targetUser = await userRepository.findById(userId);
+    if (!targetUser) throw new ApiError(404, 'User not found');
+
+    const orgRole = org.ownerId === userId ? 'Owner' : membership.role === 'ORG_ADMIN' ? 'Admin' : 'Member';
+
+    return ok(res, {
+      id: targetUser.id,
+      name: targetUser.name,
+      email: targetUser.email,
+      avatarUrl: targetUser.avatarUrl,
+      bio: targetUser.bio,
+      jobTitle: targetUser.jobTitle,
+      orgRole,
+      joinedAt: membership.joinedAt,
+    }, 'Member profile retrieved successfully');
+  }
+);

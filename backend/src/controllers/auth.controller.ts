@@ -275,16 +275,20 @@ export const changePassword = asyncHandler(
   },
 );
 
-// UPDATE PROFILE (name)
+// UPDATE PROFILE (name, bio, jobTitle)
 export const updateProfile = asyncHandler(
   async (req: AuthRequest, res: Response): Promise<Response> => {
     const userId = req.user?.id;
     if (!userId) throw new ApiError(401, 'Unauthorized');
 
-    const { name } = req.body as { name?: string };
+    const { name, bio, jobTitle } = req.body as { name?: string; bio?: string; jobTitle?: string };
     if (!name || !name.trim()) throw new ApiError(400, 'Name is required');
 
-    const updated = await userRepository.update(userId, { name: name.trim() });
+    const updated = await userRepository.update(userId, {
+      name: name.trim(),
+      ...(bio !== undefined && { bio: bio.trim() || null }),
+      ...(jobTitle !== undefined && { jobTitle: jobTitle.trim() || null }),
+    });
     if (!updated) throw new ApiError(404, 'User not found');
 
     return ok(res, {
@@ -292,6 +296,8 @@ export const updateProfile = asyncHandler(
       name: updated.name,
       email: updated.email,
       avatarUrl: updated.avatarUrl,
+      bio: updated.bio,
+      jobTitle: updated.jobTitle,
     }, 'Profile updated successfully');
   }
 );

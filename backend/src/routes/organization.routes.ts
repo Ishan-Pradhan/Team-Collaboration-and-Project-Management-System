@@ -24,6 +24,7 @@ import {
   banOrganizationMember,
   unbanOrganizationMember,
   listOrganizationBans,
+  getMemberProfile,
 } from '../controllers/organization.controller.js';
 import {
   createOrganizationSchema,
@@ -211,6 +212,10 @@ router
     validate(organizationParamSchema),
     listOrganizationMembers
   );
+
+router
+  .route('/:organizationId/members/:userId/profile')
+  .get(verifyJWT, isOrganizationMember, validate(memberParamSchema), getMemberProfile);
 
 /**
  * @swagger
