@@ -11,6 +11,8 @@ export interface Users {
   isActive: boolean;
   authProvider: 'local' | 'google' | 'github';
   refreshToken: string | null;
+  bio: string | null;
+  jobTitle: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -24,6 +26,8 @@ export type UserCreationAttributes = Optional<
   | 'isActive'
   | 'authProvider'
   | 'refreshToken'
+  | 'bio'
+  | 'jobTitle'
   | 'createdAt'
   | 'updatedAt'
 >;

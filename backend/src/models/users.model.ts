@@ -51,6 +51,16 @@ export const User = sequelize.define<UserInstance>(
       allowNull: true,
       defaultValue: null,
     },
+    bio: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      defaultValue: null,
+    },
+    jobTitle: {
+      type: DataTypes.STRING(150),
+      allowNull: true,
+      defaultValue: null,
+    },
   },
   {
     tableName: 'Users',
