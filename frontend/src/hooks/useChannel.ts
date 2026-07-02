@@ -9,6 +9,9 @@ import {
   removeChannelMember,
   getMessages,
   sendMessage,
+  addReaction,
+  removeReaction,
+  deleteMessage,
 } from '@/services/channel.service';
 
 export const useChannels = (organizationId: string) =>
@@ -79,6 +82,32 @@ export const useSendMessage = (channelId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (content: string) => sendMessage(channelId, content),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['channels', channelId, 'messages'] }),
+  });
+};
+
+export const useAddReaction = (channelId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ messageId, emoji }: { messageId: string; emoji: string }) =>
+      addReaction(channelId, messageId, emoji),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['channels', channelId, 'messages'] }),
+  });
+};
+
+export const useRemoveReaction = (channelId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ messageId, emoji }: { messageId: string; emoji: string }) =>
+      removeReaction(channelId, messageId, emoji),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['channels', channelId, 'messages'] }),
+  });
+};
+
+export const useDeleteMessage = (channelId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (messageId: string) => deleteMessage(channelId, messageId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['channels', channelId, 'messages'] }),
   });
 };

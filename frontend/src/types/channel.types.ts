@@ -25,6 +25,11 @@ export interface ChannelMember {
 
 export type MessageType = 'TEXT' | 'SYSTEM';
 
+export interface ReactionSummary {
+  emoji: string;
+  userIds: string[];
+}
+
 export interface Message {
   id: string;
   channelId: string;
@@ -32,6 +37,9 @@ export interface Message {
   type: MessageType;
   content: string;
   createdAt: string;
+  deletedAt: string | null;
+  deletedBy: string | null;
+  reactions: ReactionSummary[];
   sender?: {
     id: string;
     name: string;

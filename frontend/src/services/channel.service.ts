@@ -57,3 +57,15 @@ export async function sendMessage(channelId: string, content: string): Promise<M
   );
   return res.data.data;
 }
+
+export async function addReaction(channelId: string, messageId: string, emoji: string): Promise<void> {
+  await api.post(`/channels/${channelId}/messages/${messageId}/reactions`, { emoji });
+}
+
+export async function removeReaction(channelId: string, messageId: string, emoji: string): Promise<void> {
+  await api.delete(`/channels/${channelId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`);
+}
+
+export async function deleteMessage(channelId: string, messageId: string): Promise<void> {
+  await api.delete(`/channels/${channelId}/messages/${messageId}`);
+}
