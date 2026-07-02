@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Hash, Lock, LogOut, Paperclip, Trash2, Users } from 'lucide-react';
+import { Hash, Lock, LogOut, MoreVertical, Paperclip, Trash2, Users } from 'lucide-react';
 import { parseApiError } from '@/lib/axios';
 import { useChannelMembers, useLeaveChannel, useDeleteChannel } from '@/hooks/useChannel';
 import ManageChannelMembersModal from '@/components/shared/ManageChannelMembersModal';
@@ -27,6 +27,7 @@ export default function ChannelView({ channel, organizationId, isAdmin, onLeftOr
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeView, setActiveView] = useState<'messages' | 'files'>('messages');
+  const [showMenu, setShowMenu] = useState(false);
 
   return (
     <div className="flex h-full flex-col">
@@ -47,41 +48,68 @@ export default function ChannelView({ channel, organizationId, isAdmin, onLeftOr
             </>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="relative">
           <button
-            onClick={() => setActiveView(activeView === 'files' ? 'messages' : 'files')}
-            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
-              activeView === 'files' ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:bg-surface-muted'
-            }`}
+            onClick={() => setShowMenu((v) => !v)}
+            className="flex items-center justify-center rounded-lg p-1.5 text-text-secondary hover:bg-surface-muted transition-colors"
+            title="Channel options"
           >
-            <Paperclip size={13} /> Files
+            <MoreVertical size={16} />
           </button>
-          {channel.type !== 'DM' && (
-            <>
+
+          {showMenu && (
+            <div className="absolute right-0 top-full z-10 mt-1 w-48 rounded-lg border border-border-subtle bg-white py-1 shadow-modal">
               <button
-                onClick={() => setShowMembersModal(true)}
-                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-muted transition-colors"
+                onClick={() => {
+                  setActiveView(activeView === 'files' ? 'messages' : 'files');
+                  setShowMenu(false);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-secondary hover:bg-surface-muted transition-colors"
               >
-                <Users size={13} /> Members
+                <Paperclip size={13} />
+                {activeView === 'files' ? 'View Messages' : 'View Files'}
               </button>
-              <button
-                onClick={() => setShowLeaveConfirm(true)}
-                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-muted transition-colors"
-              >
-                <LogOut size={13} /> Leave
-              </button>
-              {isAdmin && (
-                <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-danger hover:bg-danger-soft/20 transition-colors"
-                >
-                  <Trash2 size={13} /> Delete
-                </button>
+              {channel.type !== 'DM' && (
+                <>
+                  <button
+                    onClick={() => {
+                      setShowMembersModal(true);
+                      setShowMenu(false);
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-secondary hover:bg-surface-muted transition-colors"
+                  >
+                    <Users size={13} /> Members
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowLeaveConfirm(true);
+                      setShowMenu(false);
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-secondary hover:bg-surface-muted transition-colors"
+                  >
+                    <LogOut size={13} /> Leave Channel
+                  </button>
+                  {isAdmin && (
+                    <button
+                      onClick={() => {
+                        setShowDeleteConfirm(true);
+                        setShowMenu(false);
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-xs text-danger hover:bg-danger-soft/20 transition-colors"
+                    >
+                      <Trash2 size={13} /> Delete Channel
+                    </button>
+                  )}
+                </>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
+
+      {showMenu && (
+        <div className="fixed inset-0 z-0" onClick={() => setShowMenu(false)} />
+      )}
 
       <div className="flex-1 overflow-hidden">
         {activeView === 'files' ? (
