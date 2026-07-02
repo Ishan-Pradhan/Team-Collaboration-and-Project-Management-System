@@ -3,6 +3,7 @@ import { Verification } from './verification.model.js';
 import { Organization } from './organizations.model.js';
 import { OrganizationMember } from './organizationMembers.model.js';
 import { Invitation } from './invitations.model.js';
+import { OrganizationBan } from './organizationBans.model.js';
 import { Project } from './projects.model.js';
 import { ProjectMember } from './projectMembers.model.js';
 import { KanbanColumn } from './kanbanColumns.model.js';
@@ -89,6 +90,12 @@ MessageReaction.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 Invitation.belongsTo(Organization, { foreignKey: 'organizationId', as: 'organization' });
 Invitation.belongsTo(User, { as: 'invitedBy', foreignKey: 'invitedById' });
 
+// Organization Bans
+Organization.hasMany(OrganizationBan, { foreignKey: 'organizationId', onDelete: 'CASCADE', as: 'bans' });
+OrganizationBan.belongsTo(Organization, { foreignKey: 'organizationId', as: 'organization' });
+OrganizationBan.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+OrganizationBan.belongsTo(User, { foreignKey: 'bannedBy', as: 'bannedByUser' });
+
 // Notifications
 Notification.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
@@ -106,6 +113,7 @@ export {
   Organization,
   OrganizationMember,
   Invitation,
+  OrganizationBan,
   Project,
   ProjectMember,
   KanbanColumn,

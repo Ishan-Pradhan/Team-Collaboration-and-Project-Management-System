@@ -61,3 +61,21 @@ export type OrganizationInviteCreationAttributes = Optional<
 
 export interface OrganizationInviteInstance
   extends Model<OrganizationInvites, OrganizationInviteCreationAttributes>, OrganizationInvites { }
+
+export interface OrganizationBans {
+  id: string;
+  organizationId: string;
+  userId: string;
+  bannedBy: string | null;
+  createdAt?: Date;
+  user?: UserInstance;
+  bannedByUser?: UserInstance;
+}
+
+export type OrganizationBanCreationAttributes = Optional<
+  OrganizationBans,
+  'id' | 'createdAt'
+>;
+
+export interface OrganizationBanInstance
+  extends Model<OrganizationBans, OrganizationBanCreationAttributes>, OrganizationBans {}
