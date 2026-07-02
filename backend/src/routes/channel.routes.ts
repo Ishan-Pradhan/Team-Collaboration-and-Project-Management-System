@@ -24,6 +24,8 @@ import {
   uploadFile,
   listFiles,
   downloadFile,
+  startDM,
+  listDMs,
 } from '../controllers/channel.controller.js';
 import {
   createChannelSchema,
@@ -36,6 +38,7 @@ import {
   addReactionSchema,
   removeReactionSchema,
   messageParamSchema,
+  startDMSchema,
 } from '../validations/channel.validation.js';
 
 const router = Router();
@@ -87,5 +90,10 @@ router
 router
   .route('/channels/:channelId/messages/:messageId/download')
   .get(verifyJWT, isChannelMember, validate(messageParamSchema), downloadFile);
+
+router
+  .route('/organizations/:organizationId/dms')
+  .post(verifyJWT, isOrganizationMember, validate(startDMSchema), startDM)
+  .get(verifyJWT, isOrganizationMember, validate(organizationChannelsParamSchema), listDMs);
 
 export default router;

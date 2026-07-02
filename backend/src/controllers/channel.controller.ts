@@ -66,6 +66,7 @@ export const deleteChannel = asyncHandler(async (req: AuthRequest, res: Response
 
   const channel = await channelRepository.findById(channelId);
   if (!channel) throw new ApiError(404, 'Channel not found');
+  if (channel.type === 'DM') throw new ApiError(400, 'Not applicable to direct messages');
 
   await channelRepository.delete(channelId);
 
@@ -107,6 +108,7 @@ export const inviteChannelMember = asyncHandler(async (req: AuthRequest, res: Re
 
   const channel = await channelRepository.findById(channelId);
   if (!channel) throw new ApiError(404, 'Channel not found');
+  if (channel.type === 'DM') throw new ApiError(400, 'Not applicable to direct messages');
 
   const org = await organizationRepository.findById(channel.organizationId);
   const targetMembership = await organizationMemberRepository.findOne({
@@ -149,6 +151,10 @@ export const leaveChannel = asyncHandler(async (req: AuthRequest, res: Response)
   const user = req.user;
   if (!user) throw new ApiError(401, 'Unauthorized');
 
+  const channel = await channelRepository.findById(channelId);
+  if (!channel) throw new ApiError(404, 'Channel not found');
+  if (channel.type === 'DM') throw new ApiError(400, 'Not applicable to direct messages');
+
   const membership = await channelMemberRepository.findMember(channelId, user.id);
   if (!membership) throw new ApiError(404, 'You are not a member of this channel');
 
@@ -159,6 +165,10 @@ export const leaveChannel = asyncHandler(async (req: AuthRequest, res: Response)
 export const removeChannelMember = asyncHandler(async (req: AuthRequest, res: Response) => {
   const channelId = req.params.channelId as string;
   const userId = req.params.userId as string;
+
+  const channel = await channelRepository.findById(channelId);
+  if (!channel) throw new ApiError(404, 'Channel not found');
+  if (channel.type === 'DM') throw new ApiError(400, 'Not applicable to direct messages');
 
   const membership = await channelMemberRepository.findMember(channelId, userId);
   if (!membership) throw new ApiError(404, 'Member not found in this channel');
@@ -259,7 +269,7 @@ export const deleteMessage = asyncHandler(async (req: AuthRequest, res: Response
   let isAdmin = false;
   if (!isSender) {
     const channel = await channelRepository.findById(channelId);
-    if (channel) {
+    if (channel && channel.type !== 'DM') {
       const org = await organizationRepository.findById(channel.organizationId);
       if (org?.ownerId === user.id) {
         isAdmin = true;
@@ -354,6 +364,64 @@ export const downloadFile = asyncHandler(async (req: AuthRequest, res: Response)
 
   const buffer = Buffer.from(await upstream.arrayBuffer());
   res.end(buffer);
+});
+
+export const startDM = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const organizationId = req.params.organizationId as string;
+  const { userId: targetUserId } = req.body as { userId: string };
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  if (targetUserId === user.id) throw new ApiError(400, 'Cannot start a DM with yourself');
+
+  const org = await organizationRepository.findById(organizationId);
+  const targetMembership = await organizationMemberRepository.findOne({ organizationId, userId: targetUserId });
+  if (!targetMembership && org?.ownerId !== targetUserId) {
+    throw new ApiError(400, 'User is not a member of this organization');
+  }
+
+  const { channel, created } = await channelRepository.findOrCreateDM(organizationId, user.id, targetUserId);
+
+  if (created) {
+    const io = getIO();
+    io.in(`user:${user.id}`).socketsJoin(`channel:${channel.id}`);
+    io.in(`user:${targetUserId}`).socketsJoin(`channel:${channel.id}`);
+  }
+
+  const targetUser = await userRepository.findById(targetUserId);
+  const data = {
+    ...channel.get({ plain: true }),
+    dmParticipant: targetUser ? { id: targetUser.id, name: targetUser.name, avatarUrl: targetUser.avatarUrl } : null,
+  };
+
+  return res.status(created ? 201 : 200).json({
+    success: true,
+    message: created ? 'Direct message started' : 'Direct message already exists',
+    data,
+  });
+});
+
+export const listDMs = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const organizationId = req.params.organizationId as string;
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  const channels = await channelRepository.findDMsForUser(organizationId, user.id);
+
+  const data = await Promise.all(
+    channels.map(async (channel) => {
+      const members = await channelMemberRepository.findMembers(channel.id);
+      const other = members.find((m) => m.userId !== user.id);
+      return {
+        ...channel.get({ plain: true }),
+        dmParticipant: other?.user
+          ? { id: other.user.id, name: other.user.name, avatarUrl: other.user.avatarUrl }
+          : null,
+      };
+    })
+  );
+
+  return ok(res, data, 'Direct messages retrieved successfully');
 });
 
 export async function cascadeRemoveUserFromOrgChannels(

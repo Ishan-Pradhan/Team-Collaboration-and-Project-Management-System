@@ -23,6 +23,10 @@ function groupReactions(rows: { emoji: string; userId: string }[]): ReactionSumm
   return Array.from(map.entries()).map(([emoji, userIds]) => ({ emoji, userIds }));
 }
 
+function buildDmKey(userIdA: string, userIdB: string): string {
+  return [userIdA, userIdB].sort().join(':');
+}
+
 export const channelRepository = {
   create: async (data: ChannelCreationAttributes): Promise<ChannelInstance> => {
     return await Channel.create(data);
@@ -46,6 +50,7 @@ export const channelRepository = {
     return await Channel.findAll({
       where: {
         organizationId,
+        type: { [Op.ne]: 'DM' },
         [Op.or]: [{ type: 'PUBLIC' }, { id: { [Op.in]: memberChannelIds } }],
       },
       order: [['createdAt', 'ASC']],
@@ -57,6 +62,46 @@ export const channelRepository = {
     if (!channel) return false;
     await channel.destroy();
     return true;
+  },
+
+  findOrCreateDM: async (
+    organizationId: string,
+    userIdA: string,
+    userIdB: string,
+  ): Promise<{ channel: ChannelInstance; created: boolean }> => {
+    const dmKey = buildDmKey(userIdA, userIdB);
+    const existing = await Channel.findOne({ where: { organizationId, dmKey } });
+    if (existing) return { channel: existing, created: false };
+
+    const channel = await Channel.create({
+      organizationId,
+      name: null,
+      type: 'DM',
+      createdBy: userIdA,
+      dmKey,
+    });
+    await ChannelMember.bulkCreate([
+      { channelId: channel.id, userId: userIdA },
+      { channelId: channel.id, userId: userIdB },
+    ]);
+    return { channel, created: true };
+  },
+
+  findDMsForUser: async (organizationId: string, userId: string): Promise<ChannelInstance[]> => {
+    const memberships = await ChannelMember.findAll({
+      where: { userId },
+      attributes: ['channelId'],
+    });
+    const memberChannelIds = memberships.map((m) => m.channelId);
+    if (memberChannelIds.length === 0) return [];
+    return await Channel.findAll({
+      where: {
+        organizationId,
+        type: 'DM',
+        id: { [Op.in]: memberChannelIds },
+      },
+      order: [['createdAt', 'DESC']],
+    });
   },
 };
 

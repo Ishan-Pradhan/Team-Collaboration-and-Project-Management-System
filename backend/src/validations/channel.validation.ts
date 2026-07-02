@@ -78,3 +78,12 @@ export const removeReactionSchema = {
     emoji: z.string().min(1, 'Emoji is required').max(64, 'Invalid emoji'),
   }),
 };
+
+export const startDMSchema = {
+  params: z.object({
+    organizationId: z.string().uuid('Invalid organization ID'),
+  }),
+  body: z.object({
+    userId: z.string().uuid('Invalid user ID'),
+  }),
+};
