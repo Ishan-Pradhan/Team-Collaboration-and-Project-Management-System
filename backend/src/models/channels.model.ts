@@ -16,15 +16,19 @@ export const Channel = sequelize.define<ChannelInstance>(
     },
     name: {
       type: DataTypes.STRING(100),
-      allowNull: false,
+      allowNull: true,
     },
     type: {
-      type: DataTypes.ENUM('PUBLIC', 'PRIVATE'),
+      type: DataTypes.ENUM('PUBLIC', 'PRIVATE', 'DM'),
       allowNull: false,
     },
     createdBy: {
       type: DataTypes.UUID,
       allowNull: false,
+    },
+    dmKey: {
+      type: DataTypes.STRING(200),
+      allowNull: true,
     },
   },
   {

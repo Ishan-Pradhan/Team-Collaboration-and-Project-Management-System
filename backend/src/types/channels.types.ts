@@ -4,16 +4,17 @@ import type { UserInstance } from './users.types.js';
 export interface Channels {
   id: string;
   organizationId: string;
-  name: string;
-  type: 'PUBLIC' | 'PRIVATE';
+  name: string | null;
+  type: 'PUBLIC' | 'PRIVATE' | 'DM';
   createdBy: string;
+  dmKey?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 export type ChannelCreationAttributes = Optional<
   Channels,
-  'id' | 'createdAt' | 'updatedAt'
+  'id' | 'createdAt' | 'updatedAt' | 'name' | 'dmKey'
 >;
 
 export interface ChannelInstance
