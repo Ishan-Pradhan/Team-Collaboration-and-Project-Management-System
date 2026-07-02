@@ -11,6 +11,8 @@ import type {
   PendingInvitesResponse,
   OrganizationBan,
   OrganizationBansResponse,
+  MemberProfile,
+  MemberProfileResponse,
 } from '@/types/organization.types';
 
 export async function getMyOrganizations(): Promise<Organization[]> {
@@ -102,4 +104,9 @@ export async function banMember(organizationId: string, userId: string): Promise
 
 export async function unbanMember(organizationId: string, userId: string): Promise<void> {
   await api.delete(`/organizations/${organizationId}/bans/${userId}`);
+}
+
+export async function getMemberProfile(organizationId: string, userId: string): Promise<MemberProfile> {
+  const res = await api.get<MemberProfileResponse>(`/organizations/${organizationId}/members/${userId}/profile`);
+  return res.data.data;
 }

@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../store/auth.store';
 import type { User } from '../types/auth.types';
 import type { LoginInput, RegisterInput } from '../schemas/auth.schema';
@@ -11,6 +11,7 @@ import {
   updateProfile,
   uploadAvatar,
   changePassword,
+  getCurrentUserProfile,
 } from '../services/auth.service';
 
 export const useLogin = () => {
@@ -66,6 +67,12 @@ export const useUpdateProfile = () => {
     },
   });
 };
+
+export const useCurrentUserProfile = () =>
+  useQuery({
+    queryKey: ['auth', 'current-user-profile'],
+    queryFn: getCurrentUserProfile,
+  });
 
 export const useUploadAvatar = () => {
   const { user, setAuth } = useAuthStore();

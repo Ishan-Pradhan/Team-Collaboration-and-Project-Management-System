@@ -16,6 +16,7 @@ import {
   getOrganizationBans,
   banMember,
   unbanMember,
+  getMemberProfile,
 } from '@/services/organization.service';
 
 export const useMyOrganizations = () =>
@@ -137,3 +138,10 @@ export const useUnbanMember = (organizationId: string) => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['organizations', organizationId, 'bans'] }),
   });
 };
+
+export const useMemberProfile = (organizationId: string, userId: string | null) =>
+  useQuery({
+    queryKey: ['organizations', organizationId, 'members', userId, 'profile'],
+    queryFn: () => getMemberProfile(organizationId, userId as string),
+    enabled: !!organizationId && !!userId,
+  });

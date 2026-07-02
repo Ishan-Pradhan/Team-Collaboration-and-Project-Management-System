@@ -122,3 +122,22 @@ export interface OrganizationBansResponse {
   message: string;
   data: OrganizationBan[];
 }
+
+// ─── Member Profile ────────────────────────────────────────────
+
+export interface MemberProfile {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  jobTitle: string | null;
+  orgRole: 'Owner' | 'Admin' | 'Member';
+  joinedAt: string;
+}
+
+export interface MemberProfileResponse {
+  success: boolean;
+  message: string;
+  data: MemberProfile;
+}

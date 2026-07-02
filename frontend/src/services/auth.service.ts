@@ -28,8 +28,22 @@ export async function resendVerificationEmail(email: string): Promise<void> {
   await api.post('/auth/resend-verification-email', { email });
 }
 
-export async function updateProfile(data: { name: string }): Promise<{ id: string; name: string; email: string; avatarUrl: string | null }> {
-  const res = await api.patch<{ data: { id: string; name: string; email: string; avatarUrl: string | null } }>('/auth/profile', data);
+export interface UpdateProfileData {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  jobTitle: string | null;
+}
+
+export async function updateProfile(data: { name: string; bio?: string; jobTitle?: string }): Promise<UpdateProfileData> {
+  const res = await api.patch<{ data: UpdateProfileData }>('/auth/profile', data);
+  return res.data.data;
+}
+
+export async function getCurrentUserProfile(): Promise<UpdateProfileData & { isVerified: boolean; role: string }> {
+  const res = await api.get<{ data: UpdateProfileData & { isVerified: boolean; role: string } }>('/auth/current-user');
   return res.data.data;
 }
 
