@@ -8,6 +8,7 @@ import { useChannelMembers, useLeaveChannel, useDeleteChannel } from '@/hooks/us
 import ManageChannelMembersModal from '@/components/shared/ManageChannelMembersModal';
 import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 import type { Channel } from '@/types/channel.types';
+import MessagePane from './MessagePane';
 
 interface Props {
   channel: Channel;
@@ -58,7 +59,7 @@ export default function ChannelView({ channel, organizationId, isAdmin, onLeftOr
       </div>
 
       <div className="flex-1 overflow-hidden">
-        <p className="flex h-full items-center justify-center text-sm text-text-secondary">Channel: {channel.name}</p>
+        <MessagePane channel={channel} />
       </div>
 
       {showMembersModal && (
