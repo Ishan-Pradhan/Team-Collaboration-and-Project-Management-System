@@ -10,6 +10,7 @@ let io: SocketIOServer | null = null;
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
+  userName?: string;
 }
 
 function readCookie(rawCookieHeader: string, name: string): string | undefined {
@@ -43,6 +44,7 @@ export const initSocket = (httpServer: HttpServer): SocketIOServer => {
       }
 
       socket.userId = user.id;
+      socket.userName = user.name;
       next();
     } catch {
       next(new Error('Unauthorized'));
@@ -60,6 +62,15 @@ export const initSocket = (httpServer: HttpServer): SocketIOServer => {
 
     orgMemberships.forEach((m) => socket.join(`org:${m.organizationId}`));
     channelMemberships.forEach((m) => socket.join(`channel:${m.channelId}`));
+
+    socket.on('typing:start', ({ channelId }: { channelId?: string }) => {
+      if (!channelId || !socket.rooms.has(`channel:${channelId}`)) return;
+      socket.to(`channel:${channelId}`).emit('typing:update', {
+        channelId,
+        userId: socket.userId,
+        userName: socket.userName,
+      });
+    });
   });
 
   return io;
