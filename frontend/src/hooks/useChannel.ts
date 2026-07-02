@@ -14,6 +14,8 @@ import {
   deleteMessage,
   getFiles,
   uploadFile,
+  getDMs,
+  startDM,
 } from '@/services/channel.service';
 
 export const useChannels = (organizationId: string) =>
@@ -129,5 +131,20 @@ export const useUploadFile = (channelId: string) => {
       qc.invalidateQueries({ queryKey: ['channels', channelId, 'messages'] });
       qc.invalidateQueries({ queryKey: ['channels', channelId, 'files'] });
     },
+  });
+};
+
+export const useDMs = (organizationId: string) =>
+  useQuery({
+    queryKey: ['organizations', organizationId, 'dms'],
+    queryFn: () => getDMs(organizationId),
+    enabled: !!organizationId,
+  });
+
+export const useStartDM = (organizationId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => startDM(organizationId, userId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['organizations', organizationId, 'dms'] }),
   });
 };

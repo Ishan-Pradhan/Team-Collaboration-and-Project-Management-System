@@ -1,13 +1,18 @@
-export type ChannelType = 'PUBLIC' | 'PRIVATE';
+export type ChannelType = 'PUBLIC' | 'PRIVATE' | 'DM';
 
 export interface Channel {
   id: string;
   organizationId: string;
-  name: string;
+  name: string | null;
   type: ChannelType;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  dmParticipant?: {
+    id: string;
+    name: string;
+    avatarUrl: string | null;
+  } | null;
 }
 
 export interface ChannelMember {

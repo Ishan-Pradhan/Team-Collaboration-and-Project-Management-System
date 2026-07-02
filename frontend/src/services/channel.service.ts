@@ -93,3 +93,13 @@ export async function uploadFile(channelId: string, file: File): Promise<Message
 export function getFileDownloadUrl(channelId: string, messageId: string): string {
   return `${API_BASE}/channels/${channelId}/messages/${messageId}/download`;
 }
+
+export async function getDMs(organizationId: string): Promise<Channel[]> {
+  const res = await api.get<ChannelsResponse>(`/organizations/${organizationId}/dms`);
+  return res.data.data;
+}
+
+export async function startDM(organizationId: string, userId: string): Promise<Channel> {
+  const res = await api.post<ChannelResponse>(`/organizations/${organizationId}/dms`, { userId });
+  return res.data.data;
+}
