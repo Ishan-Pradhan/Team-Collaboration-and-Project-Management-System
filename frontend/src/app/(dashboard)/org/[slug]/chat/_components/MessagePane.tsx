@@ -294,7 +294,7 @@ export default function MessagePane({ channel, isAdmin }: Props) {
         <input
           value={content}
           onChange={handleContentChange}
-          placeholder={`Message #${channel.name}`}
+          placeholder={channel.type === 'DM' ? `Message ${channel.dmParticipant?.name ?? ''}` : `Message #${channel.name}`}
           disabled={sendMessage.isPending}
           className="flex-1 rounded-lg border border-border-subtle bg-white px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:border-primary focus:outline-none disabled:opacity-50"
         />
