@@ -226,7 +226,7 @@ body {
    ========================================================================== */
 
 @layer base {
- 
+
   html {
     font-family: var(--font-sans);
     color: var(--color-text-primary);
@@ -234,6 +234,8 @@ body {
     text-rendering: geometricPrecision;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Smoothly scales from 15px @ 1280px → 17px @ 1920px → capped at 17px */
+    font-size: clamp(15px, 0.3125vw + 11px, 17px);
   }
 
   body {

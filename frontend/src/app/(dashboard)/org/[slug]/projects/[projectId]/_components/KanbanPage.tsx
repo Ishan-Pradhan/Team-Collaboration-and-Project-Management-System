@@ -377,7 +377,7 @@ export default function KanbanPage({ params }: Props) {
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
-              <div className="flex h-full items-start gap-3">
+              <div className="flex h-full items-start gap-4">
                 {localColumns.map((col) => (
                   <SortableColumn
                     key={col.id}

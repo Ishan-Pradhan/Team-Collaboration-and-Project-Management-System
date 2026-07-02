@@ -68,6 +68,10 @@ export interface Task {
     name: string;
     email: string;
   };
+  commentCount?: number;
+  attachmentCount?: number;
+  subtaskCount?: number;
+  subtaskCompletedCount?: number;
 }
 
 // ─── Comment ───────────────────────────────────────────────────

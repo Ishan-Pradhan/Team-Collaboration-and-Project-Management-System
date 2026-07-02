@@ -2,7 +2,8 @@
 
 import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useOrganizationBySlug, useUpdateOrganization, useDeleteOrganization } from '@/hooks/useOrganization';
+import { useOrganizationBySlug } from '@/hooks/useOrganization';
+import { useUpdateOrganization, useDeleteOrganization } from '@/hooks/useOrganization';
 import { useAuthStore } from '@/store/auth.store';
 import { useOrgStore } from '@/store/org.store';
 import { parseApiError } from '@/lib/axios';
@@ -11,7 +12,6 @@ import { AlertTriangle, Loader2, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ErrorState } from '@/components/shared/ErrorState';
-import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -27,7 +27,6 @@ export default function SettingsPage({ params }: Props) {
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (org) {
@@ -52,11 +51,6 @@ export default function SettingsPage({ params }: Props) {
 
   const isOwner = org.ownerId === user?.id;
 
-  if (!isOwner) {
-    router.replace(`/org/${slug}`);
-    return null;
-  }
-
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
@@ -69,7 +63,8 @@ export default function SettingsPage({ params }: Props) {
     );
   };
 
-  const confirmDelete = () => {
+  const handleDelete = () => {
+    if (!confirm(`Permanently delete "${org.name}"? This cannot be undone. All projects, tasks, and members will be removed.`)) return;
     deleteMutation.mutate(org.id, {
       onSuccess: () => {
         toast.success('Workspace deleted');
@@ -89,6 +84,7 @@ export default function SettingsPage({ params }: Props) {
         </p>
       </div>
 
+      {/* General settings — admin + owner */}
       <section className="rounded-xl border border-border-subtle bg-white p-6 shadow-card">
         <h2 className="mb-4 text-sm font-semibold text-text-primary">General</h2>
         <form onSubmit={handleSave} className="space-y-4">
@@ -119,40 +115,43 @@ export default function SettingsPage({ params }: Props) {
           </div>
           <div className="flex justify-end">
             <Button type="submit" disabled={updateMutation.isPending} className="flex items-center gap-1.5">
-              {updateMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              {updateMutation.isPending ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Save size={14} />
+              )}
               Save Changes
             </Button>
           </div>
         </form>
       </section>
 
-      <section className="rounded-xl border border-danger/30 bg-danger-soft/10 p-6">
-        <div className="flex items-center gap-2 mb-1">
-          <AlertTriangle size={16} className="text-danger" />
-          <h2 className="text-sm font-semibold text-danger">Danger Zone</h2>
-        </div>
-        <p className="text-xs text-text-secondary mb-4">
-          Permanently deletes this workspace, all its projects, tasks, and members. This cannot be undone.
-        </p>
-        <button
-          onClick={() => setShowDeleteConfirm(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-danger/40 bg-white px-4 py-2 text-sm font-medium text-danger hover:bg-danger hover:text-white transition-colors"
-        >
-          <Trash2 size={14} />
-          Delete Workspace
-        </button>
-      </section>
+      {/* Danger Zone — owner only */}
+      {isOwner && (
+        <section className="rounded-xl border border-danger/30 bg-danger-soft/10 p-6">
+          <div className="flex items-center gap-2 mb-1">
+            <AlertTriangle size={16} className="text-danger" />
+            <h2 className="text-sm font-semibold text-danger">Danger Zone</h2>
+          </div>
+          <p className="text-xs text-text-secondary mb-4">
+            Permanently deletes this workspace, all its projects, tasks, and removes all members. This cannot be undone.
+          </p>
+          <button
+            onClick={handleDelete}
+            disabled={deleteMutation.isPending}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-danger/40 bg-white px-4 py-2 text-sm font-medium text-danger hover:bg-danger hover:text-white transition-colors disabled:opacity-50"
+          >
+            {deleteMutation.isPending ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Trash2 size={14} />
+            )}
+            Delete Workspace
+          </button>
+        </section>
+      )}
 
-      <ConfirmationDialog
-        isOpen={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
-        onConfirm={confirmDelete}
-        title="Delete Workspace"
-        description={`Permanently delete "${org.name}"? All projects, tasks, and members will be removed. This cannot be undone.`}
-        confirmText="Delete"
-        isDestructive
-        isLoading={deleteMutation.isPending}
-      />
+
     </div>
   );
 }

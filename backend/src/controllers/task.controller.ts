@@ -44,7 +44,23 @@ export const listProjectTasks = asyncHandler(
     await requireProjectMembership(projectId, user.id);
 
     const tasks = await taskRepository.findByProject(projectId);
-    return ok(res, tasks, 'Tasks retrieved successfully');
+    const data = tasks.map((t) => {
+      const json = t.toJSON() as unknown as Record<string, unknown>;
+      const comments = (json.comments as unknown[]) ?? [];
+      const attachments = (json.attachments as unknown[]) ?? [];
+      const subtasks = (json.subtasks as { isCompleted: boolean }[]) ?? [];
+      return {
+        ...json,
+        commentCount: comments.length,
+        attachmentCount: attachments.length,
+        subtaskCount: subtasks.length,
+        subtaskCompletedCount: subtasks.filter((s) => s.isCompleted).length,
+        comments: undefined,
+        attachments: undefined,
+        subtasks: undefined,
+      };
+    });
+    return ok(res, data, 'Tasks retrieved successfully');
   }
 );
 

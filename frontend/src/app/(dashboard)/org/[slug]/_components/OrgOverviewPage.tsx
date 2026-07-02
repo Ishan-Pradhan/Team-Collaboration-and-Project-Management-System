@@ -7,51 +7,34 @@ import { useOrgDashboard } from '@/hooks/useProject';
 import { useAuthStore } from '@/store/auth.store';
 import { cn } from '@/lib/utils';
 import {
-  FolderOpen, CheckSquare, AlertTriangle, Clock,
-  ArrowRight, MessageSquare, CalendarDays, Plus, ArrowRightLeft, UserPlus,
+  AlertTriangle, ArrowRight, CheckSquare,
+  Clock, FolderOpen, MessageSquare, Plus, ArrowRightLeft, UserPlus,
 } from 'lucide-react';
 import { ErrorState } from '@/components/shared/ErrorState';
 import type { DashboardData } from '@/types/project.types';
 
-// ─── Colors ──────────────────────────────────────────────────
-
-const PROJECT_COLORS = [
-  { bg: '#FFE4D6', text: '#C4532A' },
-  { bg: '#E8E0FF', text: '#5B4FB5' },
-  { bg: '#D4F5E4', text: '#1D7A4E' },
-  { bg: '#D9EEFF', text: '#2D72B8' },
-  { bg: '#FFF3D6', text: '#A67C00' },
-  { bg: '#FFD6E8', text: '#B52D6B' },
-];
-
-const MEMBER_COLORS = ['#22302a', '#d4a84f', '#6f8c78', '#a86c58', '#4b7f52', '#c38a2d'];
-
-const PRIORITY_STYLES: Record<string, string> = {
-  LOW: 'bg-success-soft text-success',
-  MEDIUM: 'bg-warning-soft text-warning',
-  HIGH: 'bg-danger-soft text-danger',
-  CRITICAL: 'bg-[#e8c0c0] text-[#8e2f2f]',
-};
-
 // ─── Helpers ─────────────────────────────────────────────────
 
-function getMemberColor(name: string): string {
+const AVATAR_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#3b82f6', '#8b5cf6'];
+function avatarColor(name: string) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
-  return MEMBER_COLORS[Math.abs(h) % MEMBER_COLORS.length];
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
 }
 
-function getDueDateInfo(dueDate: string | null) {
-  if (!dueDate) return null;
-  const due = new Date(dueDate + 'T12:00:00');
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const diffDays = Math.round((due.getTime() - now.getTime()) / 86400000);
-  if (diffDays < 0) return { label: `${Math.abs(diffDays)}d overdue`, className: 'text-danger' };
-  if (diffDays === 0) return { label: 'Due today', className: 'text-warning' };
-  if (diffDays === 1) return { label: 'Due tomorrow', className: 'text-warning' };
-  return { label: `${diffDays}d left`, className: 'text-text-muted' };
-}
+const PRIORITY_DOT: Record<string, string> = {
+  LOW: 'bg-emerald-400',
+  MEDIUM: 'bg-amber-400',
+  HIGH: 'bg-orange-400',
+  CRITICAL: 'bg-red-500',
+};
+
+const PRIORITY_LABEL: Record<string, string> = {
+  LOW: 'text-emerald-600 bg-emerald-50',
+  MEDIUM: 'text-amber-600 bg-amber-50',
+  HIGH: 'text-orange-600 bg-orange-50',
+  CRITICAL: 'text-red-600 bg-red-50',
+};
 
 function formatRelativeTime(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -65,17 +48,63 @@ function formatRelativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+function getDueDateLabel(dueDate: string | null): { label: string; cls: string } | null {
+  if (!dueDate) return null;
+  const due = new Date(dueDate + 'T12:00:00');
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  const diff = Math.round((due.getTime() - now.getTime()) / 86400000);
+  if (diff < 0) return { label: `${Math.abs(diff)}d overdue`, cls: 'text-red-500' };
+  if (diff === 0) return { label: 'Due today', cls: 'text-amber-500' };
+  if (diff <= 2) return { label: `${diff}d left`, cls: 'text-amber-500' };
+  return { label: `${diff}d left`, cls: 'text-gray-400' };
+}
+
 // ─── Avatar ──────────────────────────────────────────────────
 
-function Avatar({ name, url, size = 8 }: { name: string; url?: string | null; size?: number }) {
-  const sz = `h-${size} w-${size}`;
-  if (url) return <img src={url} alt={name} className={cn(sz, 'rounded-full object-cover shrink-0')} />;
+function Avatar({ name, url, size = 7 }: { name: string; url?: string | null; size?: number }) {
+  const px = size * 4;
+  const style = { width: px, height: px, fontSize: px * 0.38, flexShrink: 0 };
+  if (url) return <img src={url} alt={name} className="rounded-full object-cover shrink-0" style={style} />;
   return (
-    <div
-      className={cn(sz, 'rounded-full flex shrink-0 items-center justify-center text-white font-semibold')}
-      style={{ backgroundColor: getMemberColor(name), fontSize: size * 1.75 }}
-    >
-      {name.charAt(0).toUpperCase()}
+    <div className="rounded-full flex items-center justify-center text-white font-semibold uppercase shrink-0"
+      style={{ ...style, backgroundColor: avatarColor(name) }}>
+      {name.charAt(0)}
+    </div>
+  );
+}
+
+// ─── Section wrapper ─────────────────────────────────────────
+
+function Section({
+  title, count, action, children, className,
+}: {
+  title: string;
+  count?: number;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn('flex flex-col rounded-xl bg-white border border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden', className)}>
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 shrink-0">
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-gray-800">{title}</h2>
+          {count !== undefined && (
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">{count}</span>
+          )}
+        </div>
+        {action}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function EmptyState({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 py-12 text-gray-300">
+      {icon}
+      <p className="text-sm text-gray-400">{label}</p>
     </div>
   );
 }
@@ -84,28 +113,26 @@ function Avatar({ name, url, size = 8 }: { name: string; url?: string | null; si
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-6 animate-pulse">
-      <div className="h-24 rounded-2xl bg-surface-muted" />
-      <div className="grid grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => <div key={i} className="h-24 rounded-xl bg-surface-muted" />)}
+    <div className="flex flex-col gap-6 animate-pulse">
+      <div className="h-16 w-64 rounded-lg bg-gray-100" />
+      <div className="grid grid-cols-4 rounded-xl border border-gray-100 overflow-hidden divide-x divide-gray-100">
+        {[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-white" />)}
       </div>
-      <div className="grid gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-3 h-72 rounded-xl bg-surface-muted" />
-        <div className="lg:col-span-2 h-72 rounded-xl bg-surface-muted" />
+      <div className="grid gap-5 lg:grid-cols-5">
+        <div className="lg:col-span-3 h-64 rounded-xl bg-gray-100" />
+        <div className="lg:col-span-2 h-64 rounded-xl bg-gray-100" />
       </div>
-      <div className="grid gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-3 h-72 rounded-xl bg-surface-muted" />
-        <div className="lg:col-span-2 h-72 rounded-xl bg-surface-muted" />
+      <div className="grid gap-5 lg:grid-cols-5">
+        <div className="lg:col-span-3 h-64 rounded-xl bg-gray-100" />
+        <div className="lg:col-span-2 h-64 rounded-xl bg-gray-100" />
       </div>
     </div>
   );
 }
 
-// ─── Main Page ───────────────────────────────────────────────
+// ─── Page ────────────────────────────────────────────────────
 
-interface Props {
-  params: Promise<{ slug: string }>;
-}
+interface Props { params: Promise<{ slug: string }> }
 
 export default function OrgOverviewPage({ params }: Props) {
   const { slug } = use(params);
@@ -116,12 +143,11 @@ export default function OrgOverviewPage({ params }: Props) {
   const { data: dashboard, isLoading, error, refetch } = useOrgDashboard(org?.id ?? '');
 
   if (isLoading || !org) return <DashboardSkeleton />;
-
   if (error || !dashboard) {
     return (
       <ErrorState
         title="Failed to load dashboard"
-        message="Something went wrong while fetching your dashboard data."
+        message="Something went wrong loading your dashboard."
         onRetry={() => refetch()}
       />
     );
@@ -130,90 +156,103 @@ export default function OrgOverviewPage({ params }: Props) {
   const firstName = user?.name?.split(' ')[0] ?? 'there';
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
 
-      {/* ── Welcome banner ── */}
-      <div className="relative overflow-hidden rounded-2xl bg-primary px-8 py-7 text-primary-text">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-brand/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-10 left-1/3 h-40 w-40 rounded-full bg-brand/10 blur-2xl" />
-        <div className="relative">
-          <p className="text-sm font-medium text-primary-text/60">{greeting},</p>
-          <h1 className="mt-0.5 text-2xl font-bold tracking-tight">{firstName}!</h1>
-          <p className="mt-1 text-sm text-primary-text/70">
-            Here&apos;s what&apos;s happening in <span className="font-semibold text-primary-text/90">{org.name}</span>
-          </p>
+      {/* Header */}
+      <div className="flex items-end justify-between">
+        <div>
+          <p className="text-sm text-gray-400">{greeting},</p>
+          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">{firstName}</h1>
+        </div>
+        <div className="text-right hidden sm:block">
+          <p className="text-sm text-gray-400">{today}</p>
+          <p className="text-sm font-medium text-gray-600">{org.name}</p>
         </div>
       </div>
 
-      {/* ── Stats ── */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard
-          label="My Projects"
-          value={dashboard.stats.projectCount}
-          icon={<FolderOpen size={18} className="text-brand" />}
+      {/* Stats strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 rounded-xl border border-gray-200 bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden divide-x divide-y sm:divide-y-0 divide-gray-100">
+        <button
           onClick={() => router.push(`/org/${slug}/projects`)}
-        />
-        <StatCard
-          label="Assigned Tasks"
-          value={dashboard.stats.assignedTaskCount}
-          icon={<CheckSquare size={18} className="text-primary" />}
-        />
-        <StatCard
-          label="Overdue"
-          value={dashboard.stats.overdueCount}
-          icon={<AlertTriangle size={18} className="text-danger" />}
-          highlight={dashboard.stats.overdueCount > 0}
-        />
-        <StatCard
-          label="Due This Week"
-          value={dashboard.stats.dueSoonCount}
-          icon={<Clock size={18} className="text-warning" />}
-        />
+          className="flex flex-col gap-1 px-6 py-5 text-left hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-center gap-1.5 text-xs font-medium text-gray-400 uppercase tracking-wide">
+            <FolderOpen size={12} />
+            Projects
+          </div>
+          <p className="text-3xl font-bold text-gray-900">{dashboard.stats.projectCount}</p>
+        </button>
+
+        <div className="flex flex-col gap-1 px-6 py-5">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-gray-400 uppercase tracking-wide">
+            <CheckSquare size={12} />
+            Assigned
+          </div>
+          <p className="text-3xl font-bold text-gray-900">{dashboard.stats.assignedTaskCount}</p>
+        </div>
+
+        <div className="flex flex-col gap-1 px-6 py-5">
+          <div className={cn(
+            'flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide',
+            dashboard.stats.overdueCount > 0 ? 'text-red-400' : 'text-gray-400',
+          )}>
+            <AlertTriangle size={12} />
+            Overdue
+          </div>
+          <p className={cn('text-3xl font-bold', dashboard.stats.overdueCount > 0 ? 'text-red-500' : 'text-gray-900')}>
+            {dashboard.stats.overdueCount}
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-1 px-6 py-5">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-gray-400 uppercase tracking-wide">
+            <Clock size={12} />
+            Due Soon
+          </div>
+          <p className="text-3xl font-bold text-gray-900">{dashboard.stats.dueSoonCount}</p>
+        </div>
       </div>
 
-      {/* ── Assigned Tasks + My Projects ── */}
-      <div className="grid gap-6 lg:grid-cols-5">
+      {/* Row 1: Assigned tasks + My Projects */}
+      <div className="grid gap-5 lg:grid-cols-5">
 
-        {/* Assigned Tasks — 3/5 */}
-        <div className="lg:col-span-3 rounded-xl border border-border-subtle bg-white shadow-card overflow-hidden">
-          <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
-            <h2 className="text-sm font-semibold text-text-primary">Assigned Tasks</h2>
-            <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-text-muted">
-              {dashboard.assignedTasks.length}
-            </span>
-          </div>
-
+        <Section
+          className="lg:col-span-3"
+          title="Assigned to Me"
+          count={dashboard.assignedTasks.length}
+        >
           {dashboard.assignedTasks.length === 0 ? (
-            <EmptyState icon={<CheckSquare size={28} />} message="No tasks assigned to you" />
+            <EmptyState icon={<CheckSquare size={28} />} label="You have no tasks assigned" />
           ) : (
-            <ul className="divide-y divide-border-subtle">
+            <ul className="divide-y divide-gray-50 max-h-[320px] overflow-y-auto">
               {dashboard.assignedTasks.map((task) => {
-                const due = getDueDateInfo(task.dueDate);
+                const due = getDueDateLabel(task.dueDate);
                 return (
                   <li key={task.id}>
                     <button
                       onClick={() => router.push(`/org/${slug}/projects/${task.projectId}?taskId=${task.id}`)}
-                      className="group flex w-full items-start gap-3 px-5 py-3.5 text-left hover:bg-surface-muted transition-colors"
+                      className="group flex w-full items-center gap-3.5 px-5 py-3 text-left hover:bg-gray-50 transition-colors"
                     >
+                      <span className={cn('h-2 w-2 rounded-full shrink-0', PRIORITY_DOT[task.priority])} />
                       <div className="flex-1 min-w-0">
-                        <p className="truncate text-sm font-medium text-text-primary group-hover:text-primary transition-colors">
+                        <p className="truncate text-sm font-medium text-gray-800 group-hover:text-gray-600 transition-colors">
                           {task.title}
                         </p>
-                        <div className="mt-1 flex items-center gap-2 flex-wrap">
-                          <span className="text-[11px] text-text-muted">{task.projectName}</span>
-                          <span className="text-text-muted/40">·</span>
-                          <span className="text-[11px] text-text-muted">{task.columnName}</span>
-                        </div>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {task.projectName}
+                          <span className="mx-1.5 text-gray-200">·</span>
+                          {task.columnName}
+                        </p>
                       </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase', PRIORITY_STYLES[task.priority])}>
-                          {task.priority}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={cn('rounded px-1.5 py-0.5 text-[0.7rem] font-semibold', PRIORITY_LABEL[task.priority])}>
+                          {task.priority.charAt(0) + task.priority.slice(1).toLowerCase()}
                         </span>
                         {due && (
-                          <span className={cn('flex items-center gap-1 text-[11px] font-medium', due.className)}>
-                            <CalendarDays size={11} />
+                          <span className={cn('text-xs font-medium tabular-nums', due.cls)}>
                             {due.label}
                           </span>
                         )}
@@ -224,247 +263,188 @@ export default function OrgOverviewPage({ params }: Props) {
               })}
             </ul>
           )}
-        </div>
+        </Section>
 
-        {/* My Projects — 2/5 */}
-        <div className="lg:col-span-2 rounded-xl border border-border-subtle bg-white shadow-card overflow-hidden">
-          <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
-            <h2 className="text-sm font-semibold text-text-primary">My Projects</h2>
+        <Section
+          className="lg:col-span-2"
+          title="My Projects"
+          action={
             <button
               onClick={() => router.push(`/org/${slug}/projects`)}
-              className="flex items-center gap-1 text-[11px] font-medium text-brand hover:text-brand-hover transition-colors"
+              className="flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors"
             >
-              View all <ArrowRight size={11} />
+              All <ArrowRight size={12} />
             </button>
-          </div>
-
+          }
+        >
           {dashboard.myProjects.length === 0 ? (
-            <EmptyState icon={<FolderOpen size={28} />} message="Not a member of any project yet" />
+            <EmptyState icon={<FolderOpen size={28} />} label="You're not in any projects" />
           ) : (
-            <div className="grid grid-cols-2 gap-3 p-4">
-              {dashboard.myProjects.slice(0, 6).map((project, idx) => {
-                const color = PROJECT_COLORS[idx % PROJECT_COLORS.length];
-                return (
+            <ul className="divide-y divide-gray-50 max-h-[320px] overflow-y-auto">
+              {dashboard.myProjects.slice(0, 8).map((project) => (
+                <li key={project.id}>
                   <button
-                    key={project.id}
                     onClick={() => router.push(`/org/${slug}/projects/${project.id}`)}
-                    className="group flex flex-col gap-2.5 rounded-lg border border-border-subtle p-3 text-left hover:border-border-muted hover:shadow-card transition-all"
+                    className="group flex w-full items-center gap-3.5 px-5 py-3 text-left hover:bg-gray-50 transition-colors"
                   >
                     <div
-                      className="flex h-9 w-9 items-center justify-center rounded-lg text-sm font-bold"
-                      style={{ backgroundColor: color.bg, color: color.text }}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs font-bold text-white"
+                      style={{ backgroundColor: avatarColor(project.name) }}
                     >
                       {project.name.charAt(0).toUpperCase()}
                     </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-semibold text-text-primary leading-snug">
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate text-sm font-medium text-gray-800 group-hover:text-gray-600 transition-colors">
                         {project.name}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-text-muted">
-                        {project.dueSoonCount > 0
-                          ? `${project.dueSoonCount} task${project.dueSoonCount !== 1 ? 's' : ''} due soon`
-                          : 'No tasks due soon'}
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {project.myRole === 'PROJECT_MANAGER' ? 'Manager' : 'Member'}
                       </p>
                     </div>
+                    {project.dueSoonCount > 0 && (
+                      <span className="text-xs font-medium text-amber-500 shrink-0 tabular-nums">
+                        {project.dueSoonCount} due
+                      </span>
+                    )}
                   </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Recent Activity + Team ── */}
-      <div className="grid gap-6 lg:grid-cols-5">
-
-        {/* Recent Activity — 3/5 */}
-        <div className="lg:col-span-3 rounded-xl border border-border-subtle bg-white shadow-card overflow-hidden">
-          <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
-            <h2 className="text-sm font-semibold text-text-primary">Recent Activity</h2>
-          </div>
-
-          {dashboard.recentActivity.length === 0 ? (
-            <EmptyState icon={<MessageSquare size={28} />} message="No recent activity in your projects" />
-          ) : (
-            <ul className="divide-y divide-border-subtle max-h-[340px] overflow-y-auto">
-              {dashboard.recentActivity.map((item) => (
-                <ActivityItem key={item.id} item={item} slug={slug} router={router} />
+                </li>
               ))}
             </ul>
           )}
-        </div>
+        </Section>
+      </div>
 
-        {/* Team Members — 2/5 */}
-        <div className="lg:col-span-2 rounded-xl border border-border-subtle bg-white shadow-card overflow-hidden">
-          <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
-            <h2 className="text-sm font-semibold text-text-primary">
-              People
-              <span className="ml-1.5 text-text-muted font-normal">({dashboard.members.length})</span>
-            </h2>
+      {/* Row 2: Recent activity + Team */}
+      <div className="grid gap-5 lg:grid-cols-5">
+
+        <Section className="lg:col-span-3" title="Recent Activity">
+          {dashboard.recentActivity.length === 0 ? (
+            <EmptyState icon={<MessageSquare size={28} />} label="No recent activity" />
+          ) : (
+            <ul className="divide-y divide-gray-50 max-h-[320px] overflow-y-auto">
+              {dashboard.recentActivity.map((item) => (
+                <ActivityRow key={item.id} item={item} slug={slug} router={router} />
+              ))}
+            </ul>
+          )}
+        </Section>
+
+        <Section
+          className="lg:col-span-2"
+          title="Team"
+          count={dashboard.members.length}
+          action={
             <button
               onClick={() => router.push(`/org/${slug}/members`)}
-              className="flex items-center gap-1 text-[11px] font-medium text-brand hover:text-brand-hover transition-colors"
+              className="flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors"
             >
-              Manage <ArrowRight size={11} />
+              Manage <ArrowRight size={12} />
             </button>
-          </div>
-
+          }
+        >
           {dashboard.members.length === 0 ? (
-            <EmptyState icon={<FolderOpen size={28} />} message="No members yet" />
+            <EmptyState icon={<FolderOpen size={28} />} label="No members yet" />
           ) : (
-            <div className="grid grid-cols-3 gap-3 p-4 max-h-[340px] overflow-y-auto">
+            <ul className="divide-y divide-gray-50 max-h-[320px] overflow-y-auto">
               {dashboard.members.map((member) => (
-                <div key={member.id} className="flex flex-col items-center gap-1.5 rounded-lg border border-border-subtle p-3 text-center">
-                  <Avatar name={member.name} url={member.avatarUrl} size={10} />
-                  <div className="w-full min-w-0">
-                    <p className="truncate text-[11px] font-semibold text-text-primary">{member.name}</p>
-                    <p className="truncate text-[10px] text-text-muted">{member.email}</p>
+                <li key={member.id} className="flex items-center gap-3.5 px-5 py-3">
+                  <Avatar name={member.name} url={member.avatarUrl} size={8} />
+                  <div className="flex-1 min-w-0">
+                    <p className="truncate text-sm font-medium text-gray-800">{member.name}</p>
+                    <p className="truncate text-xs text-gray-400">{member.email}</p>
                   </div>
-                </div>
+                  <span className="shrink-0 text-[0.7rem] font-medium text-gray-400">
+                    {member.role === 'OWNER' ? 'Owner' : member.role === 'ORG_ADMIN' ? 'Admin' : 'Member'}
+                  </span>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
-        </div>
+        </Section>
       </div>
     </div>
   );
 }
 
-// ─── Sub-components ───────────────────────────────────────────
+// ─── Activity row ─────────────────────────────────────────────
 
-function StatCard({
-  label, value, icon, onClick, highlight,
-}: {
-  label: string;
-  value: number;
-  icon: React.ReactNode;
-  onClick?: () => void;
-  highlight?: boolean;
-}) {
-  const Tag = onClick ? 'button' : 'div';
-  return (
-    <Tag
-      onClick={onClick}
-      className={cn(
-        'group rounded-xl border bg-white p-5 shadow-card text-left w-full',
-        highlight ? 'border-danger/30 bg-danger-soft/20' : 'border-border-subtle',
-        onClick && 'hover:border-brand/40 hover:shadow-md transition-all cursor-pointer',
-      )}
-    >
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium text-text-muted uppercase tracking-wide">{label}</span>
-        {icon}
-      </div>
-      <p className={cn('mt-3 text-3xl font-bold', highlight ? 'text-danger' : 'text-text-primary')}>
-        {value}
-      </p>
-    </Tag>
-  );
-}
-
-function EmptyState({ icon, message }: { icon: React.ReactNode; message: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-12 text-text-muted">
-      <div className="mb-3 opacity-20">{icon}</div>
-      <p className="text-sm">{message}</p>
-    </div>
-  );
-}
-
-const ACTIVITY_META: Record<string, { icon: React.ReactNode; color: string }> = {
-  task_created: { icon: <Plus size={11} />, color: 'text-success bg-success-soft' },
-  task_moved: { icon: <ArrowRightLeft size={11} />, color: 'text-brand bg-brand-soft' },
-  task_deleted: { icon: <AlertTriangle size={11} />, color: 'text-danger bg-danger-soft' },
-  comment_added: { icon: <MessageSquare size={11} />, color: 'text-primary bg-surface-muted' },
-  member_added: { icon: <UserPlus size={11} />, color: 'text-info bg-info-soft' },
+const ACTIVITY_ICON: Record<string, { node: React.ReactNode; bg: string }> = {
+  task_created: { node: <Plus size={10} />, bg: 'bg-emerald-100 text-emerald-600' },
+  task_moved: { node: <ArrowRightLeft size={10} />, bg: 'bg-blue-100 text-blue-600' },
+  task_deleted: { node: <AlertTriangle size={10} />, bg: 'bg-red-100 text-red-600' },
+  comment_added: { node: <MessageSquare size={10} />, bg: 'bg-gray-100 text-gray-500' },
+  member_added: { node: <UserPlus size={10} />, bg: 'bg-purple-100 text-purple-600' },
 };
 
-function activityLabel(item: DashboardData['recentActivity'][number]): React.ReactNode {
+function buildActivityText(item: DashboardData['recentActivity'][number]): React.ReactNode {
   const { metadata } = item;
-  const taskLink = metadata.taskId ? (
-    <span className="font-semibold text-text-primary">{metadata.taskTitle}</span>
+  const task = metadata.taskTitle ? (
+    <span className="font-medium text-gray-800">{metadata.taskTitle}</span>
   ) : null;
 
   switch (item.type) {
-    case 'task_created':
-      return <>created task {taskLink}</>;
+    case 'task_created': return <>created {task}</>;
     case 'task_moved':
       return (
         <>
-          moved {taskLink}{' '}
+          moved {task}
           {metadata.fromColumn && metadata.toColumn && (
-            <span className="text-text-muted">
-              {metadata.fromColumn} → {metadata.toColumn}
-            </span>
+            <span className="text-gray-400"> · {metadata.fromColumn} → {metadata.toColumn}</span>
           )}
         </>
       );
     case 'comment_added':
       return (
         <>
-          commented on {taskLink}
+          commented on {task}
           {metadata.content && (
-            <span className="block mt-0.5 text-text-secondary line-clamp-1 font-normal">
-              &ldquo;{metadata.content}&rdquo;
-            </span>
+            <span className="text-gray-400 italic"> "{metadata.content}"</span>
           )}
         </>
       );
     case 'task_deleted':
       return (
-        <>
-          deleted task{' '}
-          <span className="font-semibold text-text-primary line-through">{metadata.taskTitle}</span>
-        </>
+        <>deleted <span className="line-through text-gray-400">{metadata.taskTitle}</span></>
       );
-    case 'member_added':
-      return <>joined the project</>;
-    default:
-      return null;
+    case 'member_added': return <>joined the project</>;
+    default: return null;
   }
 }
 
-function ActivityItem({
-  item,
-  slug,
-  router,
+function ActivityRow({
+  item, slug, router,
 }: {
   item: DashboardData['recentActivity'][number];
   slug: string;
   router: ReturnType<typeof useRouter>;
 }) {
-  const meta = ACTIVITY_META[item.type] ?? ACTIVITY_META['task_created'];
+  const icon = ACTIVITY_ICON[item.type] ?? ACTIVITY_ICON.task_created;
   const taskId = item.type !== 'task_deleted' ? item.metadata.taskId : undefined;
 
   return (
-    <li className="px-5 py-3.5">
-      <div className="mb-2 flex items-center gap-1.5 text-[11px] text-text-muted">
-        <FolderOpen size={11} />
-        <button
-          onClick={() => router.push(`/org/${slug}/projects/${item.projectId}`)}
-          className="font-medium hover:text-primary transition-colors"
-        >
-          {item.projectName}
-        </button>
-      </div>
-      <div className="flex items-start gap-2.5">
-        <Avatar name={item.actor.name} url={item.actor.avatarUrl} size={7} />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-            <span className="text-xs font-semibold text-text-primary">{item.actor.name}</span>
-            <span
-              className={cn('inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium', meta.color)}
-            >
-              {meta.icon}
-            </span>
-            <span
-              className="text-xs text-text-secondary cursor-pointer hover:text-primary transition-colors"
-              onClick={() => taskId && router.push(`/org/${slug}/projects/${item.projectId}?taskId=${taskId}`)}
-            >
-              {activityLabel(item)}
-            </span>
-          </div>
-          <p className="mt-0.5 text-[11px] text-text-muted">{formatRelativeTime(item.createdAt)}</p>
+    <li
+      className="flex items-start gap-3.5 px-5 py-3.5 hover:bg-gray-50 transition-colors cursor-pointer"
+      onClick={() => taskId && router.push(`/org/${slug}/projects/${item.projectId}?taskId=${taskId}`)}
+    >
+      <Avatar name={item.actor.name} url={item.actor.avatarUrl} size={7} />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-gray-600 leading-snug">
+          <span className="font-semibold text-gray-900">{item.actor.name}</span>
+          {' '}
+          {buildActivityText(item)}
+        </p>
+        <div className="mt-1 flex items-center gap-2">
+          <span className={cn('inline-flex items-center rounded px-1 py-0.5 text-[0.65rem] font-medium', icon.bg)}>
+            {icon.node}
+          </span>
+          <button
+            onClick={(e) => { e.stopPropagation(); router.push(`/org/${slug}/projects/${item.projectId}`); }}
+            className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
+          >
+            {item.projectName}
+          </button>
+          <span className="text-gray-200 text-xs">·</span>
+          <span className="text-xs text-gray-400">{formatRelativeTime(item.createdAt)}</span>
         </div>
       </div>
     </li>

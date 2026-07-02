@@ -1,4 +1,4 @@
-import { Task, TaskAssignee, User } from '../models/index.js';
+import { Task, TaskAssignee, User, TaskComment, TaskAttachment, Subtask } from '../models/index.js';
 import type { TaskCreationAttributes, TaskInstance } from '../types/tasks.types.js';
 
 const ASSIGNEE_INCLUDE = {
@@ -26,7 +26,12 @@ export const taskRepository = {
     return await Task.findAll({
       where: { projectId },
       order: [['columnId', 'ASC'], ['position', 'ASC']],
-      include: [ASSIGNEE_INCLUDE],
+      include: [
+        ASSIGNEE_INCLUDE,
+        { model: TaskComment, as: 'comments', attributes: ['id'], separate: true },
+        { model: TaskAttachment, as: 'attachments', attributes: ['id'], separate: true },
+        { model: Subtask, as: 'subtasks', attributes: ['id', 'isCompleted'], separate: true },
+      ],
     });
   },
 
