@@ -16,9 +16,17 @@ import {
 } from '@/hooks/useChannel';
 import { getMessages } from '@/services/channel.service';
 import { useAuthStore } from '@/store/auth.store';
+import { getSocket } from '@/lib/socket';
 import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 import { FileAttachmentCard } from './fileDisplay';
 import type { Channel, Message } from '@/types/channel.types';
+
+function typingLabel(names: string[]): string {
+  if (names.length === 0) return '';
+  if (names.length === 1) return `${names[0]} is typing…`;
+  if (names.length === 2) return `${names[0]} and ${names[1]} are typing…`;
+  return `${names.length} people are typing…`;
+}
 
 interface Props {
   channel: Channel;
@@ -38,12 +46,48 @@ export default function MessagePane({ channel, isAdmin }: Props) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [openPickerFor, setOpenPickerFor] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [typingUsers, setTypingUsers] = useState<Map<string, string>>(new Map());
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const typingTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const lastTypingEmitRef = useRef(0);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages?.length]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    const onTypingUpdate = (data: { channelId: string; userId: string; userName: string }) => {
+      if (data.channelId !== channel.id || data.userId === user?.id) return;
+      setTypingUsers((prev) => {
+        const next = new Map(prev);
+        next.set(data.userId, data.userName);
+        return next;
+      });
+      const existing = typingTimeoutsRef.current.get(data.userId);
+      if (existing) clearTimeout(existing);
+      typingTimeoutsRef.current.set(
+        data.userId,
+        setTimeout(() => {
+          setTypingUsers((prev) => {
+            const next = new Map(prev);
+            next.delete(data.userId);
+            return next;
+          });
+          typingTimeoutsRef.current.delete(data.userId);
+        }, 4000)
+      );
+    };
+
+    socket.on('typing:update', onTypingUpdate);
+    return () => {
+      socket.off('typing:update', onTypingUpdate);
+      typingTimeoutsRef.current.forEach(clearTimeout);
+      typingTimeoutsRef.current.clear();
+      setTypingUsers(new Map());
+    };
+  }, [channel.id, user?.id]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,6 +153,15 @@ export default function MessagePane({ channel, isAdmin }: Props) {
     uploadFile.mutate(file, {
       onError: (err: unknown) => toast.error(parseApiError(err).message),
     });
+  };
+
+  const handleContentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setContent(e.target.value);
+    const now = Date.now();
+    if (now - lastTypingEmitRef.current > 2000) {
+      lastTypingEmitRef.current = now;
+      getSocket().emit('typing:start', { channelId: channel.id });
+    }
   };
 
   if (isLoading) {
@@ -221,6 +274,12 @@ export default function MessagePane({ channel, isAdmin }: Props) {
         <div ref={bottomRef} />
       </div>
 
+      {typingUsers.size > 0 && (
+        <p className="px-4 pb-1 text-xs italic text-text-secondary">
+          {typingLabel([...typingUsers.values()])}
+        </p>
+      )}
+
       <form onSubmit={handleSend} className="flex items-center gap-2 border-t border-border-subtle p-3">
         <input ref={fileInputRef} type="file" onChange={handleFileSelect} className="hidden" />
         <button
@@ -234,7 +293,7 @@ export default function MessagePane({ channel, isAdmin }: Props) {
         </button>
         <input
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={handleContentChange}
           placeholder={`Message #${channel.name}`}
           disabled={sendMessage.isPending}
           className="flex-1 rounded-lg border border-border-subtle bg-white px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:border-primary focus:outline-none disabled:opacity-50"
