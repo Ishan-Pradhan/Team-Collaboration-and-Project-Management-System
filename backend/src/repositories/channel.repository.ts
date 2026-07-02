@@ -1,9 +1,11 @@
 import { Op } from 'sequelize';
-import { Channel, ChannelMember, User } from '../models/index.js';
+import { Channel, ChannelMember, Message, User } from '../models/index.js';
 import type {
   ChannelCreationAttributes,
   ChannelInstance,
   ChannelMemberInstance,
+  MessageCreationAttributes,
+  MessageInstance,
 } from '../types/channels.types.js';
 
 export const channelRepository = {
@@ -66,5 +68,11 @@ export const channelMemberRepository = {
 
   removeMember: async (channelId: string, userId: string): Promise<number> => {
     return await ChannelMember.destroy({ where: { channelId, userId } });
+  },
+};
+
+export const messageRepository = {
+  create: async (data: MessageCreationAttributes): Promise<MessageInstance> => {
+    return await Message.create(data);
   },
 };
