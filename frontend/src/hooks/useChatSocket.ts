@@ -41,6 +41,67 @@ export function useChatSocket(organizationId: string | undefined) {
       );
     };
 
+    const onReactionAdded = ({
+      messageId,
+      channelId,
+      emoji,
+      userId,
+    }: {
+      messageId: string;
+      channelId: string;
+      emoji: string;
+      userId: string;
+    }) => {
+      qc.setQueryData<Message[]>(['channels', channelId, 'messages'], (old) =>
+        old?.map((m) => {
+          if (m.id !== messageId) return m;
+          const existing = m.reactions.find((r) => r.emoji === emoji);
+          if (existing) {
+            if (existing.userIds.includes(userId)) return m;
+            return {
+              ...m,
+              reactions: m.reactions.map((r) =>
+                r.emoji === emoji ? { ...r, userIds: [...r.userIds, userId] } : r
+              ),
+            };
+          }
+          return { ...m, reactions: [...m.reactions, { emoji, userIds: [userId] }] };
+        })
+      );
+    };
+
+    const onReactionRemoved = ({
+      messageId,
+      channelId,
+      emoji,
+      userId,
+    }: {
+      messageId: string;
+      channelId: string;
+      emoji: string;
+      userId: string;
+    }) => {
+      qc.setQueryData<Message[]>(['channels', channelId, 'messages'], (old) =>
+        old?.map((m) => {
+          if (m.id !== messageId) return m;
+          return {
+            ...m,
+            reactions: m.reactions
+              .map((r) => (r.emoji === emoji ? { ...r, userIds: r.userIds.filter((id) => id !== userId) } : r))
+              .filter((r) => r.userIds.length > 0),
+          };
+        })
+      );
+    };
+
+    const onMessageDeleted = ({ messageId, channelId }: { messageId: string; channelId: string }) => {
+      qc.setQueryData<Message[]>(['channels', channelId, 'messages'], (old) =>
+        old?.map((m) =>
+          m.id === messageId ? { ...m, content: '', deletedAt: new Date().toISOString(), reactions: [] } : m
+        )
+      );
+    };
+
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('channel:created', onChannelCreated);
@@ -48,6 +109,9 @@ export function useChatSocket(organizationId: string | undefined) {
     socket.on('member:joined', onMemberJoined);
     socket.on('member:left', onMemberLeft);
     socket.on('message:new', onMessageNew);
+    socket.on('reaction:added', onReactionAdded);
+    socket.on('reaction:removed', onReactionRemoved);
+    socket.on('message:deleted', onMessageDeleted);
 
     setConnected(socket.connected);
 
@@ -59,6 +123,9 @@ export function useChatSocket(organizationId: string | undefined) {
       socket.off('member:joined', onMemberJoined);
       socket.off('member:left', onMemberLeft);
       socket.off('message:new', onMessageNew);
+      socket.off('reaction:added', onReactionAdded);
+      socket.off('reaction:removed', onReactionRemoved);
+      socket.off('message:deleted', onMessageDeleted);
     };
   }, [organizationId, qc]);
 
