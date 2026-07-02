@@ -4,6 +4,13 @@ import { ApiError } from '../utils/ApiError.js';
 import { ok } from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/AsyncHandler.js';
 import { channelRepository, channelMemberRepository, messageRepository, messageReactionRepository } from '../repositories/channel.repository.js';
+import { uploadToCloudinary, deleteFromCloudinary } from '../services/cloudinary.service.js';
+
+function cloudinaryResourceType(mimeType: string): 'image' | 'video' | 'raw' {
+  if (mimeType.startsWith('image/') || mimeType === 'application/pdf') return 'image';
+  if (mimeType.startsWith('video/')) return 'video';
+  return 'raw';
+}
 import { organizationMemberRepository } from '../repositories/organization.repository.js';
 import { userRepository } from '../repositories/users.repository.js';
 import { organizationRepository } from '../repositories/organization.repository.js';
@@ -205,7 +212,7 @@ export const addReaction = asyncHandler(async (req: AuthRequest, res: Response) 
 
   const message = await messageRepository.findById(messageId);
   if (!message || message.channelId !== channelId) throw new ApiError(404, 'Message not found');
-  if (message.type !== 'TEXT') throw new ApiError(400, 'Cannot react to a system message');
+  if (message.type === 'SYSTEM') throw new ApiError(400, 'Cannot react to a system message');
   if (message.deletedAt) throw new ApiError(400, 'Cannot react to a deleted message');
 
   await messageReactionRepository.add(messageId, user.id, emoji);
@@ -245,7 +252,7 @@ export const deleteMessage = asyncHandler(async (req: AuthRequest, res: Response
 
   const message = await messageRepository.findById(messageId);
   if (!message || message.channelId !== channelId) throw new ApiError(404, 'Message not found');
-  if (message.type !== 'TEXT') throw new ApiError(400, 'Cannot delete a system message');
+  if (message.type === 'SYSTEM') throw new ApiError(400, 'Cannot delete a system message');
   if (message.deletedAt) throw new ApiError(400, 'Message already deleted');
 
   const isSender = message.senderId === user.id;
@@ -269,11 +276,84 @@ export const deleteMessage = asyncHandler(async (req: AuthRequest, res: Response
     throw new ApiError(403, 'Unauthorized request. Only the sender or an organization admin can delete this message.');
   }
 
+  if (message.type === 'FILE' && message.cloudinaryPublicId && message.fileType) {
+    await deleteFromCloudinary(message.cloudinaryPublicId, cloudinaryResourceType(message.fileType));
+  }
+
   await messageRepository.delete(messageId, user.id);
 
   getIO().to(`channel:${channelId}`).emit('message:deleted', { messageId, channelId });
 
   return ok(res, null, 'Message deleted successfully');
+});
+
+export const uploadFile = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const channelId = req.params.channelId as string;
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  const file = req.file;
+  if (!file) throw new ApiError(400, 'No file uploaded');
+
+  const uploaded = await uploadToCloudinary(file.buffer, {
+    folder: `chat-files/${channelId}`,
+    resourceType: 'auto',
+  });
+
+  const created = await messageRepository.create({
+    channelId,
+    senderId: user.id,
+    type: 'FILE',
+    content: '',
+    fileName: file.originalname,
+    fileUrl: uploaded.url,
+    cloudinaryPublicId: uploaded.publicId,
+    fileType: file.mimetype,
+    fileSize: file.size,
+  });
+  const message = await messageRepository.findById(created.id);
+
+  getIO().to(`channel:${channelId}`).emit('message:new', message);
+
+  return res.status(201).json({
+    success: true,
+    message: 'File shared successfully',
+    data: message,
+  });
+});
+
+export const listFiles = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const channelId = req.params.channelId as string;
+  const { before, limit } = req.query as { before?: string; limit?: string };
+
+  const files = await messageRepository.findFilesByChannel(channelId, {
+    before,
+    limit: limit ? Number(limit) : 50,
+  });
+
+  return ok(res, files, 'Files retrieved successfully');
+});
+
+export const downloadFile = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const channelId = req.params.channelId as string;
+  const messageId = req.params.messageId as string;
+
+  const message = await messageRepository.findById(messageId);
+  if (!message || message.channelId !== channelId) throw new ApiError(404, 'Message not found');
+  if (message.type !== 'FILE') throw new ApiError(400, 'Message has no file attachment');
+  if (message.deletedAt) throw new ApiError(400, 'File is no longer available');
+
+  const upstream = await fetch(message.fileUrl as string);
+  if (!upstream.ok) throw new ApiError(502, 'Could not retrieve file from storage');
+
+  const safeName = encodeURIComponent(message.fileName as string);
+  res.setHeader('Content-Disposition', `attachment; filename="${safeName}"; filename*=UTF-8''${safeName}`);
+  res.setHeader('Content-Type', message.fileType as string);
+  if (message.fileSize) res.setHeader('Content-Length', String(message.fileSize));
+  res.setHeader('Cache-Control', 'private, no-store');
+
+  const buffer = Buffer.from(await upstream.arrayBuffer());
+  res.end(buffer);
 });
 
 export async function cascadeRemoveUserFromOrgChannels(

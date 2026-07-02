@@ -162,6 +162,31 @@ export const messageRepository = {
     );
     await MessageReaction.destroy({ where: { messageId: id } });
   },
+
+  findFilesByChannel: async (
+    channelId: string,
+    options: { before?: string; limit: number },
+  ): Promise<MessageWithReactions[]> => {
+    const where: Record<string, unknown> = { channelId, type: 'FILE', deletedAt: null };
+    if (options.before) {
+      where.createdAt = { [Op.lt]: options.before };
+    }
+    const messages = await Message.findAll({
+      where,
+      include: [
+        { model: User, as: 'sender', attributes: ['id', 'name', 'avatarUrl'] },
+        { model: MessageReaction, as: 'reactions', attributes: ['emoji', 'userId'] },
+      ],
+      order: [['createdAt', 'DESC']],
+      limit: options.limit,
+    });
+    return messages.map((m) => {
+      const plain = m.get({ plain: true }) as MessageWithReactions & {
+        reactions: { emoji: string; userId: string }[];
+      };
+      return { ...plain, reactions: groupReactions(plain.reactions) };
+    });
+  },
 };
 
 export const messageReactionRepository = {

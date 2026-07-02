@@ -7,6 +7,7 @@ import {
   isChannelMember,
 } from '../middlewares/auth.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
+import { uploadMiddleware } from '../middlewares/upload.middleware.js';
 import {
   createChannel,
   listChannels,
@@ -20,6 +21,9 @@ import {
   addReaction,
   removeReaction,
   deleteMessage,
+  uploadFile,
+  listFiles,
+  downloadFile,
 } from '../controllers/channel.controller.js';
 import {
   createChannelSchema,
@@ -74,5 +78,14 @@ router
 router
   .route('/channels/:channelId/messages/:messageId')
   .delete(verifyJWT, isChannelMember, validate(messageParamSchema), deleteMessage);
+
+router
+  .route('/channels/:channelId/files')
+  .get(verifyJWT, isChannelMember, validate(listMessagesSchema), listFiles)
+  .post(verifyJWT, isChannelMember, validate(channelParamSchema), uploadMiddleware.single('file'), uploadFile);
+
+router
+  .route('/channels/:channelId/messages/:messageId/download')
+  .get(verifyJWT, isChannelMember, validate(messageParamSchema), downloadFile);
 
 export default router;
