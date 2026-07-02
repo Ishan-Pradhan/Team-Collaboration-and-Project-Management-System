@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { ChatSkeleton } from '@/components/shared/skeletons/ChatSkeleton';
 import { ErrorState } from '@/components/shared/ErrorState';
 import type { Channel } from '@/types/channel.types';
+import ChannelView from './ChannelView';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -174,11 +175,14 @@ export default function ChatPage({ params }: Props) {
         </div>
       </aside>
 
-      <div className="flex-1 rounded-xl border border-border-subtle bg-white">
+      <div className="flex-1 rounded-xl border border-border-subtle bg-white overflow-hidden">
         {selectedChannel ? (
-          <div className="flex h-full flex-col items-center justify-center text-text-secondary">
-            <p className="text-sm">Channel: {selectedChannel.name}</p>
-          </div>
+          <ChannelView
+            channel={selectedChannel}
+            organizationId={org.id}
+            isAdmin={isAdmin}
+            onLeftOrDeleted={() => setSelectedChannel(null)}
+          />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-text-secondary">
             <MessageSquare size={28} className="text-gray-300" />
