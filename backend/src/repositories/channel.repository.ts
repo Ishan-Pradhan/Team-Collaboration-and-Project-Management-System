@@ -75,4 +75,27 @@ export const messageRepository = {
   create: async (data: MessageCreationAttributes): Promise<MessageInstance> => {
     return await Message.create(data);
   },
+
+  findById: async (id: string): Promise<MessageInstance | null> => {
+    return await Message.findByPk(id, {
+      include: [{ model: User, as: 'sender', attributes: ['id', 'name', 'avatarUrl'] }],
+    });
+  },
+
+  findByChannel: async (
+    channelId: string,
+    options: { before?: string; limit: number },
+  ): Promise<MessageInstance[]> => {
+    const where: Record<string, unknown> = { channelId };
+    if (options.before) {
+      where.createdAt = { [Op.lt]: options.before };
+    }
+    const messages = await Message.findAll({
+      where,
+      include: [{ model: User, as: 'sender', attributes: ['id', 'name', 'avatarUrl'] }],
+      order: [['createdAt', 'DESC']],
+      limit: options.limit,
+    });
+    return messages.reverse();
+  },
 };

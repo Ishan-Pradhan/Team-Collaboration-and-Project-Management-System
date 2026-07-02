@@ -160,3 +160,38 @@ export const removeChannelMember = asyncHandler(async (req: AuthRequest, res: Re
   await removeMemberAndNotify(channelId, userId, targetUser?.name ?? 'A member', 'removed');
   return ok(res, null, 'Member removed successfully');
 });
+
+export const sendMessage = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const channelId = req.params.channelId as string;
+  const { content } = req.body as { content: string };
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  const created = await messageRepository.create({
+    channelId,
+    senderId: user.id,
+    type: 'TEXT',
+    content: content.trim(),
+  });
+  const message = await messageRepository.findById(created.id);
+
+  getIO().to(`channel:${channelId}`).emit('message:new', message);
+
+  return res.status(201).json({
+    success: true,
+    message: 'Message sent successfully',
+    data: message,
+  });
+});
+
+export const listMessages = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const channelId = req.params.channelId as string;
+  const { before, limit } = req.query as { before?: string; limit?: string };
+
+  const messages = await messageRepository.findByChannel(channelId, {
+    before,
+    limit: limit ? Number(limit) : 50,
+  });
+
+  return ok(res, messages, 'Messages retrieved successfully');
+});

@@ -15,6 +15,8 @@ import {
   inviteChannelMember,
   leaveChannel,
   removeChannelMember,
+  sendMessage,
+  listMessages,
 } from '../controllers/channel.controller.js';
 import {
   createChannelSchema,
@@ -22,6 +24,8 @@ import {
   channelParamSchema,
   inviteChannelMemberSchema,
   channelMemberParamSchema,
+  sendMessageSchema,
+  listMessagesSchema,
 } from '../validations/channel.validation.js';
 
 const router = Router();
@@ -47,5 +51,10 @@ router
 router
   .route('/channels/:channelId/members/:userId')
   .delete(verifyJWT, isChannelOrgAdmin, validate(channelMemberParamSchema), removeChannelMember);
+
+router
+  .route('/channels/:channelId/messages')
+  .get(verifyJWT, isChannelMember, validate(listMessagesSchema), listMessages)
+  .post(verifyJWT, isChannelMember, validate(sendMessageSchema), sendMessage);
 
 export default router;
