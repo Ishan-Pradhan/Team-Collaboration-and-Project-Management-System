@@ -1,4 +1,5 @@
 import express, { type Request, type Response } from 'express';
+import http from 'http';
 import { sequelize } from './config/db.js';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
@@ -7,11 +8,14 @@ import swaggerUi from 'swagger-ui-express';
 import { limiter } from './middlewares/rateLimiter.middleware.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import { swaggerSpec } from './config/swagger.config.js';
+import { initSocket } from './socket/index.js';
 import './models/index.js';
 
 dotenv.config();
 
 const app = express();
+const httpServer = http.createServer(app);
+initSocket(httpServer);
 
 app.set("trust proxy", 1);
 
@@ -79,6 +83,6 @@ export const connectDB = async () => {
 };
 connectDB();
 
-app.listen(process.env.PORT, () => {
+httpServer.listen(process.env.PORT, () => {
   console.log(`app is listening at ${process.env.PORT}`)
 })
