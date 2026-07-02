@@ -23,6 +23,7 @@ import { useOrgStore } from '@/store/org.store';
 import { useAuthStore } from '@/store/auth.store';
 import { useLogout } from '@/hooks/useAuth';
 import { useOrgProjects } from '@/hooks/useProject';
+import { useChatSocket } from '@/hooks/useChatSocket';
 import { cn } from '@/lib/utils';
 
 
@@ -85,6 +86,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const activeOrg = orgs?.find((o) => o.slug === currentSlug) || null;
   const { data: projects, isLoading: projectsLoading } = useOrgProjects(activeOrg?.id || '');
+  const { connected: chatConnected } = useChatSocket(activeOrg?.id);
 
   // Sync workspace store with the URL's current slug
   useEffect(() => {
@@ -367,11 +369,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             >
               <Menu size={20} />
             </button>
-            <div className="text-xs text-text-muted">
+            <div className="flex items-center gap-2 text-xs text-text-muted">
               {currentOrg ? (
                 <span className="font-medium text-primary">{currentOrg.name}</span>
               ) : (
                 'Dashboard'
+              )}
+              {currentOrg && !chatConnected && (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                  Reconnecting…
+                </span>
               )}
             </div>
           </div>

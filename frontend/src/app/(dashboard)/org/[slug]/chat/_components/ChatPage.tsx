@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { Hash, Lock, Loader2, MessageSquare, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOrganizationBySlug, useOrganizationMembers } from '@/hooks/useOrganization';
@@ -113,6 +113,12 @@ export default function ChatPage({ params }: Props) {
 
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  useEffect(() => {
+    if (selectedChannel && channels && !channels.some((c) => c.id === selectedChannel.id)) {
+      setSelectedChannel(null);
+    }
+  }, [channels, selectedChannel]);
 
   if (orgLoading || channelsLoading) return <ChatSkeleton />;
   if (orgError || !org) {
