@@ -17,7 +17,9 @@ import {
 import { getMessages } from '@/services/channel.service';
 import { useAuthStore } from '@/store/auth.store';
 import { getSocket } from '@/lib/socket';
+import { useRouter } from 'next/navigation';
 import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
+import UserProfileDialog from '@/components/shared/UserProfileDialog';
 import { FileAttachmentCard } from './fileDisplay';
 import type { Channel, Message } from '@/types/channel.types';
 
@@ -31,10 +33,13 @@ function typingLabel(names: string[]): string {
 interface Props {
   channel: Channel;
   isAdmin: boolean;
+  organizationId: string;
 }
 
-export default function MessagePane({ channel, isAdmin }: Props) {
+export default function MessagePane({ channel, isAdmin, organizationId }: Props) {
+  const router = useRouter();
   const { user } = useAuthStore();
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const qc = useQueryClient();
   const { data: messages, isLoading } = useChannelMessages(channel.id);
   const sendMessage = useSendMessage(channel.id);
@@ -192,9 +197,12 @@ export default function MessagePane({ channel, isAdmin }: Props) {
               </p>
             ) : (
               <div key={message.id} className="group relative flex items-start gap-2.5">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                <button
+                  onClick={() => message.sender && setProfileUserId(message.sender.id)}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary hover:opacity-80 transition-opacity"
+                >
                   {(message.sender?.name ?? '?').charAt(0).toUpperCase()}
-                </div>
+                </button>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2">
                     <span className="text-sm font-medium text-text-primary">
@@ -317,6 +325,18 @@ export default function MessagePane({ channel, isAdmin }: Props) {
         isDestructive
         isLoading={deleteMessage.isPending}
       />
+
+      {profileUserId && (
+        <UserProfileDialog
+          userId={profileUserId}
+          organizationId={organizationId}
+          onClose={() => setProfileUserId(null)}
+          onMessage={(userId) => {
+            setProfileUserId(null);
+            router.push(`?dmUserId=${userId}`);
+          }}
+        />
+      )}
     </div>
   );
 }

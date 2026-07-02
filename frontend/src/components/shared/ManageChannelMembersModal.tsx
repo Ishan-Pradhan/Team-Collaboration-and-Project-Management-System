@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Loader2, UserPlus, X } from 'lucide-react';
 import { parseApiError } from '@/lib/axios';
@@ -9,6 +11,7 @@ import {
   useRemoveChannelMember,
 } from '@/hooks/useChannel';
 import { useOrganizationMembers } from '@/hooks/useOrganization';
+import UserProfileDialog from '@/components/shared/UserProfileDialog';
 
 interface Props {
   channelId: string;
@@ -25,11 +28,14 @@ export default function ManageChannelMembersModal({
   isAdmin,
   onClose,
 }: Props) {
+  const router = useRouter();
   const { data: channelMembers, isLoading: channelMembersLoading } = useChannelMembers(channelId);
   const { data: orgMembers, isLoading: orgMembersLoading } = useOrganizationMembers(organizationId);
 
   const inviteMember = useInviteChannelMember(channelId);
   const removeMember = useRemoveChannelMember(channelId);
+
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -82,15 +88,18 @@ export default function ManageChannelMembersModal({
                     const email = member.user?.email ?? '';
                     return (
                       <li key={member.id} className="flex items-center justify-between rounded-lg px-3 py-2.5 hover:bg-surface-muted/50 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/5 text-sm font-semibold text-primary">
+                        <button
+                          onClick={() => setProfileUserId(member.userId)}
+                          className="flex items-center gap-3 text-left"
+                        >
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/5 text-sm font-semibold text-primary hover:opacity-80 transition-opacity">
                             {name.charAt(0).toUpperCase()}
                           </div>
                           <div>
                             <p className="text-sm font-medium text-text-primary leading-none">{name}</p>
                             <p className="mt-0.5 text-xs text-text-secondary">{email}</p>
                           </div>
-                        </div>
+                        </button>
                         {isAdmin && (
                           <button
                             onClick={() => handleRemove(member.userId, name)}
@@ -149,6 +158,19 @@ export default function ManageChannelMembersModal({
           </div>
         )}
       </div>
+
+      {profileUserId && (
+        <UserProfileDialog
+          userId={profileUserId}
+          organizationId={organizationId}
+          onClose={() => setProfileUserId(null)}
+          onMessage={(userId) => {
+            setProfileUserId(null);
+            onClose();
+            router.push(`?dmUserId=${userId}`);
+          }}
+        />
+      )}
     </div>
   );
 }

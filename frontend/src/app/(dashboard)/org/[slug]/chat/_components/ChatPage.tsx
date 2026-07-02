@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Hash, Lock, Loader2, MessageSquare, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOrganizationBySlug, useOrganizationMembers } from '@/hooks/useOrganization';
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ChatSkeleton } from '@/components/shared/skeletons/ChatSkeleton';
 import { ErrorState } from '@/components/shared/ErrorState';
+import UserProfileDialog from '@/components/shared/UserProfileDialog';
 import type { Channel } from '@/types/channel.types';
 import ChannelView from './ChannelView';
 
@@ -148,6 +150,8 @@ function NewDMModal({
 
 export default function ChatPage({ params }: Props) {
   const { slug } = use(params);
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuthStore();
 
   const { data: org, isLoading: orgLoading, error: orgError, refetch } = useOrganizationBySlug(slug);
@@ -160,6 +164,7 @@ export default function ChatPage({ params }: Props) {
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDMModal, setShowDMModal] = useState(false);
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
 
   useEffect(() => {
     if (
@@ -172,6 +177,25 @@ export default function ChatPage({ params }: Props) {
       setSelectedChannel(null);
     }
   }, [channels, dms, selectedChannel]);
+
+  useEffect(() => {
+    const dmUserId = searchParams.get('dmUserId');
+    if (!dmUserId || !dms || !org) return;
+
+    const existing = dms.find((dm) => dm.dmParticipant?.id === dmUserId);
+    if (existing) {
+      setSelectedChannel(existing);
+      router.replace(`/org/${slug}/chat`);
+      return;
+    }
+
+    startDM.mutate(dmUserId, {
+      onSuccess: (channel) => setSelectedChannel(channel),
+      onError: (err: unknown) => toast.error(parseApiError(err).message),
+      onSettled: () => router.replace(`/org/${slug}/chat`),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, dms, org]);
 
   if (orgLoading || channelsLoading) return <ChatSkeleton />;
   if (orgError || !org) {
@@ -265,9 +289,15 @@ export default function ChatPage({ params }: Props) {
                     : 'text-text-secondary hover:bg-surface-muted'
                 }`}
               >
-                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (dm.dmParticipant) setProfileUserId(dm.dmParticipant.id);
+                  }}
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary hover:opacity-80 transition-opacity"
+                >
                   {(dm.dmParticipant?.name ?? '?').charAt(0).toUpperCase()}
-                </div>
+                </span>
                 <span className="truncate">{dm.dmParticipant?.name ?? 'Unknown'}</span>
               </button>
             ))
@@ -307,6 +337,18 @@ export default function ChatPage({ params }: Props) {
           onSelect={handleStartDM}
           members={(orgMembers ?? []).filter((m) => m.userId !== user?.id)}
           isPending={startDM.isPending}
+        />
+      )}
+
+      {profileUserId && org && (
+        <UserProfileDialog
+          userId={profileUserId}
+          organizationId={org.id}
+          onClose={() => setProfileUserId(null)}
+          onMessage={(userId) => {
+            setProfileUserId(null);
+            router.push(`/org/${slug}/chat?dmUserId=${userId}`);
+          }}
         />
       )}
     </div>

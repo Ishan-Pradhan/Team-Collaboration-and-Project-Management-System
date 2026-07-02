@@ -40,6 +40,7 @@ import { MembersSkeleton } from '@/components/shared/skeletons/MembersSkeleton';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { cn } from '@/lib/utils';
 import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
+import UserProfileDialog from '@/components/shared/UserProfileDialog';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -72,6 +73,7 @@ export default function MembersPage({ params }: Props) {
 
   const [activeConfirm, setActiveConfirm] = useState<'remove' | 'revoke' | 'leave' | 'delete' | 'ban' | null>(null);
   const [confirmPayload, setConfirmPayload] = useState<any>(null);
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
 
   if (orgLoading || membersLoading) return <MembersSkeleton />;
 
@@ -292,20 +294,23 @@ export default function MembersPage({ params }: Props) {
                   return (
                     <tr key={member.id} className="hover:bg-surface-hover/30 transition-colors">
                       <td className="whitespace-nowrap px-6 py-4">
-                        <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setProfileUserId(member.userId)}
+                          className="flex items-center gap-3 text-left"
+                        >
                           {member.user?.avatarUrl ? (
                             <img
                               src={member.user.avatarUrl}
                               alt={name}
-                              className="h-8 w-8 rounded-full object-cover"
+                              className="h-8 w-8 rounded-full object-cover hover:opacity-80 transition-opacity"
                             />
                           ) : (
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/5 text-primary font-semibold text-sm">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/5 text-primary font-semibold text-sm hover:opacity-80 transition-opacity">
                               {name.charAt(0).toUpperCase()}
                             </div>
                           )}
                           <span className="font-medium text-text-primary">{name}</span>
-                        </div>
+                        </button>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-text-secondary">{email}</td>
                       <td className="whitespace-nowrap px-6 py-4">
@@ -675,7 +680,17 @@ export default function MembersPage({ params }: Props) {
         isLoading={leaveMutation.isPending}
       />
 
-
+      {profileUserId && org && (
+        <UserProfileDialog
+          userId={profileUserId}
+          organizationId={org.id}
+          onClose={() => setProfileUserId(null)}
+          onMessage={(userId) => {
+            setProfileUserId(null);
+            router.push(`/org/${slug}/chat?dmUserId=${userId}`);
+          }}
+        />
+      )}
     </div>
   );
 }

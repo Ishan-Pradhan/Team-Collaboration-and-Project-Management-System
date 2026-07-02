@@ -115,7 +115,7 @@ export default function ChannelView({ channel, organizationId, isAdmin, onLeftOr
         {activeView === 'files' ? (
           <FileList channel={channel} />
         ) : (
-          <MessagePane channel={channel} isAdmin={isAdmin} />
+          <MessagePane channel={channel} isAdmin={isAdmin} organizationId={organizationId} />
         )}
       </div>
 
