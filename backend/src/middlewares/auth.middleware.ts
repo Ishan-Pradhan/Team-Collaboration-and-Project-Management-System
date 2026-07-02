@@ -195,6 +195,10 @@ export const isChannelOrgAdmin = async (
   const org = await Organization.findByPk(channel.organizationId);
   if (!org) throw new ApiError(404, 'Organization not found');
 
+  if (org.isSuspended) {
+    throw new ApiError(403, 'This organization has been suspended');
+  }
+
   if (org.ownerId === user.id) {
     return next();
   }
@@ -221,10 +225,17 @@ export const isChannelMember = async (
   const channelId = req.params.channelId as string;
   if (!channelId) throw new ApiError(400, 'Channel ID is required');
 
-  const { Channel, ChannelMember } = await import('../models/index.js');
+  const { Channel, ChannelMember, Organization } = await import('../models/index.js');
 
   const channel = await Channel.findByPk(channelId);
   if (!channel) throw new ApiError(404, 'Channel not found');
+
+  const org = await Organization.findByPk(channel.organizationId);
+  if (!org) throw new ApiError(404, 'Organization not found');
+
+  if (org.isSuspended) {
+    throw new ApiError(403, 'This organization has been suspended');
+  }
 
   const membership = await ChannelMember.findOne({ where: { channelId, userId: user.id } });
   if (!membership) {
