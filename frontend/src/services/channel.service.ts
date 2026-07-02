@@ -69,3 +69,27 @@ export async function removeReaction(channelId: string, messageId: string, emoji
 export async function deleteMessage(channelId: string, messageId: string): Promise<void> {
   await api.delete(`/channels/${channelId}/messages/${messageId}`);
 }
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api/v1';
+
+export async function getFiles(channelId: string, before?: string): Promise<Message[]> {
+  const res = await api.get<MessagesResponse>(`/channels/${channelId}/files`, {
+    params: before ? { before } : undefined,
+  });
+  return res.data.data;
+}
+
+export async function uploadFile(channelId: string, file: File): Promise<Message> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await api.post<{ success: boolean; message: string; data: Message }>(
+    `/channels/${channelId}/files`,
+    form,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  );
+  return res.data.data;
+}
+
+export function getFileDownloadUrl(channelId: string, messageId: string): string {
+  return `${API_BASE}/channels/${channelId}/messages/${messageId}/download`;
+}

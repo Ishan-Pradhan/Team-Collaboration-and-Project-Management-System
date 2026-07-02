@@ -12,6 +12,8 @@ import {
   addReaction,
   removeReaction,
   deleteMessage,
+  getFiles,
+  uploadFile,
 } from '@/services/channel.service';
 
 export const useChannels = (organizationId: string) =>
@@ -109,5 +111,23 @@ export const useDeleteMessage = (channelId: string) => {
   return useMutation({
     mutationFn: (messageId: string) => deleteMessage(channelId, messageId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['channels', channelId, 'messages'] }),
+  });
+};
+
+export const useChannelFiles = (channelId: string) =>
+  useQuery({
+    queryKey: ['channels', channelId, 'files'],
+    queryFn: () => getFiles(channelId),
+    enabled: !!channelId,
+  });
+
+export const useUploadFile = (channelId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => uploadFile(channelId, file),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['channels', channelId, 'messages'] });
+      qc.invalidateQueries({ queryKey: ['channels', channelId, 'files'] });
+    },
   });
 };

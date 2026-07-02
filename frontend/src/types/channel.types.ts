@@ -23,7 +23,7 @@ export interface ChannelMember {
   };
 }
 
-export type MessageType = 'TEXT' | 'SYSTEM';
+export type MessageType = 'TEXT' | 'SYSTEM' | 'FILE';
 
 export interface ReactionSummary {
   emoji: string;
@@ -39,6 +39,11 @@ export interface Message {
   createdAt: string;
   deletedAt: string | null;
   deletedBy: string | null;
+  fileName: string | null;
+  fileUrl: string | null;
+  cloudinaryPublicId: string | null;
+  fileType: string | null;
+  fileSize: number | null;
   reactions: ReactionSummary[];
   sender?: {
     id: string;
