@@ -32,9 +32,20 @@ export default function ChannelView({ channel, organizationId, isAdmin, onLeftOr
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
         <div className="flex items-center gap-2">
-          {channel.type === 'PUBLIC' ? <Hash size={15} className="text-text-secondary" /> : <Lock size={15} className="text-text-secondary" />}
-          <h2 className="text-sm font-semibold text-text-primary">{channel.name}</h2>
-          <span className="text-xs text-text-secondary">{members?.length ?? 0} members</span>
+          {channel.type === 'DM' ? (
+            <>
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
+                {(channel.dmParticipant?.name ?? '?').charAt(0).toUpperCase()}
+              </div>
+              <h2 className="text-sm font-semibold text-text-primary">{channel.dmParticipant?.name ?? 'Unknown'}</h2>
+            </>
+          ) : (
+            <>
+              {channel.type === 'PUBLIC' ? <Hash size={15} className="text-text-secondary" /> : <Lock size={15} className="text-text-secondary" />}
+              <h2 className="text-sm font-semibold text-text-primary">{channel.name}</h2>
+              <span className="text-xs text-text-secondary">{members?.length ?? 0} members</span>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -45,25 +56,29 @@ export default function ChannelView({ channel, organizationId, isAdmin, onLeftOr
           >
             <Paperclip size={13} /> Files
           </button>
-          <button
-            onClick={() => setShowMembersModal(true)}
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-muted transition-colors"
-          >
-            <Users size={13} /> Members
-          </button>
-          <button
-            onClick={() => setShowLeaveConfirm(true)}
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-muted transition-colors"
-          >
-            <LogOut size={13} /> Leave
-          </button>
-          {isAdmin && (
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-danger hover:bg-danger-soft/20 transition-colors"
-            >
-              <Trash2 size={13} /> Delete
-            </button>
+          {channel.type !== 'DM' && (
+            <>
+              <button
+                onClick={() => setShowMembersModal(true)}
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-muted transition-colors"
+              >
+                <Users size={13} /> Members
+              </button>
+              <button
+                onClick={() => setShowLeaveConfirm(true)}
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-muted transition-colors"
+              >
+                <LogOut size={13} /> Leave
+              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-danger hover:bg-danger-soft/20 transition-colors"
+                >
+                  <Trash2 size={13} /> Delete
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
