@@ -209,7 +209,7 @@ export default function ChatPage({ params }: Props) {
 
   return (
     <div className="flex h-full gap-4">
-      <aside className="flex w-64 shrink-0 flex-col rounded-xl border border-border-subtle bg-white">
+      <aside className="flex w-64 shrink-0 flex-col overflow-y-auto rounded-xl border border-border-subtle bg-white">
         <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2.5">
           <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Channels</span>
           {isAdmin && (
@@ -222,7 +222,7 @@ export default function ChatPage({ params }: Props) {
             </button>
           )}
         </div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+        <div className="space-y-0.5 p-2">
           {channels && channels.length > 0 ? (
             channels.map((channel) => (
               <button
@@ -242,10 +242,8 @@ export default function ChatPage({ params }: Props) {
             <p className="px-2.5 py-2 text-xs text-text-secondary italic">No channels yet.</p>
           )}
         </div>
-      </aside>
 
-      <aside className="flex w-64 shrink-0 flex-col rounded-xl border border-border-subtle bg-white">
-        <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2.5">
+        <div className="flex items-center justify-between border-b border-t border-border-subtle px-3 py-2.5">
           <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Direct Messages</span>
           <button
             onClick={() => setShowDMModal(true)}
@@ -255,7 +253,7 @@ export default function ChatPage({ params }: Props) {
             <Plus size={15} />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+        <div className="space-y-0.5 p-2">
           {dms && dms.length > 0 ? (
             dms.map((dm) => (
               <button
