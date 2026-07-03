@@ -295,7 +295,7 @@ export default function ChatPage({ params }: Props) {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-1.5">
                       <span className="truncate">{channel.name}</span>
-                      {unread && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />}
+                      {unread && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
                     </span>
                     {unread && (
                       <span className="block truncate text-xs font-semibold text-text-primary">{unread.body}</span>
@@ -345,7 +345,7 @@ export default function ChatPage({ params }: Props) {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-1.5">
                       <span className="truncate">{dm.dmParticipant?.name ?? 'Unknown'}</span>
-                      {unread && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />}
+                      {unread && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
                     </span>
                     {unread && (
                       <span className="block truncate text-xs font-semibold text-text-primary">{unread.body}</span>
