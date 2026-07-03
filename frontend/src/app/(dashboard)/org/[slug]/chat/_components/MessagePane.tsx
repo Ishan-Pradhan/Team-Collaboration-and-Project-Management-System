@@ -30,6 +30,49 @@ function typingLabel(names: string[]): string {
   return `${names.length} people are typing…`;
 }
 
+function isSameDay(a: string, b: string): boolean {
+  return new Date(a).toDateString() === new Date(b).toDateString();
+}
+
+function formatDateSeparator(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  if (isSameDay(iso, now.toISOString())) return 'Today';
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (isSameDay(iso, yesterday.toISOString())) return 'Yesterday';
+  return date.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+  });
+}
+
+interface MessageGroupEntry {
+  message: Message;
+  showHeader: boolean;
+  dateLabel: string | null;
+}
+
+function buildMessageGroups(messages: Message[]): MessageGroupEntry[] {
+  return messages.map((message, i) => {
+    const prev = messages[i - 1];
+    const showDateSeparator = !prev || !isSameDay(prev.createdAt, message.createdAt);
+    const withinWindow =
+      !!prev &&
+      !showDateSeparator &&
+      prev.type !== 'SYSTEM' &&
+      message.type !== 'SYSTEM' &&
+      prev.senderId === message.senderId &&
+      new Date(message.createdAt).getTime() - new Date(prev.createdAt).getTime() <= 5 * 60 * 1000;
+    return {
+      message,
+      showHeader: !withinWindow,
+      dateLabel: showDateSeparator ? formatDateSeparator(message.createdAt) : null,
+    };
+  });
+}
+
 interface Props {
   channel: Channel;
   isAdmin: boolean;
@@ -169,6 +212,8 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
     }
   };
 
+  const messageGroups = messages ? buildMessageGroups(messages) : [];
+
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -184,98 +229,113 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
           <button
             onClick={handleLoadMore}
             disabled={loadingMore}
-            className="mx-auto block text-xs text-primary hover:underline disabled:opacity-50"
+            className="mx-auto block rounded text-xs text-primary hover:underline disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {loadingMore ? 'Loading…' : 'Load earlier messages'}
           </button>
         )}
         {messages && messages.length > 0 ? (
-          messages.map((message) =>
-            message.type === 'SYSTEM' ? (
-              <p key={message.id} className="text-center text-xs italic text-text-secondary">
-                {message.content}
-              </p>
-            ) : (
-              <div key={message.id} className="group relative flex items-start gap-2.5">
-                <button
-                  onClick={() => message.sender && setProfileUserId(message.sender.id)}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary hover:opacity-80 transition-opacity"
-                >
-                  {(message.sender?.name ?? '?').charAt(0).toUpperCase()}
-                </button>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-sm font-medium text-text-primary">
-                      {message.sender?.id === user?.id ? 'You' : message.sender?.name ?? 'Unknown'}
-                    </span>
-                    <span className="text-[10px] text-text-secondary">
-                      {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-
-                  {message.deletedAt ? (
-                    <p className="text-sm italic text-text-secondary">This message was deleted</p>
-                  ) : (
-                    <>
-                      {message.type === 'FILE' ? (
-                        <FileAttachmentCard message={message} channelId={channel.id} />
-                      ) : (
-                        <p className="text-sm text-text-primary">{message.content}</p>
-                      )}
-
-                      {message.reactions.length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {message.reactions.map((reaction) => {
-                            const reacted = !!user && reaction.userIds.includes(user.id);
-                            return (
-                              <button
-                                key={reaction.emoji}
-                                onClick={() => handleToggleReaction(message, reaction.emoji)}
-                                className={`rounded-full border px-1.5 py-0.5 text-xs transition-colors ${
-                                  reacted
-                                    ? 'border-primary bg-primary/10 text-primary'
-                                    : 'border-border-subtle text-text-secondary hover:bg-surface-muted'
-                                }`}
-                              >
-                                {reaction.emoji} {reaction.userIds.length}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </>
-                  )}
+          messageGroups.map(({ message, showHeader, dateLabel }) => (
+            <div key={message.id}>
+              {dateLabel && (
+                <div className="my-2 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-border-subtle" />
+                  <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-[11px] font-medium text-text-muted">
+                    {dateLabel}
+                  </span>
+                  <div className="h-px flex-1 bg-border-subtle" />
                 </div>
-
-                {!message.deletedAt && (
-                  <div className="absolute -top-3 right-2 hidden items-center gap-0.5 rounded-lg border border-border-subtle bg-white p-0.5 shadow-sm group-hover:flex">
+              )}
+              {message.type === 'SYSTEM' ? (
+                <p className="text-center text-xs italic text-text-secondary">{message.content}</p>
+              ) : (
+                <div className="group relative -mx-2 flex items-start gap-2.5 rounded-md px-2 py-0.5 transition-colors hover:bg-surface-muted/40">
+                  {showHeader ? (
                     <button
-                      onClick={() => setOpenPickerFor(openPickerFor === message.id ? null : message.id)}
-                      className="rounded p-1 text-text-secondary hover:bg-surface-muted transition-colors"
-                      title="Add reaction"
+                      onClick={() => message.sender && setProfileUserId(message.sender.id)}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
-                      <Smile size={14} />
+                      {(message.sender?.name ?? '?').charAt(0).toUpperCase()}
                     </button>
-                    {(message.sender?.id === user?.id || isAdmin) && (
-                      <button
-                        onClick={() => setDeleteTarget(message.id)}
-                        className="rounded p-1 text-text-secondary hover:bg-danger-soft/20 hover:text-danger transition-colors"
-                        title="Delete message"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                  ) : (
+                    <div className="w-7 shrink-0" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    {showHeader && (
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-sm font-medium text-text-primary">
+                          {message.sender?.id === user?.id ? 'You' : message.sender?.name ?? 'Unknown'}
+                        </span>
+                        <span className="text-[10px] text-text-secondary">
+                          {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    )}
+
+                    {message.deletedAt ? (
+                      <p className="text-sm italic text-text-secondary">This message was deleted</p>
+                    ) : (
+                      <>
+                        {message.type === 'FILE' ? (
+                          <FileAttachmentCard message={message} channelId={channel.id} />
+                        ) : (
+                          <p className="text-sm text-text-primary">{message.content}</p>
+                        )}
+
+                        {message.reactions.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {message.reactions.map((reaction) => {
+                              const reacted = !!user && reaction.userIds.includes(user.id);
+                              return (
+                                <button
+                                  key={reaction.emoji}
+                                  onClick={() => handleToggleReaction(message, reaction.emoji)}
+                                  className={`rounded-full border px-1.5 py-0.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                                    reacted
+                                      ? 'border-primary bg-primary/10 text-primary'
+                                      : 'border-border-subtle text-text-secondary hover:bg-surface-muted'
+                                  }`}
+                                >
+                                  {reaction.emoji} {reaction.userIds.length}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
-                )}
 
-                {openPickerFor === message.id && (
-                  <div className="absolute right-2 top-6 z-20">
-                    <EmojiPicker onEmojiClick={(emojiData) => handlePickEmoji(message, emojiData)} />
-                  </div>
-                )}
-              </div>
-            )
-          )
+                  {!message.deletedAt && (
+                    <div className="absolute -top-3 right-2 hidden items-center gap-0.5 rounded-lg border border-border-subtle bg-white p-0.5 shadow-sm group-hover:flex">
+                      <button
+                        onClick={() => setOpenPickerFor(openPickerFor === message.id ? null : message.id)}
+                        className="rounded p-1 text-text-secondary transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        title="Add reaction"
+                      >
+                        <Smile size={14} />
+                      </button>
+                      {(message.sender?.id === user?.id || isAdmin) && (
+                        <button
+                          onClick={() => setDeleteTarget(message.id)}
+                          className="rounded p-1 text-text-secondary transition-colors hover:bg-danger-soft/20 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          title="Delete message"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {openPickerFor === message.id && (
+                    <div className="absolute right-2 top-6 z-20">
+                      <EmojiPicker onEmojiClick={(emojiData) => handlePickEmoji(message, emojiData)} />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))
         ) : (
           <p className="py-8 text-center text-sm text-text-secondary">No messages yet. Say hello!</p>
         )}
@@ -288,31 +348,33 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
         </p>
       )}
 
-      <form onSubmit={handleSend} className="flex items-center gap-2 border-t border-border-subtle p-3">
+      <form onSubmit={handleSend} className="border-t border-border-subtle p-3">
         <input ref={fileInputRef} type="file" onChange={handleFileSelect} className="hidden" />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploadFile.isPending}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-text-secondary hover:bg-surface-muted transition-colors disabled:opacity-50"
-          title="Attach a file"
-        >
-          <Paperclip size={16} />
-        </button>
-        <input
-          value={content}
-          onChange={handleContentChange}
-          placeholder={channel.type === 'DM' ? `Message ${channel.dmParticipant?.name ?? ''}` : `Message #${channel.name}`}
-          disabled={sendMessage.isPending}
-          className="flex-1 rounded-lg border border-border-subtle bg-white px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:border-primary focus:outline-none disabled:opacity-50"
-        />
-        <button
-          type="submit"
-          disabled={sendMessage.isPending || !content.trim()}
-          className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white transition-colors disabled:opacity-50"
-        >
-          <Send size={15} />
-        </button>
+        <div className="flex items-center gap-1 rounded-lg border border-border-subtle bg-white px-1.5 py-1 transition-colors focus-within:border-primary">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadFile.isPending}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            title="Attach a file"
+          >
+            <Paperclip size={16} />
+          </button>
+          <input
+            value={content}
+            onChange={handleContentChange}
+            placeholder={channel.type === 'DM' ? `Message ${channel.dmParticipant?.name ?? ''}` : `Message #${channel.name}`}
+            disabled={sendMessage.isPending}
+            className="min-w-0 flex-1 bg-transparent px-1.5 py-1.5 text-sm text-text-primary placeholder:text-text-secondary focus:outline-none disabled:opacity-50"
+          />
+          <button
+            type="submit"
+            disabled={sendMessage.isPending || !content.trim()}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-white transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Send size={15} />
+          </button>
+        </div>
       </form>
 
       <ConfirmationDialog
