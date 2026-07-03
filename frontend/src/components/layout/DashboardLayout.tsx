@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
+  Bell,
   CalendarDays,
   ChevronDown,
   FolderOpen,
@@ -25,7 +26,8 @@ import { useLogout } from '@/hooks/useAuth';
 import { useOrgProjects } from '@/hooks/useProject';
 import { useChatSocket } from '@/hooks/useChatSocket';
 import { useNotificationSocket } from '@/hooks/useNotificationSocket';
-import { NotificationBell } from '@/components/shared/NotificationBell';
+import { useUnreadCount, useUnreadChannels } from '@/hooks/useNotification';
+import { NavBadge } from '@/components/shared/NavBadge';
 import { cn } from '@/lib/utils';
 
 
@@ -90,6 +92,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { data: projects, isLoading: projectsLoading } = useOrgProjects(activeOrg?.id || '');
   const { connected: chatConnected } = useChatSocket(activeOrg?.id);
   useNotificationSocket();
+  const { data: unreadNotificationCount } = useUnreadCount();
+  const { data: unreadChannels } = useUnreadChannels();
 
   // Sync workspace store with the URL's current slug
   useEffect(() => {
@@ -118,6 +122,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       exact: true,
     },
     {
+      name: 'Notifications',
+      href: '/notifications',
+      icon: Bell,
+      badgeCount: unreadNotificationCount,
+    },
+    {
       name: 'Members',
       href: currentSlug ? `/org/${currentSlug}/members` : '#',
       icon: Users,
@@ -134,6 +144,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       href: currentSlug ? `/org/${currentSlug}/chat` : '#',
       icon: MessageSquare,
       disabled: !currentSlug,
+      badgeCount: currentSlug ? unreadChannels?.length : undefined,
     },
     ...(activeOrg?.ownerId === user?.id
       ? [{
@@ -264,6 +275,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 >
                   <Icon size={18} />
                   <span>{item.name}</span>
+                  <NavBadge count={item.badgeCount} />
                 </Link>
               );
             })}
@@ -385,7 +397,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               )}
             </div>
           </div>
-          <NotificationBell />
         </header>
 
         {/* Children content area */}
