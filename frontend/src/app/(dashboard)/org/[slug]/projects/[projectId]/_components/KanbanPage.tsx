@@ -360,8 +360,8 @@ export default function KanbanPage({ params }: Props) {
             const active = activeTab === name;
             return (
               <button key={name} onClick={() => setActiveTab(name)}
-                className={cn('flex items-center gap-1.5 pb-3 text-[13px] font-medium transition-colors border-b-2',
-                  active ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                className={cn('flex items-center gap-1.5 pb-3 text-[13px] font-medium transition-colors border-b-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  active ? 'border-primary text-primary' : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border-muted'
                 )}>
                 <Icon size={14} />{name}
               </button>
@@ -400,7 +400,7 @@ export default function KanbanPage({ params }: Props) {
                 {isAdmin && (
                   <div className="w-[280px] shrink-0">
                     {addingColumn ? (
-                      <form onSubmit={handleAddColumn} className="rounded-xl bg-[#f1f2f4] p-3 space-y-2">
+                      <form onSubmit={handleAddColumn} className="rounded-xl bg-surface-muted/50 p-3 space-y-2">
                         <Input autoFocus placeholder="Column name" value={newColumnName}
                           onChange={(e) => setNewColumnName(e.target.value)} className="text-sm bg-white" />
                         <div className="flex gap-1.5">
