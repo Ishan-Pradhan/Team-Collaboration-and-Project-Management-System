@@ -15,6 +15,9 @@ import { organizationMemberRepository } from '../repositories/organization.repos
 import { userRepository } from '../repositories/users.repository.js';
 import { organizationRepository } from '../repositories/organization.repository.js';
 import { getIO } from '../socket/index.js';
+import { notifyUser } from '../utils/notify.js';
+import { env } from '../config/env.js';
+import type { ChannelInstance } from '../types/channels.types.js';
 
 export const createChannel = asyncHandler(async (req: AuthRequest, res: Response) => {
   const organizationId = req.params.organizationId as string;
@@ -76,24 +79,53 @@ export const deleteChannel = asyncHandler(async (req: AuthRequest, res: Response
 });
 
 export async function removeMemberAndNotify(
-  channelId: string,
+  channel: ChannelInstance,
   userId: string,
-  actorName: string,
+  displayName: string,
   reason: 'left' | 'removed',
+  removedByName?: string,
 ): Promise<void> {
+  const channelId = channel.id;
   await channelMemberRepository.removeMember(channelId, userId);
 
   const message = await messageRepository.create({
     channelId,
     senderId: null,
     type: 'SYSTEM',
-    content: reason === 'left' ? `${actorName} left the channel` : `${actorName} was removed from the channel`,
+    content: reason === 'left' ? `${displayName} left the channel` : `${displayName} was removed from the channel`,
   });
 
   const io = getIO();
   io.to(`channel:${channelId}`).emit('member:left', { channelId, userId });
   io.to(`channel:${channelId}`).emit('message:new', message);
   io.in(`user:${userId}`).socketsLeave(`channel:${channelId}`);
+
+  // Only notify when someone else removed this user — a voluntary "left" needs no self-notification.
+  if (reason === 'removed') {
+    const [org, targetUser] = await Promise.all([
+      organizationRepository.findById(channel.organizationId),
+      userRepository.findById(userId),
+    ]);
+
+    const remover = removedByName ?? 'An admin';
+    await notifyUser({
+      userId,
+      organizationId: channel.organizationId,
+      type: 'channel_member_removed',
+      title: `You were removed from #${channel.name}`,
+      body: `${remover} removed you from the ${channel.name} channel in ${org?.name ?? 'your workspace'}.`,
+      entityType: 'channel',
+      entityId: channelId,
+      email: targetUser
+        ? {
+            to: targetUser.email,
+            subject: `You were removed from #${channel.name}`,
+            bodyText: `${remover} removed you from the ${channel.name} channel in ${org?.name ?? 'your workspace'}.`,
+            link: `${(env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '')}/org/${org?.slug}/chat`,
+          }
+        : undefined,
+    });
+  }
 }
 
 export const listChannelMembers = asyncHandler(async (req: AuthRequest, res: Response) => {
@@ -105,6 +137,8 @@ export const listChannelMembers = asyncHandler(async (req: AuthRequest, res: Res
 export const inviteChannelMember = asyncHandler(async (req: AuthRequest, res: Response) => {
   const channelId = req.params.channelId as string;
   const { userId } = req.body as { userId: string };
+  const actor = req.user;
+  if (!actor) throw new ApiError(401, 'Unauthorized');
 
   const channel = await channelRepository.findById(channelId);
   if (!channel) throw new ApiError(404, 'Channel not found');
@@ -139,6 +173,24 @@ export const inviteChannelMember = asyncHandler(async (req: AuthRequest, res: Re
   io.to(`channel:${channelId}`).emit('member:joined', { channelId, userId });
   io.to(`channel:${channelId}`).emit('message:new', message);
 
+  await notifyUser({
+    userId,
+    organizationId: channel.organizationId,
+    type: 'channel_member_added',
+    title: `${actor.name} added you to #${channel.name}`,
+    body: `You were added to the ${channel.name} channel in ${org?.name ?? 'your workspace'}.`,
+    entityType: 'channel',
+    entityId: channelId,
+    email: invitedUser
+      ? {
+          to: invitedUser.email,
+          subject: `${actor.name} added you to #${channel.name}`,
+          bodyText: `You were added to the ${channel.name} channel in ${org?.name ?? 'your workspace'}.`,
+          link: `${(env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '')}/org/${org?.slug}/chat?channelId=${channelId}`,
+        }
+      : undefined,
+  });
+
   return res.status(201).json({
     success: true,
     message: 'Member added to channel',
@@ -158,13 +210,15 @@ export const leaveChannel = asyncHandler(async (req: AuthRequest, res: Response)
   const membership = await channelMemberRepository.findMember(channelId, user.id);
   if (!membership) throw new ApiError(404, 'You are not a member of this channel');
 
-  await removeMemberAndNotify(channelId, user.id, user.name, 'left');
+  await removeMemberAndNotify(channel, user.id, user.name, 'left');
   return ok(res, null, 'You have left the channel');
 });
 
 export const removeChannelMember = asyncHandler(async (req: AuthRequest, res: Response) => {
   const channelId = req.params.channelId as string;
   const userId = req.params.userId as string;
+  const actor = req.user;
+  if (!actor) throw new ApiError(401, 'Unauthorized');
 
   const channel = await channelRepository.findById(channelId);
   if (!channel) throw new ApiError(404, 'Channel not found');
@@ -174,7 +228,7 @@ export const removeChannelMember = asyncHandler(async (req: AuthRequest, res: Re
   if (!membership) throw new ApiError(404, 'Member not found in this channel');
 
   const targetUser = await userRepository.findById(userId);
-  await removeMemberAndNotify(channelId, userId, targetUser?.name ?? 'A member', 'removed');
+  await removeMemberAndNotify(channel, userId, targetUser?.name ?? 'A member', 'removed', actor.name);
   return ok(res, null, 'Member removed successfully');
 });
 
@@ -431,7 +485,9 @@ export async function cascadeRemoveUserFromOrgChannels(
 ): Promise<void> {
   const channelIds = await channelMemberRepository.findChannelIdsForUserInOrg(organizationId, userId);
   for (const channelId of channelIds) {
-    await removeMemberAndNotify(channelId, userId, actorName, 'removed');
+    const channel = await channelRepository.findById(channelId);
+    if (!channel) continue;
+    await removeMemberAndNotify(channel, userId, actorName, 'removed');
   }
 }
 
