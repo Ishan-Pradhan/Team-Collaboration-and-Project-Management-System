@@ -274,7 +274,7 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                   ) : (
                     <div className="w-7 shrink-0" />
                   )}
-                  <div className={cn('flex min-w-0 flex-1 flex-col', isOwn && 'items-end')}>
+                  <div className={cn('flex min-w-0 flex-1 flex-col', isOwn ? 'items-end' : 'items-start')}>
                     {showHeader && (
                       <div className={cn('flex items-baseline gap-2', isOwn && 'flex-row-reverse')}>
                         <span className="text-sm font-medium text-text-primary">
@@ -290,12 +290,12 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                       <p className="text-sm italic text-text-secondary">This message was deleted</p>
                     ) : (
                       <>
-                        <div className="relative">
+                        <div className="relative w-fit max-w-[75%]">
                           {message.type === 'FILE' ? (
                             <FileAttachmentCard message={message} channelId={channel.id} />
                           ) : (
                             <p className={cn(
-                              'max-w-[75%] break-words rounded-lg px-3 py-1.5 text-sm text-text-primary',
+                              'break-words rounded-lg px-3 py-1.5 text-sm text-text-primary',
                               isOwn ? 'bg-primary/10' : 'bg-surface-muted',
                             )}>
                               {message.content}
@@ -338,7 +338,7 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                         </div>
 
                         {message.reactions.length > 0 && (
-                          <div className={cn('mt-1 flex flex-wrap gap-1', isOwn && 'justify-end')}>
+                          <div className={cn('mt-1 flex w-fit flex-wrap gap-1', isOwn ? 'self-start' : 'self-end')}>
                             {message.reactions.map((reaction) => {
                               const reacted = !!user && reaction.userIds.includes(user.id);
                               return (
