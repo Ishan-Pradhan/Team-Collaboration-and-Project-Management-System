@@ -11,7 +11,7 @@ import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { useDroppable } from '@dnd-kit/core';
 
-const AVATAR_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#3b82f6', '#8b5cf6'];
+const AVATAR_COLORS = ['#22302a', '#d4a84f', '#6f8c78', '#a86c58', '#4b7f52', '#c38a2d'];
 function avatarColor(name: string) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
@@ -53,12 +53,12 @@ export function KanbanCard({
       onClick={overlay ? undefined : onEdit}
       style={overlay ? undefined : { transform: CSS.Translate.toString(transform), transition }}
       className={cn(
-        'flex flex-col gap-2.5 rounded-lg bg-white px-3.5 py-3 select-none touch-none outline-none',
+        'flex flex-col gap-2.5 rounded-lg border border-border-subtle bg-white px-3.5 py-3 select-none touch-none outline-none transition-colors',
         overlay
           ? 'shadow-lg rotate-[1deg] opacity-95 cursor-grabbing'
           : isAdmin
-            ? 'cursor-grab shadow-[0_1px_2px_rgba(0,0,0,0.1)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-shadow duration-150 active:cursor-grabbing'
-            : 'cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.1)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.12)] transition-shadow duration-150',
+            ? 'cursor-grab hover:border-border-muted active:cursor-grabbing'
+            : 'cursor-pointer hover:border-border-muted',
         isDragging && !overlay && 'opacity-0',
       )}
     >
@@ -76,13 +76,13 @@ export function KanbanCard({
       </div>
 
       {/* Row 2 — Title */}
-      <p className="text-sm font-medium text-gray-800 leading-snug line-clamp-2">
+      <p className="text-sm font-medium text-text-primary leading-snug line-clamp-2">
         {task.title}
       </p>
 
       {/* Row 3 — Description (optional) */}
       {task.description && (
-        <p className="text-xs text-gray-400 line-clamp-1 leading-relaxed -mt-1">
+        <p className="text-xs text-text-muted line-clamp-1 leading-relaxed -mt-1">
           {task.description}
         </p>
       )}
@@ -90,13 +90,13 @@ export function KanbanCard({
       {/* Row 4 — Subtask progress (optional) */}
       {subtaskCount > 0 && (
         <div className="flex items-center gap-2">
-          <div className="h-1 flex-1 overflow-hidden rounded-full bg-gray-100">
+          <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface-muted">
             <div
-              className={cn('h-full rounded-full', subtaskDone === subtaskCount ? 'bg-emerald-400' : 'bg-gray-300')}
+              className={cn('h-full rounded-full', subtaskDone === subtaskCount ? 'bg-success' : 'bg-border-muted')}
               style={{ width: `${(subtaskDone / subtaskCount) * 100}%` }}
             />
           </div>
-          <span className="shrink-0 text-xs tabular-nums text-gray-400">
+          <span className="shrink-0 text-xs tabular-nums text-text-muted">
             {subtaskDone}/{subtaskCount}
           </span>
         </div>
@@ -109,27 +109,27 @@ export function KanbanCard({
           {task.dueDate ? (
             <span className={cn(
               'flex items-center gap-1 text-xs font-medium',
-              dueStatus === 'overdue' ? 'text-red-500' :
-              isUrgent ? 'text-amber-500' : 'text-gray-400',
+              dueStatus === 'overdue' ? 'text-danger' :
+              isUrgent ? 'text-warning' : 'text-text-muted',
             )}>
               <Calendar size={11} strokeWidth={2} />
               {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
           ) : (
-            <span className="text-xs text-gray-200">No due date</span>
+            <span className="text-xs text-text-muted">No due date</span>
           )}
         </div>
 
         {/* Counts + assignees */}
         <div className="flex items-center gap-2.5">
           {commentCount > 0 && (
-            <span className="flex items-center gap-1 text-xs text-gray-400">
+            <span className="flex items-center gap-1 text-xs text-text-muted">
               <MessageSquare size={11} strokeWidth={2} />
               {commentCount}
             </span>
           )}
           {attachmentCount > 0 && (
-            <span className="flex items-center gap-1 text-xs text-gray-400">
+            <span className="flex items-center gap-1 text-xs text-text-muted">
               <Paperclip size={11} strokeWidth={2} />
               {attachmentCount}
             </span>
@@ -149,13 +149,13 @@ export function KanbanCard({
                 )
               )}
               {task.assignees.length > 3 && (
-                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-[0.6rem] font-semibold text-gray-500 ring-[1.5px] ring-white">
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-surface-muted text-[0.6rem] font-semibold text-text-secondary ring-[1.5px] ring-white">
                   +{task.assignees.length - 3}
                 </div>
               )}
             </div>
           ) : (
-            <div className="flex h-5 w-5 items-center justify-center rounded-full border border-dashed border-gray-200 text-gray-300">
+            <div className="flex h-5 w-5 items-center justify-center rounded-full border border-dashed border-border-muted text-text-muted">
               <User size={10} />
             </div>
           )}
@@ -192,12 +192,12 @@ function ColumnTaskArea({
         className={cn(
           'flex flex-col gap-2 px-2 pb-1 min-h-[48px] overflow-y-auto max-h-[calc(100vh-230px)]',
           'rounded-md transition-colors duration-100',
-          isOver && 'bg-blue-50/60',
+          isOver && 'bg-primary/10',
         )}
       >
         {tasks.length === 0 && !isOver && (
-          <div className="flex h-10 items-center justify-center rounded border border-dashed border-gray-200">
-            <span className="text-xs text-gray-300">Empty</span>
+          <div className="flex h-10 items-center justify-center rounded border border-dashed border-border-muted">
+            <span className="text-xs text-text-muted">Empty</span>
           </div>
         )}
         {tasks.map((task) => (
@@ -269,17 +269,22 @@ function KanbanColumnInner({
 
   return (
     <div className={cn(
-      'flex w-full flex-col rounded-xl bg-[#f1f2f4]',
+      'flex w-full flex-col rounded-xl bg-surface-muted/50',
       isDraggingColumn && 'opacity-40',
     )}>
       {/* Header */}
       <div className="flex items-center gap-1.5 px-3 pt-3 pb-2.5">
         {isAdmin && (
           <div {...colDragHandleProps}
-            className="shrink-0 cursor-grab rounded p-0.5 text-gray-400 hover:text-gray-600 touch-none transition-colors">
+            className="shrink-0 cursor-grab rounded p-0.5 text-text-muted hover:text-text-secondary touch-none transition-colors">
             <GripVertical size={14} />
           </div>
         )}
+
+        <span
+          className="h-2 w-2 shrink-0 rounded-full"
+          style={{ backgroundColor: column.color ?? 'var(--color-border-muted)' }}
+        />
 
         {renaming ? (
           <input
@@ -291,21 +296,21 @@ function KanbanColumnInner({
               if (e.key === 'Enter') commitRename();
               if (e.key === 'Escape') { setNameVal(column.name); setRenaming(false); }
             }}
-            className="flex-1 min-w-0 rounded border border-blue-400 bg-white px-2 py-0.5 text-sm font-semibold text-gray-800 focus:outline-none"
+            className="flex-1 min-w-0 rounded border border-primary bg-white px-2 py-0.5 text-sm font-semibold text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         ) : (
-          <h3 className="flex-1 min-w-0 truncate text-sm font-semibold text-gray-700 select-none">
+          <h3 className="flex-1 min-w-0 truncate text-sm font-semibold text-text-primary select-none">
             {column.name}
           </h3>
         )}
 
-        <span className="shrink-0 rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-500 select-none">
+        <span className="shrink-0 text-xs font-medium text-text-muted select-none">
           {tasks.length}
         </span>
 
         {isAdmin && (
           <button onClick={() => onAddTask(column.id)}
-            className="shrink-0 rounded-md p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
+            className="shrink-0 rounded-md p-1 text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             title="Add task">
             <Plus size={14} />
           </button>
@@ -314,20 +319,20 @@ function KanbanColumnInner({
         {isAdmin && (
           <div ref={menuRef} className="relative shrink-0">
             <button onClick={() => setMenuOpen((o) => !o)}
-              className="rounded-md p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors">
+              className="rounded-md p-1 text-text-muted hover:bg-surface-hover hover:text-text-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <MoreHorizontal size={14} />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-lg border border-gray-100 bg-white py-1 shadow-lg">
+              <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-lg border border-border-subtle bg-white py-1 shadow-lg">
                 <button
                   onClick={() => { setRenaming(true); setMenuOpen(false); }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                  <Pencil size={13} className="text-gray-400" /> Rename
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <Pencil size={13} className="text-text-muted" /> Rename
                 </button>
-                <div className="mx-2 my-0.5 border-t border-gray-100" />
+                <div className="mx-2 my-0.5 border-t border-border-subtle" />
                 <button
                   onClick={() => { onDelete(column.id); setMenuOpen(false); }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50 transition-colors">
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-danger hover:bg-danger-soft transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   <Trash2 size={13} /> Delete
                 </button>
               </div>
@@ -349,7 +354,7 @@ function KanbanColumnInner({
       {isAdmin && (
         <button
           onClick={() => onAddTask(column.id)}
-          className="mx-2 mb-2 mt-1.5 flex w-[calc(100%-16px)] items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors text-left">
+          className="mx-2 mb-2 mt-1.5 flex w-[calc(100%-16px)] items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <Plus size={14} />
           Add a task
         </button>
