@@ -96,7 +96,7 @@ export function ActivityRow({ item, slug, showProjectLink = true }: ActivityRowP
 
   return (
     <li
-      className="flex items-start gap-3.5 px-5 py-3.5 hover:bg-gray-50 transition-colors cursor-pointer"
+      className="flex items-start gap-3.5 px-5 py-3.5 hover:bg-surface-hover transition-colors cursor-pointer"
       onClick={() => taskId && router.push(`/org/${slug}/projects/${item.projectId}?taskId=${taskId}`)}
     >
       <Avatar name={item.actor.name} url={item.actor.avatarUrl} size={7} />
