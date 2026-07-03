@@ -47,6 +47,24 @@ export const sendPasswordResetEmail = async (to: string, token: string) => {
   return { resetLink };
 };
 
+// Send a generic notification email (channel/project/task events)
+export const sendNotificationEmail = async (
+  to: string,
+  subject: string,
+  bodyText: string,
+  link: string,
+) => {
+  const from = env.EMAIL_FROM;
+  const resend = getResendClient();
+
+  await resend.emails.send({
+    from,
+    to,
+    subject,
+    html: notificationTemplate(subject, bodyText, link),
+  });
+};
+
 // Send organization invitation email
 export const sendOrganizationInviteEmail = async (
   to: string,
@@ -137,6 +155,31 @@ const resetPasswordTemplate = (resetLink: string) => `
       <p style="font-size: 12px; color: #777;">
         For security, this link will expire after a limited time.
       </p>
+    </div>
+  `;
+
+const notificationTemplate = (subject: string, bodyText: string, link: string) => `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+      <h2 style="color: #2aaad5;">${subject}</h2>
+
+      <p>${bodyText}</p>
+
+      <a href="${link}"
+         style="
+           display: inline-block;
+           padding: 12px 20px;
+           margin: 16px 0;
+           background-color: #2aaad5;
+           color: #ffffff;
+           text-decoration: none;
+           border-radius: 6px;
+           font-weight: bold;
+         ">
+         View in app
+      </a>
+
+      <p>If the button doesn't work, you can also use this link:</p>
+      <p><a href="${link}">${link}</a></p>
     </div>
   `;
 
