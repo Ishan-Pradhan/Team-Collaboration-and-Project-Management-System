@@ -54,3 +54,29 @@ export const markAllNotificationsRead = asyncHandler(async (req: AuthRequest, re
   await notificationRepository.markAllRead(user.id);
   return ok(res, null, 'All notifications marked as read');
 });
+
+export const getUnreadChannels = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  const notifications = await notificationRepository.findUnreadChannels(user.id);
+  return ok(
+    res,
+    notifications.map((n) => ({
+      channelId: n.entityId,
+      title: n.title,
+      body: n.body,
+      createdAt: n.createdAt,
+    })),
+    'Unread channels retrieved successfully'
+  );
+});
+
+export const markReadByEntity = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+  const { entityType, entityId } = req.body as { entityType: string; entityId: string };
+
+  await notificationRepository.markReadByEntity(user.id, entityType, entityId);
+  return ok(res, null, 'Marked as read');
+});
