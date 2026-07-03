@@ -8,8 +8,11 @@ import type {
   UnreadChannelsResponse,
 } from '@/types/notification.types';
 
-export async function getNotifications(page = 1): Promise<{ notifications: Notification[]; meta: PaginationMeta }> {
-  const res = await api.get<NotificationsResponse>('/notifications', { params: { page } });
+export async function getNotifications(
+  page = 1,
+  entityType?: string
+): Promise<{ notifications: Notification[]; meta: PaginationMeta }> {
+  const res = await api.get<NotificationsResponse>('/notifications', { params: { page, entityType } });
   return res.data.data;
 }
 

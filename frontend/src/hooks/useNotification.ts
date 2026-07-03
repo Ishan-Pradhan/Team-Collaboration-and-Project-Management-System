@@ -9,10 +9,10 @@ import {
 } from '@/services/notification.service';
 import type { UnreadChannel } from '@/types/notification.types';
 
-export const useNotifications = (page = 1) =>
+export const useNotifications = (page = 1, entityType?: string) =>
   useQuery({
-    queryKey: ['notifications', { page }],
-    queryFn: () => getNotifications(page),
+    queryKey: ['notifications', { page, entityType: entityType ?? 'all' }],
+    queryFn: () => getNotifications(page, entityType),
   });
 
 export const useUnreadCount = () =>

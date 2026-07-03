@@ -7,15 +7,21 @@ import { notificationRepository } from '../repositories/notification.repository.
 import { serializeNotification } from '../serializers/notification.serializer.js';
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.utils.js';
 
+const ENTITY_TYPE_FILTERS = ['channel', 'project', 'task', 'organization'] as const;
+
 export const listNotifications = asyncHandler(async (req: AuthRequest, res: Response) => {
   const user = req.user;
   if (!user) throw new ApiError(401, 'Unauthorized');
 
   const { page, limit, offset } = getPaginationParams(req.query as { page?: string; limit?: string });
+  const entityTypeParam = req.query.entityType as string | undefined;
+  const entityType = ENTITY_TYPE_FILTERS.includes(entityTypeParam as (typeof ENTITY_TYPE_FILTERS)[number])
+    ? entityTypeParam
+    : undefined;
 
   const [notifications, totalItems] = await Promise.all([
-    notificationRepository.findByUser(user.id, limit, offset),
-    notificationRepository.countByUser(user.id),
+    notificationRepository.findByUser(user.id, limit, offset, entityType),
+    notificationRepository.countByUser(user.id, entityType),
   ]);
 
   return ok(
