@@ -25,6 +25,7 @@ import { useLogout } from '@/hooks/useAuth';
 import { useOrgProjects } from '@/hooks/useProject';
 import { useChatSocket } from '@/hooks/useChatSocket';
 import { useNotificationSocket } from '@/hooks/useNotificationSocket';
+import { NotificationBell } from '@/components/shared/NotificationBell';
 import { cn } from '@/lib/utils';
 
 
@@ -384,6 +385,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               )}
             </div>
           </div>
+          <NotificationBell />
         </header>
 
         {/* Children content area */}

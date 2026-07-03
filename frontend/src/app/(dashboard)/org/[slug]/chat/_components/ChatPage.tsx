@@ -197,6 +197,16 @@ export default function ChatPage({ params }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, dms, org]);
 
+  useEffect(() => {
+    const channelId = searchParams.get('channelId');
+    if (!channelId || !channels) return;
+
+    const target = channels.find((c) => c.id === channelId);
+    if (target) setSelectedChannel(target);
+    router.replace(`/org/${slug}/chat`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, channels]);
+
   if (orgLoading || channelsLoading) return <ChatSkeleton />;
   if (orgError || !org) {
     return (
