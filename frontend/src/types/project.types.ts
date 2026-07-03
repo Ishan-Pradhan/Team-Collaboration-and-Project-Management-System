@@ -166,6 +166,28 @@ export interface TaskResponse {
 
 // ─── Dashboard ─────────────────────────────────────────────────
 
+export interface ActivityEntry {
+  id: string;
+  type: 'task_created' | 'task_moved' | 'task_deleted' | 'comment_added' | 'member_added' | 'member_removed';
+  createdAt: string;
+  projectId: string;
+  projectName: string;
+  metadata: {
+    taskTitle?: string;
+    taskId?: string;
+    fromColumn?: string | null;
+    toColumn?: string | null;
+    content?: string;
+    commentId?: string;
+    targetName?: string;
+  };
+  actor: {
+    id: string;
+    name: string;
+    avatarUrl: string | null;
+  };
+}
+
 export interface DashboardData {
   stats: {
     projectCount: number;
@@ -189,26 +211,7 @@ export interface DashboardData {
     projectName: string;
     columnName: string;
   }[];
-  recentActivity: {
-    id: string;
-    type: 'task_created' | 'task_moved' | 'task_deleted' | 'comment_added' | 'member_added';
-    createdAt: string;
-    projectId: string;
-    projectName: string;
-    metadata: {
-      taskTitle?: string;
-      taskId?: string;
-      fromColumn?: string | null;
-      toColumn?: string | null;
-      content?: string;
-      commentId?: string;
-    };
-    actor: {
-      id: string;
-      name: string;
-      avatarUrl: string | null;
-    };
-  }[];
+  recentActivity: ActivityEntry[];
   members: {
     id: string;
     name: string;
