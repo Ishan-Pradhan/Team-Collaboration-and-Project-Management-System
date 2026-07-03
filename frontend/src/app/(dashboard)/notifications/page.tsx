@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { NotificationRow } from '@/components/shared/NotificationRow';
-import { resolveNotificationLink } from '@/components/shared/NotificationBell';
+import { resolveNotificationLink } from '@/lib/notificationLinks';
 import { NotificationsSkeleton } from '@/components/shared/skeletons/NotificationsSkeleton';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead } from '@/hooks/useNotification';
