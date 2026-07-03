@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, Paperclip, Send, Smile, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -33,6 +34,19 @@ function typingLabel(names: string[]): string {
 
 function isSameDay(a: string, b: string): boolean {
   return new Date(a).toDateString() === new Date(b).toDateString();
+}
+
+const PICKER_WIDTH = 350;
+const PICKER_HEIGHT = 420;
+
+function computePickerPosition(rect: DOMRect): { top: number; left: number } {
+  let left = rect.left;
+  let top = rect.bottom + 6;
+  if (left + PICKER_WIDTH > window.innerWidth - 8) left = window.innerWidth - PICKER_WIDTH - 8;
+  if (left < 8) left = 8;
+  if (top + PICKER_HEIGHT > window.innerHeight - 8) top = rect.top - PICKER_HEIGHT - 6;
+  if (top < 8) top = 8;
+  return { top, left };
 }
 
 function formatDateSeparator(iso: string): string {
@@ -94,6 +108,7 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
   const [content, setContent] = useState('');
   const [loadingMore, setLoadingMore] = useState(false);
   const [openPickerFor, setOpenPickerFor] = useState<string | null>(null);
+  const [pickerAnchor, setPickerAnchor] = useState<{ top: number; left: number } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [typingUsers, setTypingUsers] = useState<Map<string, string>>(new Map());
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -225,12 +240,12 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+      <div className="flex-1 overflow-y-auto px-4 py-3">
         {messages && messages.length > 0 && (
           <button
             onClick={handleLoadMore}
             disabled={loadingMore}
-            className="mx-auto block rounded text-xs text-primary hover:underline disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="mx-auto mb-3 block rounded text-xs text-primary hover:underline disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {loadingMore ? 'Loading…' : 'Load earlier messages'}
           </button>
@@ -239,7 +254,7 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
           messageGroups.map(({ message, showHeader, dateLabel }) => {
             const isOwn = message.sender?.id === user?.id;
             return (
-            <div key={message.id}>
+            <div key={message.id} className={dateLabel ? '' : showHeader ? 'mt-3' : 'mt-0.5'}>
               {dateLabel && (
                 <div className="my-2 flex items-center gap-3">
                   <div className="h-px flex-1 bg-border-subtle" />
@@ -302,38 +317,48 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                             </p>
                           )}
 
-                          <div className={cn(
-                            'absolute -top-8 left-1/2 hidden -translate-x-1/2 items-center gap-0.5 rounded-lg border p-0.5 shadow-sm group-hover:flex',
-                            isOwn ? 'border-primary/30 bg-primary/10' : 'border-border-subtle bg-white',
-                          )}>
-                            <button
-                              onClick={() => setOpenPickerFor(openPickerFor === message.id ? null : message.id)}
-                              className={cn(
-                                'rounded p-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                                isOwn ? 'text-primary hover:bg-primary/15' : 'text-text-secondary hover:bg-surface-muted',
-                              )}
-                              title="Add reaction"
-                            >
-                              <Smile size={14} />
-                            </button>
-                            {(isOwn || isAdmin) && (
+                          <div className="absolute -top-8 left-1/2 hidden -translate-x-1/2 flex-col items-center pb-3 group-hover:flex">
+                            <div className={cn(
+                              'flex items-center gap-0.5 rounded-lg border p-0.5 shadow-sm',
+                              isOwn ? 'border-primary/30 bg-primary/10' : 'border-border-subtle bg-white',
+                            )}>
                               <button
-                                onClick={() => setDeleteTarget(message.id)}
+                                onClick={(e) => {
+                                  if (openPickerFor === message.id) {
+                                    setOpenPickerFor(null);
+                                  } else {
+                                    setPickerAnchor(computePickerPosition(e.currentTarget.getBoundingClientRect()));
+                                    setOpenPickerFor(message.id);
+                                  }
+                                }}
                                 className={cn(
-                                  'rounded p-1 transition-colors hover:bg-danger-soft/20 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                                  isOwn ? 'text-primary' : 'text-text-secondary',
+                                  'rounded p-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                  isOwn ? 'text-primary hover:bg-primary/15' : 'text-text-secondary hover:bg-surface-muted',
                                 )}
-                                title="Delete message"
+                                title="Add reaction"
                               >
-                                <Trash2 size={14} />
+                                <Smile size={14} />
                               </button>
-                            )}
+                              {(isOwn || isAdmin) && (
+                                <button
+                                  onClick={() => setDeleteTarget(message.id)}
+                                  className={cn(
+                                    'rounded p-1 transition-colors hover:bg-danger-soft/20 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                    isOwn ? 'text-primary' : 'text-text-secondary',
+                                  )}
+                                  title="Delete message"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </div>
                           </div>
 
-                          {openPickerFor === message.id && (
-                            <div className="absolute left-1/2 top-full z-20 mt-1 -translate-x-1/2">
+                          {openPickerFor === message.id && pickerAnchor && createPortal(
+                            <div className="fixed z-50" style={{ top: pickerAnchor.top, left: pickerAnchor.left }}>
                               <EmojiPicker onEmojiClick={(emojiData) => handlePickEmoji(message, emojiData)} />
-                            </div>
+                            </div>,
+                            document.body,
                           )}
 
                           {message.reactions.length > 0 && (
