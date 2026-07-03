@@ -1,0 +1,20 @@
+import { api } from '@/lib/axios';
+import type { Notification, NotificationsResponse, UnreadCountResponse, PaginationMeta } from '@/types/notification.types';
+
+export async function getNotifications(page = 1): Promise<{ notifications: Notification[]; meta: PaginationMeta }> {
+  const res = await api.get<NotificationsResponse>('/notifications', { params: { page } });
+  return res.data.data;
+}
+
+export async function getUnreadCount(): Promise<number> {
+  const res = await api.get<UnreadCountResponse>('/notifications/unread-count');
+  return res.data.data.count;
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  await api.patch(`/notifications/${id}/read`);
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  await api.post('/notifications/mark-all-read');
+}
