@@ -1,8 +1,9 @@
 'use client';
 
 import { use, useState, useMemo, useEffect, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Archive, ArchiveRestore, CalendarDays, ChevronDown, Download, ExternalLink, Eye, File, FileText, Image as ImageIcon, Layout, List, Loader2, Paperclip, Plus, Settings, Trash2, Users, X } from 'lucide-react';
+import { Archive, ArchiveRestore, CalendarDays, ChevronDown, Download, ExternalLink, Eye, File, FileText, History, Image as ImageIcon, Layout, List, Loader2, Paperclip, Plus, Settings, Trash2, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,7 @@ import {
   useMoveTask,
   useProjectMembers,
   useProjectFiles,
+  useProjectActivity,
   useArchiveProject,
   useUnarchiveProject,
   useDeleteProject,
@@ -27,6 +29,8 @@ import {
 import { useOrganizationBySlug, useOrganizationMembers } from '@/hooks/useOrganization';
 import { useAuthStore } from '@/store/auth.store';
 import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
+import { ActivityRow } from '@/components/shared/ActivityRow';
+import { getSocket } from '@/lib/socket';
 
 import {
   DndContext,
@@ -292,6 +296,7 @@ export default function KanbanPage({ params }: Props) {
     { name: 'List', icon: List },
     { name: 'Calendar', icon: CalendarDays },
     { name: 'Files', icon: Paperclip },
+    { name: 'Activity', icon: History },
     { name: 'Settings', icon: Settings },
   ];
 
@@ -496,6 +501,8 @@ export default function KanbanPage({ params }: Props) {
         />
       ) : activeTab === 'Files' ? (
         <ProjectFilesView projectId={projectId} currentUserId={currentUser?.id ?? ''} isAdmin={isAdmin} />
+      ) : activeTab === 'Activity' ? (
+        <ProjectActivityView projectId={projectId} slug={slug} />
       ) : (
         <ProjectSettingsView project={project} slug={slug} isAdmin={isAdmin} isOrgAdmin={isOrgAdmin} />
       )}
@@ -857,6 +864,43 @@ function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function ProjectActivityView({ projectId, slug }: { projectId: string; slug: string }) {
+  const { data: activity = [], isLoading } = useProjectActivity(projectId);
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    const socket = getSocket();
+    const onActivityNew = ({ projectId: eventProjectId }: { projectId: string }) => {
+      if (eventProjectId === projectId) {
+        qc.invalidateQueries({ queryKey: ['projects', projectId, 'activity'] });
+      }
+    };
+    socket.on('activity:new', onActivityNew);
+    return () => {
+      socket.off('activity:new', onActivityNew);
+    };
+  }, [projectId, qc]);
+
+  if (isLoading) {
+    return <div className="flex-1 p-8 text-sm text-gray-400">Loading activity...</div>;
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto p-8">
+      <h2 className="mb-4 text-base font-semibold text-gray-900">Recent Activity</h2>
+      {activity.length === 0 ? (
+        <p className="py-12 text-center text-sm text-gray-400">No activity yet.</p>
+      ) : (
+        <ul className="divide-y divide-gray-100 rounded-xl border border-gray-100 bg-white">
+          {activity.map((item) => (
+            <ActivityRow key={item.id} item={item} slug={slug} showProjectLink={false} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 function ProjectFilesView({

@@ -4,6 +4,7 @@ import {
   getOrgDashboard,
   getOrgProjects,
   getProject,
+  getProjectActivity,
   createProject,
   updateProject,
   archiveProject,
@@ -43,6 +44,13 @@ export const useOrgDashboard = (organizationId: string) =>
     queryKey: ['organizations', organizationId, 'dashboard'],
     queryFn: () => getOrgDashboard(organizationId),
     enabled: !!organizationId,
+  });
+
+export const useProjectActivity = (projectId: string) =>
+  useQuery({
+    queryKey: ['projects', projectId, 'activity'],
+    queryFn: () => getProjectActivity(projectId),
+    enabled: !!projectId,
   });
 
 // ─── Projects ────────────────────────────────────────────────

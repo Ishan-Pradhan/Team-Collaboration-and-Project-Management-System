@@ -13,6 +13,7 @@ import type {
   Subtask,
   TaskAttachment,
   DashboardData,
+  ActivityEntry,
 } from '@/types/project.types';
 
 export async function getOrgDashboard(organizationId: string): Promise<DashboardData> {
@@ -29,6 +30,13 @@ export async function getOrgProjects(organizationId: string): Promise<Project[]>
 
 export async function getProject(projectId: string): Promise<Project> {
   const res = await api.get<ProjectResponse>(`/projects/${projectId}`);
+  return res.data.data;
+}
+
+export async function getProjectActivity(projectId: string): Promise<ActivityEntry[]> {
+  const res = await api.get<{ success: boolean; message: string; data: ActivityEntry[] }>(
+    `/projects/${projectId}/activity`
+  );
   return res.data.data;
 }
 
