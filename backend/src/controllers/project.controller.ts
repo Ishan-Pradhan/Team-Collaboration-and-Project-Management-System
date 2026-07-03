@@ -11,6 +11,8 @@ import {
 } from '../repositories/organization.repository.js';
 import { userRepository } from '../repositories/users.repository.js';
 import { notifyUser } from '../utils/notify.js';
+import { logActivity } from '../utils/activity.js';
+import { activityLogRepository } from '../repositories/activityLog.repository.js';
 import { env } from '../config/env.js';
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -98,6 +100,40 @@ export const getProject = asyncHandler(
     if (!membership) throw new ApiError(403, 'You are not a member of this project');
 
     return ok(res, project, 'Project details retrieved successfully');
+  }
+);
+
+// ─── Get project activity ──────────────────────────────────────
+
+export const getProjectActivity = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { projectId } = req.params as { projectId: string };
+    const user = req.user;
+
+    if (!user) throw new ApiError(401, 'Unauthorized');
+
+    const project = await projectRepository.findById(projectId);
+    if (!project) throw new ApiError(404, 'Project not found');
+
+    const membership = await projectRepository.findMembership(projectId, user.id);
+    if (!membership) throw new ApiError(403, 'You are not a member of this project');
+
+    const entries = await activityLogRepository.findByProjects([projectId], 20);
+    const serialized = entries.map((entry) => ({
+      id: entry.id,
+      type: entry.type,
+      createdAt: entry.createdAt,
+      projectId: entry.projectId,
+      projectName: (entry as unknown as { project?: { name: string } }).project?.name ?? project.name,
+      metadata: entry.metadata ?? {},
+      actor: {
+        id: entry.actorId,
+        name: (entry as unknown as { actor?: { name: string; avatarUrl: string | null } }).actor?.name ?? 'Someone',
+        avatarUrl: (entry as unknown as { actor?: { name: string; avatarUrl: string | null } }).actor?.avatarUrl ?? null,
+      },
+    }));
+
+    return ok(res, serialized, 'Activity retrieved successfully');
   }
 );
 
@@ -256,6 +292,15 @@ export const addProjectMember = asyncHandler(
         : undefined,
     });
 
+    logActivity({
+      projectId: project.id,
+      actorId: user.id,
+      type: 'member_added',
+      entityType: 'user',
+      entityId: userId,
+      metadata: { targetName: targetUser?.name ?? 'A member' },
+    });
+
     return res.status(201).json({
       success: true,
       message: 'Member added to project successfully',
@@ -316,6 +361,15 @@ export const removeProjectMember = asyncHandler(
               link: `${(env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '')}/org/${org?.slug}/projects`,
             }
           : undefined,
+      });
+
+      logActivity({
+        projectId: project.id,
+        actorId: user.id,
+        type: 'member_removed',
+        entityType: 'user',
+        entityId: userId,
+        metadata: { targetName: targetUser?.name ?? 'A member' },
       });
     }
 

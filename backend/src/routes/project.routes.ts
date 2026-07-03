@@ -5,6 +5,7 @@ import {
   createProject,
   listProjects,
   getProject,
+  getProjectActivity,
   updateProject,
   archiveProject,
   unarchiveProject,
@@ -150,6 +151,13 @@ router
   .route('/projects/:projectId')
   .get(verifyJWT, validate(projectParamSchema), getProject)
   .put(verifyJWT, validate(updateProjectSchema), updateProject);
+
+router.get(
+  '/projects/:projectId/activity',
+  verifyJWT,
+  validate(projectParamSchema),
+  getProjectActivity
+);
 
 /**
  * @swagger
