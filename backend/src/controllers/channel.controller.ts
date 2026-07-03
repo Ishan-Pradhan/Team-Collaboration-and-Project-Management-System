@@ -15,7 +15,7 @@ import { organizationMemberRepository } from '../repositories/organization.repos
 import { userRepository } from '../repositories/users.repository.js';
 import { organizationRepository } from '../repositories/organization.repository.js';
 import { getIO } from '../socket/index.js';
-import { notifyUser } from '../utils/notify.js';
+import { notifyUser, notifyNewMessage } from '../utils/notify.js';
 import { env } from '../config/env.js';
 import type { ChannelInstance } from '../types/channels.types.js';
 
@@ -238,15 +238,37 @@ export const sendMessage = asyncHandler(async (req: AuthRequest, res: Response) 
   const user = req.user;
   if (!user) throw new ApiError(401, 'Unauthorized');
 
+  const channel = await channelRepository.findById(channelId);
+  if (!channel) throw new ApiError(404, 'Channel not found');
+
+  const trimmedContent = content.trim();
   const created = await messageRepository.create({
     channelId,
     senderId: user.id,
     type: 'TEXT',
-    content: content.trim(),
+    content: trimmedContent,
   });
   const message = await messageRepository.findById(created.id);
 
   getIO().to(`channel:${channelId}`).emit('message:new', message);
+
+  const members = await channelMemberRepository.findMembers(channelId);
+  const title = channel.type === 'DM'
+    ? `${user.name} sent you a message`
+    : `${user.name} sent a message in #${channel.name}`;
+  await Promise.all(
+    members
+      .filter((m) => m.userId !== user.id)
+      .map((m) =>
+        notifyNewMessage({
+          userId: m.userId,
+          organizationId: channel.organizationId,
+          channelId,
+          title,
+          body: `${user.name}: ${trimmedContent.slice(0, 200)}`,
+        })
+      )
+  );
 
   return res.status(201).json({
     success: true,
@@ -356,6 +378,9 @@ export const uploadFile = asyncHandler(async (req: AuthRequest, res: Response) =
   const user = req.user;
   if (!user) throw new ApiError(401, 'Unauthorized');
 
+  const channel = await channelRepository.findById(channelId);
+  if (!channel) throw new ApiError(404, 'Channel not found');
+
   const file = req.file;
   if (!file) throw new ApiError(400, 'No file uploaded');
 
@@ -378,6 +403,24 @@ export const uploadFile = asyncHandler(async (req: AuthRequest, res: Response) =
   const message = await messageRepository.findById(created.id);
 
   getIO().to(`channel:${channelId}`).emit('message:new', message);
+
+  const members = await channelMemberRepository.findMembers(channelId);
+  const title = channel.type === 'DM'
+    ? `${user.name} sent you a message`
+    : `${user.name} sent a message in #${channel.name}`;
+  await Promise.all(
+    members
+      .filter((m) => m.userId !== user.id)
+      .map((m) =>
+        notifyNewMessage({
+          userId: m.userId,
+          organizationId: channel.organizationId,
+          channelId,
+          title,
+          body: `${user.name}: Sent a file: ${file.originalname}`,
+        })
+      )
+  );
 
   return res.status(201).json({
     success: true,
