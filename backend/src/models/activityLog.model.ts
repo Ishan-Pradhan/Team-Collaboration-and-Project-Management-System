@@ -1,7 +1,7 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import { sequelize } from '../config/db.js';
 
-export type ActivityLogType = 'task_created' | 'task_moved' | 'task_deleted' | 'comment_added' | 'member_added';
+export type ActivityLogType = 'task_created' | 'task_moved' | 'task_deleted' | 'comment_added' | 'member_added' | 'member_removed';
 
 export interface ActivityLogAttributes {
   id: string;

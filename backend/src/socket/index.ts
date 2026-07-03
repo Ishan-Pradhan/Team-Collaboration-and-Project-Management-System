@@ -3,7 +3,7 @@ import { Server as SocketIOServer, type Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import { userRepository } from '../repositories/users.repository.js';
-import { OrganizationMember, ChannelMember } from '../models/index.js';
+import { OrganizationMember, ChannelMember, ProjectMember } from '../models/index.js';
 import type { JwtPayload } from '../types/auth.types.js';
 
 let io: SocketIOServer | null = null;
@@ -55,13 +55,15 @@ export const initSocket = (httpServer: HttpServer): SocketIOServer => {
     const userId = socket.userId as string;
     socket.join(`user:${userId}`);
 
-    const [orgMemberships, channelMemberships] = await Promise.all([
+    const [orgMemberships, channelMemberships, projectMemberships] = await Promise.all([
       OrganizationMember.findAll({ where: { userId }, attributes: ['organizationId'] }),
       ChannelMember.findAll({ where: { userId }, attributes: ['channelId'] }),
+      ProjectMember.findAll({ where: { userId }, attributes: ['projectId'] }),
     ]);
 
     orgMemberships.forEach((m) => socket.join(`org:${m.organizationId}`));
     channelMemberships.forEach((m) => socket.join(`channel:${m.channelId}`));
+    projectMemberships.forEach((m) => socket.join(`project:${m.projectId}`));
 
     socket.on('typing:start', ({ channelId }: { channelId?: string }) => {
       if (!channelId || !socket.rooms.has(`channel:${channelId}`)) return;
