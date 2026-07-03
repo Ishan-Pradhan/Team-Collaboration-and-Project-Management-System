@@ -6,17 +6,17 @@ export const notificationRepository = {
     return await Notification.create(data);
   },
 
-  findByUser: async (userId: string, limit: number, offset: number, entityType?: string): Promise<NotificationInstance[]> => {
+  findByUser: async (userId: string, limit: number, offset: number): Promise<NotificationInstance[]> => {
     return await Notification.findAll({
-      where: { userId, ...(entityType ? { entityType } : {}) },
+      where: { userId },
       order: [['createdAt', 'DESC']],
       limit,
       offset,
     });
   },
 
-  countByUser: async (userId: string, entityType?: string): Promise<number> => {
-    return await Notification.count({ where: { userId, ...(entityType ? { entityType } : {}) } });
+  countByUser: async (userId: string): Promise<number> => {
+    return await Notification.count({ where: { userId } });
   },
 
   countUnread: async (userId: string): Promise<number> => {
