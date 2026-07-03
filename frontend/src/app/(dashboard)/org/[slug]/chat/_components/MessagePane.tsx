@@ -236,7 +236,9 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
           </button>
         )}
         {messages && messages.length > 0 ? (
-          messageGroups.map(({ message, showHeader, dateLabel }) => (
+          messageGroups.map(({ message, showHeader, dateLabel }) => {
+            const isOwn = message.sender?.id === user?.id;
+            return (
             <div key={message.id}>
               {dateLabel && (
                 <div className="my-2 flex items-center gap-3">
@@ -252,7 +254,7 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
               ) : (
                 <div className={cn(
                   'group relative -mx-2 flex items-start gap-2.5 rounded-md px-2 py-0.5 transition-colors hover:bg-surface-muted/40',
-                  message.sender?.id === user?.id && 'flex-row-reverse',
+                  isOwn && 'flex-row-reverse',
                 )}>
                   {showHeader ? (
                     <button
@@ -272,17 +274,11 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                   ) : (
                     <div className="w-7 shrink-0" />
                   )}
-                  <div className={cn(
-                    'flex min-w-0 flex-1 flex-col',
-                    message.sender?.id === user?.id && 'items-end',
-                  )}>
+                  <div className={cn('flex min-w-0 flex-1 flex-col', isOwn && 'items-end')}>
                     {showHeader && (
-                      <div className={cn(
-                        'flex items-baseline gap-2',
-                        message.sender?.id === user?.id && 'flex-row-reverse',
-                      )}>
+                      <div className={cn('flex items-baseline gap-2', isOwn && 'flex-row-reverse')}>
                         <span className="text-sm font-medium text-text-primary">
-                          {message.sender?.id === user?.id ? 'You' : message.sender?.name ?? 'Unknown'}
+                          {isOwn ? 'You' : message.sender?.name ?? 'Unknown'}
                         </span>
                         <span className="text-[10px] text-text-secondary">
                           {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -294,22 +290,55 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                       <p className="text-sm italic text-text-secondary">This message was deleted</p>
                     ) : (
                       <>
-                        {message.type === 'FILE' ? (
-                          <FileAttachmentCard message={message} channelId={channel.id} />
-                        ) : (
-                          <p className={cn(
-                            'max-w-[75%] break-words text-sm text-text-primary',
-                            message.sender?.id === user?.id && 'rounded-lg bg-primary/10 px-3 py-1.5',
+                        <div className="relative">
+                          {message.type === 'FILE' ? (
+                            <FileAttachmentCard message={message} channelId={channel.id} />
+                          ) : (
+                            <p className={cn(
+                              'max-w-[75%] break-words rounded-lg px-3 py-1.5 text-sm text-text-primary',
+                              isOwn ? 'bg-primary/10' : 'bg-surface-muted',
+                            )}>
+                              {message.content}
+                            </p>
+                          )}
+
+                          <div className={cn(
+                            'absolute -top-8 left-1/2 hidden -translate-x-1/2 items-center gap-0.5 rounded-lg border p-0.5 shadow-sm group-hover:flex',
+                            isOwn ? 'border-primary/30 bg-primary/10' : 'border-border-subtle bg-white',
                           )}>
-                            {message.content}
-                          </p>
-                        )}
+                            <button
+                              onClick={() => setOpenPickerFor(openPickerFor === message.id ? null : message.id)}
+                              className={cn(
+                                'rounded p-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                isOwn ? 'text-primary hover:bg-primary/15' : 'text-text-secondary hover:bg-surface-muted',
+                              )}
+                              title="Add reaction"
+                            >
+                              <Smile size={14} />
+                            </button>
+                            {(isOwn || isAdmin) && (
+                              <button
+                                onClick={() => setDeleteTarget(message.id)}
+                                className={cn(
+                                  'rounded p-1 transition-colors hover:bg-danger-soft/20 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                  isOwn ? 'text-primary' : 'text-text-secondary',
+                                )}
+                                title="Delete message"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
+
+                          {openPickerFor === message.id && (
+                            <div className="absolute left-1/2 top-full z-20 mt-1 -translate-x-1/2">
+                              <EmojiPicker onEmojiClick={(emojiData) => handlePickEmoji(message, emojiData)} />
+                            </div>
+                          )}
+                        </div>
 
                         {message.reactions.length > 0 && (
-                          <div className={cn(
-                            'mt-1 flex flex-wrap gap-1',
-                            message.sender?.id === user?.id && 'justify-end',
-                          )}>
+                          <div className={cn('mt-1 flex flex-wrap gap-1', isOwn && 'justify-end')}>
                             {message.reactions.map((reaction) => {
                               const reacted = !!user && reaction.userIds.includes(user.id);
                               return (
@@ -331,40 +360,11 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                       </>
                     )}
                   </div>
-
-                  {!message.deletedAt && (
-                    <div className={cn(
-                      'absolute -top-3 hidden items-center gap-0.5 rounded-lg border border-border-subtle bg-white p-0.5 shadow-sm group-hover:flex',
-                      message.sender?.id === user?.id ? 'left-2' : 'right-2',
-                    )}>
-                      <button
-                        onClick={() => setOpenPickerFor(openPickerFor === message.id ? null : message.id)}
-                        className="rounded p-1 text-text-secondary transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        title="Add reaction"
-                      >
-                        <Smile size={14} />
-                      </button>
-                      {(message.sender?.id === user?.id || isAdmin) && (
-                        <button
-                          onClick={() => setDeleteTarget(message.id)}
-                          className="rounded p-1 text-text-secondary transition-colors hover:bg-danger-soft/20 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          title="Delete message"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {openPickerFor === message.id && (
-                    <div className="absolute right-2 top-6 z-20">
-                      <EmojiPicker onEmojiClick={(emojiData) => handlePickEmoji(message, emojiData)} />
-                    </div>
-                  )}
                 </div>
               )}
             </div>
-          ))
+            );
+          })
         ) : (
           <p className="py-8 text-center text-sm text-text-secondary">No messages yet. Say hello!</p>
         )}
