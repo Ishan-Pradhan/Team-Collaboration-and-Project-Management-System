@@ -6,6 +6,7 @@ import { Loader2, Paperclip, Send, Smile, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react';
 import { parseApiError } from '@/lib/axios';
+import { cn } from '@/lib/utils';
 import {
   useChannelMessages,
   useSendMessage,
@@ -249,20 +250,37 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
               {message.type === 'SYSTEM' ? (
                 <p className="text-center text-xs italic text-text-secondary">{message.content}</p>
               ) : (
-                <div className="group relative -mx-2 flex items-start gap-2.5 rounded-md px-2 py-0.5 transition-colors hover:bg-surface-muted/40">
+                <div className={cn(
+                  'group relative -mx-2 flex items-start gap-2.5 rounded-md px-2 py-0.5 transition-colors hover:bg-surface-muted/40',
+                  message.sender?.id === user?.id && 'flex-row-reverse',
+                )}>
                   {showHeader ? (
                     <button
                       onClick={() => message.sender && setProfileUserId(message.sender.id)}
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-semibold text-primary transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
-                      {(message.sender?.name ?? '?').charAt(0).toUpperCase()}
+                      {message.sender?.avatarUrl ? (
+                        <img
+                          src={message.sender.avatarUrl}
+                          alt={message.sender.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        (message.sender?.name ?? '?').charAt(0).toUpperCase()
+                      )}
                     </button>
                   ) : (
                     <div className="w-7 shrink-0" />
                   )}
-                  <div className="min-w-0 flex-1">
+                  <div className={cn(
+                    'flex min-w-0 flex-1 flex-col',
+                    message.sender?.id === user?.id && 'items-end',
+                  )}>
                     {showHeader && (
-                      <div className="flex items-baseline gap-2">
+                      <div className={cn(
+                        'flex items-baseline gap-2',
+                        message.sender?.id === user?.id && 'flex-row-reverse',
+                      )}>
                         <span className="text-sm font-medium text-text-primary">
                           {message.sender?.id === user?.id ? 'You' : message.sender?.name ?? 'Unknown'}
                         </span>
@@ -279,11 +297,19 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                         {message.type === 'FILE' ? (
                           <FileAttachmentCard message={message} channelId={channel.id} />
                         ) : (
-                          <p className="text-sm text-text-primary">{message.content}</p>
+                          <p className={cn(
+                            'max-w-[75%] break-words text-sm text-text-primary',
+                            message.sender?.id === user?.id && 'rounded-lg bg-primary/10 px-3 py-1.5',
+                          )}>
+                            {message.content}
+                          </p>
                         )}
 
                         {message.reactions.length > 0 && (
-                          <div className="mt-1 flex flex-wrap gap-1">
+                          <div className={cn(
+                            'mt-1 flex flex-wrap gap-1',
+                            message.sender?.id === user?.id && 'justify-end',
+                          )}>
                             {message.reactions.map((reaction) => {
                               const reacted = !!user && reaction.userIds.includes(user.id);
                               return (
@@ -307,7 +333,10 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                   </div>
 
                   {!message.deletedAt && (
-                    <div className="absolute -top-3 right-2 hidden items-center gap-0.5 rounded-lg border border-border-subtle bg-white p-0.5 shadow-sm group-hover:flex">
+                    <div className={cn(
+                      'absolute -top-3 hidden items-center gap-0.5 rounded-lg border border-border-subtle bg-white p-0.5 shadow-sm group-hover:flex',
+                      message.sender?.id === user?.id ? 'left-2' : 'right-2',
+                    )}>
                       <button
                         onClick={() => setOpenPickerFor(openPickerFor === message.id ? null : message.id)}
                         className="rounded p-1 text-text-secondary transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
