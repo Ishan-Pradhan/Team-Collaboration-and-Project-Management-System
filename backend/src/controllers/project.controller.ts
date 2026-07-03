@@ -9,6 +9,9 @@ import {
   organizationMemberRepository,
   organizationRepository,
 } from '../repositories/organization.repository.js';
+import { userRepository } from '../repositories/users.repository.js';
+import { notifyUser } from '../utils/notify.js';
+import { env } from '../config/env.js';
 
 // ─── Helpers ──────────────────────────────────────────────────
 
@@ -213,7 +216,7 @@ export const addProjectMember = asyncHandler(
     const project = await projectRepository.findById(projectId);
     if (!project) throw new ApiError(404, 'Project not found');
 
-    const { isOrgPrivileged } = await getOrgContext(project.organizationId, user.id);
+    const { org, isOrgPrivileged } = await getOrgContext(project.organizationId, user.id);
     const isProjectManager = await projectRepository.isProjectManager(projectId, user.id);
 
     if (!isOrgPrivileged && !isProjectManager) {
@@ -233,6 +236,26 @@ export const addProjectMember = asyncHandler(
     if (existing) throw new ApiError(400, 'User is already a member of this project');
 
     const member = await projectRepository.addMember(projectId, userId, 'MEMBER');
+
+    const targetUser = await userRepository.findById(userId);
+    await notifyUser({
+      userId,
+      organizationId: project.organizationId,
+      type: 'project_member_added',
+      title: `${user.name} added you to ${project.name}`,
+      body: `You were added to the ${project.name} project in ${org?.name ?? 'your workspace'}.`,
+      entityType: 'project',
+      entityId: project.id,
+      email: targetUser
+        ? {
+            to: targetUser.email,
+            subject: `${user.name} added you to ${project.name}`,
+            bodyText: `You were added to the ${project.name} project in ${org?.name ?? 'your workspace'}.`,
+            link: `${(env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '')}/org/${org?.slug}/projects/${project.id}`,
+          }
+        : undefined,
+    });
+
     return res.status(201).json({
       success: true,
       message: 'Member added to project successfully',
@@ -263,7 +286,7 @@ export const removeProjectMember = asyncHandler(
       }
     }
 
-    const { isOrgPrivileged } = await getOrgContext(project.organizationId, user.id);
+    const { org, isOrgPrivileged } = await getOrgContext(project.organizationId, user.id);
     const isProjectManager = await projectRepository.isProjectManager(projectId, user.id);
     const isSelf = user.id === userId;
 
@@ -273,6 +296,28 @@ export const removeProjectMember = asyncHandler(
 
     const removedCount = await projectRepository.removeMember(projectId, userId);
     if (removedCount === 0) throw new ApiError(404, 'Member not found in this project');
+
+    // Only notify when someone else removed this user — self-removal needs no self-notification.
+    if (!isSelf) {
+      const targetUser = await userRepository.findById(userId);
+      await notifyUser({
+        userId,
+        organizationId: project.organizationId,
+        type: 'project_member_removed',
+        title: `You were removed from ${project.name}`,
+        body: `${user.name} removed you from the ${project.name} project in ${org?.name ?? 'your workspace'}.`,
+        entityType: 'project',
+        entityId: project.id,
+        email: targetUser
+          ? {
+              to: targetUser.email,
+              subject: `You were removed from ${project.name}`,
+              bodyText: `${user.name} removed you from the ${project.name} project in ${org?.name ?? 'your workspace'}.`,
+              link: `${(env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '')}/org/${org?.slug}/projects`,
+            }
+          : undefined,
+      });
+    }
 
     return ok(res, null, 'Member removed from project successfully');
   }
