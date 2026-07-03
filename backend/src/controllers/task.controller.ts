@@ -10,8 +10,10 @@ import { taskCommentRepository } from '../repositories/taskComment.repository.js
 import { taskAttachmentRepository } from '../repositories/taskAttachment.repository.js';
 import { subtaskRepository } from '../repositories/subtask.repository.js';
 import { uploadToCloudinary, deleteFromCloudinary } from '../services/cloudinary.service.js';
-import { organizationMemberRepository } from '../repositories/organization.repository.js';
+import { organizationMemberRepository, organizationRepository } from '../repositories/organization.repository.js';
 import { activityLogRepository } from '../repositories/activityLog.repository.js';
+import { notifyUser } from '../utils/notify.js';
+import { env } from '../config/env.js';
 function cloudinaryResourceType(mimeType: string): 'image' | 'video' | 'raw' {
   if (mimeType.startsWith('image/') || mimeType === 'application/pdf') return 'image';
   if (mimeType.startsWith('video/')) return 'video';
@@ -79,7 +81,7 @@ export const createTask = asyncHandler(
     const user = req.user;
     if (!user) throw new ApiError(401, 'Unauthorized');
 
-    await requireProjectMembership(projectId, user.id);
+    const project = await requireProjectMembership(projectId, user.id);
 
     const columns = await kanbanColumnRepository.findByProject(projectId);
     const colExists = columns.some((c) => c.id === columnId);
@@ -103,6 +105,32 @@ export const createTask = asyncHandler(
     }
 
     const created = await taskRepository.findById(task.id);
+
+    if (created?.assignees && created.assignees.length > 0) {
+      const org = await organizationRepository.findById(project.organizationId);
+      await Promise.all(
+        created.assignees
+          .filter((assignee) => assignee.id !== user.id)
+          .map((assignee) =>
+            notifyUser({
+              userId: assignee.id,
+              organizationId: project.organizationId,
+              projectId: project.id,
+              type: 'task_assigned',
+              title: `${user.name} assigned you to "${created.title}"`,
+              body: `You were assigned to a task in ${project.name}.`,
+              entityType: 'task',
+              entityId: created.id,
+              email: {
+                to: assignee.email,
+                subject: `${user.name} assigned you to "${created.title}"`,
+                bodyText: `You were assigned to a task in ${project.name}.`,
+                link: `${(env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '')}/org/${org?.slug}/projects/${project.id}?taskId=${created.id}`,
+              },
+            })
+          )
+      );
+    }
 
     activityLogRepository.log({
       projectId,
@@ -148,11 +176,13 @@ export const updateTask = asyncHandler(
     const user = req.user;
     if (!user) throw new ApiError(401, 'Unauthorized');
 
-    await requireProjectMembership(projectId, user.id);
+    const project = await requireProjectMembership(projectId, user.id);
 
     const task = await taskRepository.findById(taskId);
     if (!task || task.projectId !== projectId)
       throw new ApiError(404, 'Task not found');
+
+    const previousAssigneeIds = new Set((task.assignees ?? []).map((a) => a.id));
 
     await taskRepository.update(taskId, {
       title: title !== undefined ? title.trim() : task.title,
@@ -166,6 +196,36 @@ export const updateTask = asyncHandler(
     }
 
     const updated = await taskRepository.findById(taskId);
+
+    if (assigneeIds !== undefined && updated?.assignees) {
+      const newlyAssigned = updated.assignees.filter(
+        (assignee) => !previousAssigneeIds.has(assignee.id) && assignee.id !== user.id
+      );
+      if (newlyAssigned.length > 0) {
+        const org = await organizationRepository.findById(project.organizationId);
+        await Promise.all(
+          newlyAssigned.map((assignee) =>
+            notifyUser({
+              userId: assignee.id,
+              organizationId: project.organizationId,
+              projectId: project.id,
+              type: 'task_assigned',
+              title: `${user.name} assigned you to "${updated.title}"`,
+              body: `You were assigned to a task in ${project.name}.`,
+              entityType: 'task',
+              entityId: taskId,
+              email: {
+                to: assignee.email,
+                subject: `${user.name} assigned you to "${updated.title}"`,
+                bodyText: `You were assigned to a task in ${project.name}.`,
+                link: `${(env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '')}/org/${org?.slug}/projects/${project.id}?taskId=${taskId}`,
+              },
+            })
+          )
+        );
+      }
+    }
+
     return ok(res, updated, 'Task updated successfully');
   }
 );
@@ -386,12 +446,38 @@ export const createComment = asyncHandler(async (req: AuthRequest, res: Response
   const user = req.user;
   if (!user) throw new ApiError(401, 'Unauthorized');
 
-  await requireProjectMembership(projectId, user.id);
+  const project = await requireProjectMembership(projectId, user.id);
 
   const task = await taskRepository.findById(taskId);
   if (!task || task.projectId !== projectId) throw new ApiError(404, 'Task not found');
 
   const comment = await taskCommentRepository.create({ taskId, authorId: user.id, content: content.trim() });
+
+  const otherAssignees = (task.assignees ?? []).filter((assignee) => assignee.id !== user.id);
+  if (otherAssignees.length > 0) {
+    const org = await organizationRepository.findById(project.organizationId);
+    const trimmedContent = content.trim();
+    await Promise.all(
+      otherAssignees.map((assignee) =>
+        notifyUser({
+          userId: assignee.id,
+          organizationId: project.organizationId,
+          projectId: project.id,
+          type: 'task_comment_added',
+          title: `${user.name} commented on "${task.title}"`,
+          body: trimmedContent.slice(0, 200),
+          entityType: 'task',
+          entityId: taskId,
+          email: {
+            to: assignee.email,
+            subject: `${user.name} commented on "${task.title}"`,
+            bodyText: trimmedContent.slice(0, 200),
+            link: `${(env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '')}/org/${org?.slug}/projects/${project.id}?taskId=${taskId}`,
+          },
+        })
+      )
+    );
+  }
 
   activityLogRepository.log({
     projectId,
