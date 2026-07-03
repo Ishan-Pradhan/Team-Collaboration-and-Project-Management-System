@@ -39,6 +39,7 @@ async function notifyAdminsOfMemberLeave(
     recipients.map((userId) =>
       Notification.create({
         userId,
+        organizationId,
         type: 'member_left',
         title,
         body,

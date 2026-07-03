@@ -14,6 +14,15 @@ export const Notification = sequelize.define<NotificationInstance>(
       type: DataTypes.UUID,
       allowNull: false,
     },
+    organizationId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    projectId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      defaultValue: null,
+    },
     type: {
       type: DataTypes.STRING(100),
       allowNull: false,
