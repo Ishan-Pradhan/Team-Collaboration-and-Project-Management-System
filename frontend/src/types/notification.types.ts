@@ -35,3 +35,16 @@ export interface UnreadCountResponse {
   message: string;
   data: { count: number };
 }
+
+export interface UnreadChannel {
+  channelId: string;
+  title: string;
+  body: string | null;
+  createdAt: string;
+}
+
+export interface UnreadChannelsResponse {
+  success: boolean;
+  message: string;
+  data: UnreadChannel[];
+}
