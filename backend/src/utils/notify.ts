@@ -50,3 +50,22 @@ export async function notifyUser(params: NotifyUserParams): Promise<void> {
     }
   }
 }
+
+interface NotifyNewMessageParams {
+  userId: string;
+  organizationId: string;
+  channelId: string;
+  title: string;
+  body: string;
+}
+
+// Sibling to notifyUser(), not a variant of it — this event type has no
+// email option at all, so a message-frequency email can never happen.
+export async function notifyNewMessage(params: NotifyNewMessageParams): Promise<void> {
+  try {
+    const notification = await notificationRepository.upsertMessageNotification(params);
+    getIO().to(`user:${params.userId}`).emit('notification:new', serializeNotification(notification));
+  } catch (err) {
+    console.error('[notifyNewMessage] failed to upsert/push message notification:', err);
+  }
+}
