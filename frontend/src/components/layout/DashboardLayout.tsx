@@ -24,6 +24,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { useLogout } from '@/hooks/useAuth';
 import { useOrgProjects } from '@/hooks/useProject';
 import { useChatSocket } from '@/hooks/useChatSocket';
+import { useNotificationSocket } from '@/hooks/useNotificationSocket';
 import { cn } from '@/lib/utils';
 
 
@@ -87,6 +88,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const activeOrg = orgs?.find((o) => o.slug === currentSlug) || null;
   const { data: projects, isLoading: projectsLoading } = useOrgProjects(activeOrg?.id || '');
   const { connected: chatConnected } = useChatSocket(activeOrg?.id);
+  useNotificationSocket();
 
   // Sync workspace store with the URL's current slug
   useEffect(() => {
