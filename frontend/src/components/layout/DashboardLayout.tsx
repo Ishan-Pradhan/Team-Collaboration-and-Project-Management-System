@@ -81,14 +81,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Parse organization slug from the pathname
   const match = pathname.match(/^\/org\/([^/]+)/);
-  const currentSlug = match ? match[1] : null;
+  const urlSlug = match ? match[1] : null;
 
   const { data: orgs, isLoading: orgsLoading } = useMyOrganizations();
   const { currentOrg, setCurrentOrg } = useOrgStore();
   const { user } = useAuthStore();
   const logout = useLogout();
 
-  const activeOrg = orgs?.find((o) => o.slug === currentSlug) || null;
+  // On routes with no org in the URL (e.g. /notifications), fall back to the
+  // last-active org so the sidebar keeps showing Projects/Chat/Members instead
+  // of degrading to a slug-less state.
+  const activeOrg = (urlSlug ? orgs?.find((o) => o.slug === urlSlug) : currentOrg) || null;
+  const currentSlug = activeOrg?.slug ?? null;
   const { data: projects, isLoading: projectsLoading } = useOrgProjects(activeOrg?.id || '');
   const { connected: chatConnected } = useChatSocket(activeOrg?.id);
   useNotificationSocket();
