@@ -29,7 +29,7 @@ export function NotificationRow({ notification, onClick }: NotificationRowProps)
       )}
     >
       <div className="flex items-center gap-2">
-        {!notification.isRead && <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand" />}
+        {!notification.isRead && <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />}
         <span className={cn('truncate', !notification.isRead ? 'font-medium text-text-primary' : 'text-text-secondary')}>
           {notification.title}
         </span>

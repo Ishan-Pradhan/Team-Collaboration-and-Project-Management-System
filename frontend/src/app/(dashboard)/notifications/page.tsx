@@ -11,6 +11,35 @@ import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead 
 import { useMyOrganizations } from '@/hooks/useOrganization';
 import type { Notification } from '@/types/notification.types';
 
+interface NotificationGroup {
+  label: 'Today' | 'Earlier';
+  items: Notification[];
+}
+
+function isToday(iso: string): boolean {
+  const d = new Date(iso);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
+
+function groupByDate(notifications: Notification[]): NotificationGroup[] {
+  const groups: NotificationGroup[] = [];
+  for (const n of notifications) {
+    const label: NotificationGroup['label'] = isToday(n.createdAt) ? 'Today' : 'Earlier';
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) {
+      last.items.push(n);
+    } else {
+      groups.push({ label, items: [n] });
+    }
+  }
+  return groups;
+}
+
 export default function NotificationsPage() {
   const router = useRouter();
   const [page, setPage] = useState(1);
@@ -31,25 +60,38 @@ export default function NotificationsPage() {
   };
 
   const { notifications, meta } = data;
+  const groups = groupByDate(notifications);
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-2xl space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-text-primary">Notifications</h1>
-        <Button variant="outline" size="sm" onClick={() => markAllRead.mutate()}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => markAllRead.mutate()}
+          className="text-text-secondary hover:bg-transparent hover:text-text-primary"
+        >
           Mark all as read
         </Button>
       </div>
 
-      <div className="rounded-xl border border-border-subtle bg-white p-2">
+      <div className="rounded-lg border border-border-subtle bg-white p-2">
         {notifications.length === 0 ? (
           <p className="px-3 py-10 text-center text-sm text-text-muted">No notifications yet</p>
         ) : (
-          <div className="divide-y divide-border-subtle">
-            {notifications.map((n) => (
-              <NotificationRow key={n.id} notification={n} onClick={handleRowClick} />
-            ))}
-          </div>
+          groups.map((group, i) => (
+            <div key={i}>
+              <p className="px-3 pb-1 pt-2.5 text-xs font-semibold uppercase tracking-wide text-text-muted">
+                {group.label}
+              </p>
+              <div className="divide-y divide-border-subtle">
+                {group.items.map((n) => (
+                  <NotificationRow key={n.id} notification={n} onClick={handleRowClick} />
+                ))}
+              </div>
+            </div>
+          ))
         )}
       </div>
 
