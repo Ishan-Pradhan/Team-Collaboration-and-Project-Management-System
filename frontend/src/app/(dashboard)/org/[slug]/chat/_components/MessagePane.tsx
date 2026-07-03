@@ -253,7 +253,7 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                 <p className="text-center text-xs italic text-text-secondary">{message.content}</p>
               ) : (
                 <div className={cn(
-                  'group relative -mx-2 flex items-start gap-2.5 rounded-md px-2 py-0.5 transition-colors hover:bg-surface-muted/40',
+                  'group relative flex items-start gap-2.5 py-0.5',
                   isOwn && 'flex-row-reverse',
                 )}>
                   {showHeader ? (
@@ -335,28 +335,28 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                               <EmojiPicker onEmojiClick={(emojiData) => handlePickEmoji(message, emojiData)} />
                             </div>
                           )}
-                        </div>
 
-                        {message.reactions.length > 0 && (
-                          <div className={cn('mt-1 flex w-fit flex-wrap gap-1', isOwn ? 'self-start' : 'self-end')}>
-                            {message.reactions.map((reaction) => {
-                              const reacted = !!user && reaction.userIds.includes(user.id);
-                              return (
-                                <button
-                                  key={reaction.emoji}
-                                  onClick={() => handleToggleReaction(message, reaction.emoji)}
-                                  className={`rounded-full border px-1.5 py-0.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                                    reacted
-                                      ? 'border-primary bg-primary/10 text-primary'
-                                      : 'border-border-subtle text-text-secondary hover:bg-surface-muted'
-                                  }`}
-                                >
-                                  {reaction.emoji} {reaction.userIds.length}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
+                          {message.reactions.length > 0 && (
+                            <div className={cn('mt-1 flex w-fit flex-wrap gap-1', !isOwn && 'ml-auto')}>
+                              {message.reactions.map((reaction) => {
+                                const reacted = !!user && reaction.userIds.includes(user.id);
+                                return (
+                                  <button
+                                    key={reaction.emoji}
+                                    onClick={() => handleToggleReaction(message, reaction.emoji)}
+                                    className={`rounded-full border px-1.5 py-0.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                                      reacted
+                                        ? 'border-primary bg-primary/10 text-primary'
+                                        : 'border-border-subtle text-text-secondary hover:bg-surface-muted'
+                                    }`}
+                                  >
+                                    {reaction.emoji} {reaction.userIds.length}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       </>
                     )}
                   </div>
