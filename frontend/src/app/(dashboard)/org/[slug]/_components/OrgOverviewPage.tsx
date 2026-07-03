@@ -1,16 +1,19 @@
 'use client';
 
-import { use } from 'react';
+import { use, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useOrganizationBySlug } from '@/hooks/useOrganization';
 import { useOrgDashboard } from '@/hooks/useProject';
 import { useAuthStore } from '@/store/auth.store';
 import { cn } from '@/lib/utils';
 import {
   AlertTriangle, ArrowRight, CheckSquare,
-  Clock, FolderOpen, MessageSquare, Plus, ArrowRightLeft, UserPlus,
+  Clock, FolderOpen, MessageSquare,
 } from 'lucide-react';
 import { ErrorState } from '@/components/shared/ErrorState';
+import { ActivityRow } from '@/components/shared/ActivityRow';
+import { getSocket } from '@/lib/socket';
 import type { DashboardData } from '@/types/project.types';
 
 // ─── Helpers ─────────────────────────────────────────────────
@@ -35,18 +38,6 @@ const PRIORITY_LABEL: Record<string, string> = {
   HIGH: 'text-orange-600 bg-orange-50',
   CRITICAL: 'text-red-600 bg-red-50',
 };
-
-function formatRelativeTime(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(ms / 60000);
-  if (m < 1) return 'just now';
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  if (d < 7) return `${d}d ago`;
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
 
 function getDueDateLabel(dueDate: string | null): { label: string; cls: string } | null {
   if (!dueDate) return null;
@@ -141,6 +132,24 @@ export default function OrgOverviewPage({ params }: Props) {
 
   const { data: org } = useOrganizationBySlug(slug);
   const { data: dashboard, isLoading, error, refetch } = useOrgDashboard(org?.id ?? '');
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!org || !dashboard) return;
+    const myProjectIds = new Set(dashboard.myProjects.map((p) => p.id));
+    const socket = getSocket();
+
+    const onActivityNew = ({ projectId }: { projectId: string }) => {
+      if (myProjectIds.has(projectId)) {
+        qc.invalidateQueries({ queryKey: ['organizations', org.id, 'dashboard'] });
+      }
+    };
+
+    socket.on('activity:new', onActivityNew);
+    return () => {
+      socket.off('activity:new', onActivityNew);
+    };
+  }, [org, dashboard, qc]);
 
   if (isLoading || !org) return <DashboardSkeleton />;
   if (error || !dashboard) {
@@ -323,7 +332,7 @@ export default function OrgOverviewPage({ params }: Props) {
           ) : (
             <ul className="divide-y divide-gray-50 max-h-[320px] overflow-y-auto">
               {dashboard.recentActivity.map((item) => (
-                <ActivityRow key={item.id} item={item} slug={slug} router={router} />
+                <ActivityRow key={item.id} item={item} slug={slug} />
               ))}
             </ul>
           )}
@@ -366,87 +375,3 @@ export default function OrgOverviewPage({ params }: Props) {
   );
 }
 
-// ─── Activity row ─────────────────────────────────────────────
-
-const ACTIVITY_ICON: Record<string, { node: React.ReactNode; bg: string }> = {
-  task_created: { node: <Plus size={10} />, bg: 'bg-emerald-100 text-emerald-600' },
-  task_moved: { node: <ArrowRightLeft size={10} />, bg: 'bg-blue-100 text-blue-600' },
-  task_deleted: { node: <AlertTriangle size={10} />, bg: 'bg-red-100 text-red-600' },
-  comment_added: { node: <MessageSquare size={10} />, bg: 'bg-gray-100 text-gray-500' },
-  member_added: { node: <UserPlus size={10} />, bg: 'bg-purple-100 text-purple-600' },
-};
-
-function buildActivityText(item: DashboardData['recentActivity'][number]): React.ReactNode {
-  const { metadata } = item;
-  const task = metadata.taskTitle ? (
-    <span className="font-medium text-gray-800">{metadata.taskTitle}</span>
-  ) : null;
-
-  switch (item.type) {
-    case 'task_created': return <>created {task}</>;
-    case 'task_moved':
-      return (
-        <>
-          moved {task}
-          {metadata.fromColumn && metadata.toColumn && (
-            <span className="text-gray-400"> · {metadata.fromColumn} → {metadata.toColumn}</span>
-          )}
-        </>
-      );
-    case 'comment_added':
-      return (
-        <>
-          commented on {task}
-          {metadata.content && (
-            <span className="text-gray-400 italic"> "{metadata.content}"</span>
-          )}
-        </>
-      );
-    case 'task_deleted':
-      return (
-        <>deleted <span className="line-through text-gray-400">{metadata.taskTitle}</span></>
-      );
-    case 'member_added': return <>joined the project</>;
-    default: return null;
-  }
-}
-
-function ActivityRow({
-  item, slug, router,
-}: {
-  item: DashboardData['recentActivity'][number];
-  slug: string;
-  router: ReturnType<typeof useRouter>;
-}) {
-  const icon = ACTIVITY_ICON[item.type] ?? ACTIVITY_ICON.task_created;
-  const taskId = item.type !== 'task_deleted' ? item.metadata.taskId : undefined;
-
-  return (
-    <li
-      className="flex items-start gap-3.5 px-5 py-3.5 hover:bg-gray-50 transition-colors cursor-pointer"
-      onClick={() => taskId && router.push(`/org/${slug}/projects/${item.projectId}?taskId=${taskId}`)}
-    >
-      <Avatar name={item.actor.name} url={item.actor.avatarUrl} size={7} />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-600 leading-snug">
-          <span className="font-semibold text-gray-900">{item.actor.name}</span>
-          {' '}
-          {buildActivityText(item)}
-        </p>
-        <div className="mt-1 flex items-center gap-2">
-          <span className={cn('inline-flex items-center rounded px-1 py-0.5 text-[0.65rem] font-medium', icon.bg)}>
-            {icon.node}
-          </span>
-          <button
-            onClick={(e) => { e.stopPropagation(); router.push(`/org/${slug}/projects/${item.projectId}`); }}
-            className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
-          >
-            {item.projectName}
-          </button>
-          <span className="text-gray-200 text-xs">·</span>
-          <span className="text-xs text-gray-400">{formatRelativeTime(item.createdAt)}</span>
-        </div>
-      </div>
-    </li>
-  );
-}
