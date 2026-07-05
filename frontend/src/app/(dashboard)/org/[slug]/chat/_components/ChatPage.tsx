@@ -182,6 +182,7 @@ export default function ChatPage({ params }: Props) {
       !channels.some((c) => c.id === selectedChannel.id) &&
       !dms.some((c) => c.id === selectedChannel.id)
     ) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedChannel(null);
     }
   }, [channels, dms, selectedChannel]);
@@ -207,6 +208,7 @@ export default function ChatPage({ params }: Props) {
 
     const existing = dms.find((dm) => dm.dmParticipant?.id === dmUserId);
     if (existing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedChannel(existing);
       router.replace(`/org/${slug}/chat`);
       return;
@@ -225,10 +227,27 @@ export default function ChatPage({ params }: Props) {
     if (!channelId || !channels) return;
 
     const target = channels.find((c) => c.id === channelId);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (target) setSelectedChannel(target);
     router.replace(`/org/${slug}/chat`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, channels]);
+
+  useEffect(() => {
+    if (searchParams.get('createChannel') === 'true') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowCreateModal(true);
+      router.replace(`/org/${slug}/chat`);
+    }
+  }, [searchParams, slug, router]);
+
+  useEffect(() => {
+    if (searchParams.get('startDM') === 'true') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowDMModal(true);
+      router.replace(`/org/${slug}/chat`);
+    }
+  }, [searchParams, slug, router]);
 
   if (orgLoading || channelsLoading) return <ChatSkeleton />;
   if (orgError || !org) {

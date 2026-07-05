@@ -7,7 +7,6 @@ import {
   BellOff,
   CalendarDays,
   ChevronDown,
-  FolderOpen,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -16,6 +15,8 @@ import {
   Settings,
   Users,
   X,
+  Hash,
+  Lock,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -28,6 +29,8 @@ import { useOrgProjects } from '@/hooks/useProject';
 import { useChatSocket } from '@/hooks/useChatSocket';
 import { useNotificationSocket } from '@/hooks/useNotificationSocket';
 import { useUnreadCount, useUnreadChannels } from '@/hooks/useNotification';
+import { useChannels, useDMs, useMutedChannels } from '@/hooks/useChannel';
+import { useChatStore } from '@/store/chat.store';
 import { NavBadge } from '@/components/shared/NavBadge';
 import { cn } from '@/lib/utils';
 
@@ -103,6 +106,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { data: unreadNotificationCount } = useUnreadCount();
   const { data: unreadChannels } = useUnreadChannels();
 
+  const { data: channels, isLoading: channelsLoading } = useChannels(activeOrg?.id || '');
+  const { data: dms, isLoading: dmsLoading } = useDMs(activeOrg?.id || '');
+  const { data: mutedChannelIds } = useMutedChannels();
+  const activeChannelId = useChatStore((state) => state.activeChannelId);
+
   // Sync workspace store with the URL's current slug
   useEffect(() => {
     if (activeOrg) {
@@ -120,6 +128,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       onSettled: () => router.push('/auth/login'),
     });
   };
+
+  const unreadMap = new Map((unreadChannels ?? []).map((c) => [c.channelId, c]));
+  const mutedSet = new Set(mutedChannelIds ?? []);
 
   // Sidebar links derived directly from URL slug to ensure SSR matches client
   const navItems = [
@@ -353,6 +364,140 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                       <Plus size={16} className="text-white group-hover:text-primary transition-all" />
                       <span>View all projects</span>
                     </Link>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Channels Section */}
+          {currentSlug && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between px-3 py-1">
+                <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+                  Channels
+                </span>
+                <Link
+                  href={`/org/${currentSlug}/chat?createChannel=true`}
+                  className="rounded p-0.5 text-text-muted hover:bg-surface-muted hover:text-white transition-colors"
+                  title="Create channel"
+                >
+                  <Plus size={14} />
+                </Link>
+              </div>
+              <div className="space-y-1">
+                {channelsLoading ? (
+                  <span className="block px-3 py-1.5 text-xs text-text-muted">Loading channels...</span>
+                ) : (
+                  <>
+                    {channels && channels.length > 0 ? (
+                      channels.map((channel) => {
+                        const isChannelActive = activeChannelId === channel.id;
+                        const unread = unreadMap.get(channel.id);
+                        const isMuted = mutedSet.has(channel.id);
+                        
+                        return (
+                          <Link
+                            key={channel.id}
+                            href={`/org/${currentSlug}/chat?channelId=${channel.id}`}
+                            className={cn(
+                              'flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm transition-all truncate',
+                              isChannelActive
+                                ? 'bg-primary-foreground text-primary font-medium'
+                                : unread
+                                  ? 'text-white font-semibold'
+                                  : 'text-white/80 hover:bg-surface-muted hover:text-text-primary',
+                              isMuted && 'opacity-50'
+                            )}
+                          >
+                            {channel.type === 'PUBLIC' ? (
+                              <Hash size={15} className="shrink-0" />
+                            ) : (
+                              <Lock size={15} className="shrink-0" />
+                            )}
+                            <span className="truncate flex-1">{channel.name}</span>
+                            {unread && (
+                              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+                            )}
+                          </Link>
+                        );
+                      })
+                    ) : (
+                      <span className="block px-3 py-1.5 text-xs text-text-muted italic">
+                        No channels yet
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Direct Messages Section */}
+          {currentSlug && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between px-3 py-1">
+                <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+                  Direct Messages
+                </span>
+                <Link
+                  href={`/org/${currentSlug}/chat?startDM=true`}
+                  className="rounded p-0.5 text-text-muted hover:bg-surface-muted hover:text-white transition-colors"
+                  title="New direct message"
+                >
+                  <Plus size={14} />
+                </Link>
+              </div>
+              <div className="space-y-1">
+                {dmsLoading ? (
+                  <span className="block px-3 py-1.5 text-xs text-text-muted">Loading DMs...</span>
+                ) : (
+                  <>
+                    {dms && dms.length > 0 ? (
+                      dms.map((dm) => {
+                        const isDMActive = activeChannelId === dm.id;
+                        const unread = unreadMap.get(dm.id);
+                        const isMuted = mutedSet.has(dm.id);
+                        const participantName = dm.dmParticipant?.name ?? 'Unknown';
+                        const avatarUrl = dm.dmParticipant?.avatarUrl;
+                        
+                        return (
+                          <Link
+                            key={dm.id}
+                            href={`/org/${currentSlug}/chat?dmUserId=${dm.dmParticipant?.id}`}
+                            className={cn(
+                              'flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm transition-all truncate',
+                              isDMActive
+                                ? 'bg-primary-foreground text-primary font-medium'
+                                : unread
+                                  ? 'text-white font-semibold'
+                                  : 'text-white/80 hover:bg-surface-muted hover:text-text-primary',
+                              isMuted && 'opacity-50'
+                            )}
+                          >
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-[10px] font-semibold text-white">
+                              {avatarUrl ? (
+                                <img
+                                  src={avatarUrl}
+                                  alt={participantName}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                participantName.charAt(0).toUpperCase()
+                              )}
+                            </span>
+                            <span className="truncate flex-1">{participantName}</span>
+                            {unread && (
+                              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+                            )}
+                          </Link>
+                        );
+                      })
+                    ) : (
+                      <span className="block px-3 py-1.5 text-xs text-text-muted italic">
+                        No direct messages yet
+                      </span>
+                    )}
                   </>
                 )}
               </div>
