@@ -316,7 +316,7 @@ export default function MembersPage({ params }: Props) {
 
       {/* Members Tab */}
       {activeTab === 'members' && (
-        <div className="overflow-hidden rounded-xl border border-border-subtle bg-white shadow-card">
+        <div className="overflow-hidden rounded-xl border border-border-subtle bg-white">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left text-sm">
               <thead className="border-b border-border-subtle bg-surface-muted/50 text-xs font-semibold text-text-secondary">
@@ -324,6 +324,7 @@ export default function MembersPage({ params }: Props) {
                   <th className="px-6 py-4">User</th>
                   <th className="px-6 py-4">Email</th>
                   <th className="px-6 py-4">Role</th>
+                  <th className="px-6 py-4">Joined</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -336,7 +337,7 @@ export default function MembersPage({ params }: Props) {
                   const canEditRole = isAdmin && !isOwner && !isSelf;
 
                   return (
-                    <tr key={member.id} className="hover:bg-surface-hover/30 transition-colors">
+                    <tr key={member.id} className="hover:bg-surface-hover transition-colors">
                       <td className="whitespace-nowrap px-6 py-4">
                         <button
                           onClick={() => setProfileUserId(member.userId)}
@@ -366,7 +367,12 @@ export default function MembersPage({ params }: Props) {
                                   openRoleDropdown === member.userId ? null : member.userId
                                 )
                               }
-                              className="inline-flex items-center gap-1 rounded bg-surface-muted px-2 py-0.5 text-xs font-medium text-text-secondary hover:bg-surface-hover transition-colors"
+                              className={cn(
+                                'inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium transition-colors',
+                                member.role === 'ORG_ADMIN'
+                                  ? 'bg-primary/10 text-primary hover:bg-primary/15'
+                                  : 'bg-surface-muted text-text-secondary hover:bg-surface-hover',
+                              )}
                             >
                               <UserCog size={11} />
                               {member.role === 'ORG_ADMIN' ? 'Admin' : 'Member'}
@@ -398,18 +404,30 @@ export default function MembersPage({ params }: Props) {
                             )}
                           </div>
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded bg-surface-muted px-2 py-0.5 text-xs font-medium text-text-secondary">
+                          <span className={cn(
+                            'inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium',
+                            isOwner
+                              ? 'bg-brand-soft text-brand-hover'
+                              : member.role === 'ORG_ADMIN'
+                                ? 'bg-primary/10 text-primary'
+                                : 'bg-surface-muted text-text-secondary',
+                          )}>
                             {isOwner ? (
                               <>
-                                <Shield size={12} className="text-brand" /> Owner
+                                <Shield size={12} /> Owner
                               </>
                             ) : member.role === 'ORG_ADMIN' ? (
-                              'Admin'
+                              <>
+                                <UserCog size={12} /> Admin
+                              </>
                             ) : (
                               'Member'
                             )}
                           </span>
                         )}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-text-secondary">
+                        {new Date(member.createdAt).toLocaleDateString()}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-right">
                         {isSelf && !isOwner && (
@@ -455,7 +473,7 @@ export default function MembersPage({ params }: Props) {
 
       {/* Pending Invites Tab */}
       {activeTab === 'invites' && isAdmin && (
-        <div className="overflow-hidden rounded-xl border border-border-subtle bg-white shadow-card">
+        <div className="overflow-hidden rounded-xl border border-border-subtle bg-white">
           {invitesLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-5 w-5 animate-spin text-text-secondary" />
@@ -475,7 +493,7 @@ export default function MembersPage({ params }: Props) {
                   {pendingInvites.map((invite) => (
                     <tr
                       key={invite.id}
-                      className="hover:bg-surface-hover/30 transition-colors"
+                      className="hover:bg-surface-hover transition-colors"
                     >
                       <td className="whitespace-nowrap px-6 py-4">
                         <div className="flex items-center gap-2">
@@ -508,12 +526,16 @@ export default function MembersPage({ params }: Props) {
               </table>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-14 text-center">
-              <Mail size={36} className="mb-3 text-text-secondary/40" />
-              <p className="text-sm font-medium text-text-secondary">No pending invitations</p>
-              <p className="mt-1 text-xs text-text-secondary/70">
-                All invites have been accepted or none have been sent.
-              </p>
+            <div className="flex flex-col items-center justify-center gap-3 py-14 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted">
+                <Mail size={24} className="text-text-muted" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-text-secondary">No pending invitations</p>
+                <p className="mt-1 text-xs text-text-secondary/70">
+                  All invites have been accepted or none have been sent.
+                </p>
+              </div>
             </div>
           )}
         </div>
@@ -521,7 +543,7 @@ export default function MembersPage({ params }: Props) {
 
       {/* Banned Users Tab */}
       {activeTab === 'bans' && isAdmin && (
-        <div className="overflow-hidden rounded-xl border border-border-subtle bg-white shadow-card">
+        <div className="overflow-hidden rounded-xl border border-border-subtle bg-white">
           {bansLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-5 w-5 animate-spin text-text-secondary" />
@@ -539,7 +561,7 @@ export default function MembersPage({ params }: Props) {
                 </thead>
                 <tbody className="divide-y divide-border-subtle">
                   {bans.map((ban) => (
-                    <tr key={ban.id} className="hover:bg-surface-hover/30 transition-colors">
+                    <tr key={ban.id} className="hover:bg-surface-hover transition-colors">
                       <td className="whitespace-nowrap px-6 py-4">
                         <div>
                           <p className="font-medium text-text-primary">{ban.user?.name ?? 'Unknown User'}</p>
@@ -570,12 +592,16 @@ export default function MembersPage({ params }: Props) {
               </table>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-14 text-center">
-              <Ban size={36} className="mb-3 text-text-secondary/40" />
-              <p className="text-sm font-medium text-text-secondary">No banned users</p>
-              <p className="mt-1 text-xs text-text-secondary/70">
-                Members you ban from this workspace will show up here.
-              </p>
+            <div className="flex flex-col items-center justify-center gap-3 py-14 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted">
+                <Ban size={24} className="text-text-muted" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-text-secondary">No banned users</p>
+                <p className="mt-1 text-xs text-text-secondary/70">
+                  Members you ban from this workspace will show up here.
+                </p>
+              </div>
             </div>
           )}
         </div>
