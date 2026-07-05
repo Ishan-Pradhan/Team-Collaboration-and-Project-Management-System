@@ -153,6 +153,24 @@ export const channelMemberRepository = {
     );
     return publicChannels.map((c) => c.id);
   },
+
+  setMuted: async (
+    channelId: string,
+    userId: string,
+    isMuted: boolean,
+  ): Promise<ChannelMemberInstance | null> => {
+    const membership = await ChannelMember.findOne({ where: { channelId, userId } });
+    if (!membership) return null;
+    return await membership.update({ isMuted });
+  },
+
+  findMutedChannelIds: async (userId: string): Promise<string[]> => {
+    const memberships = await ChannelMember.findAll({
+      where: { userId, isMuted: true },
+      attributes: ['channelId'],
+    });
+    return memberships.map((m) => m.channelId);
+  },
 };
 
 export const messageRepository = {

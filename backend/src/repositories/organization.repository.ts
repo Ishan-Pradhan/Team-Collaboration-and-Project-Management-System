@@ -150,6 +150,24 @@ export const organizationMemberRepository = {
     const ids = new Set([ownerId, ...admins.map((m) => m.userId)]);
     return [...ids];
   },
+
+  setMuted: async (
+    organizationId: string,
+    userId: string,
+    isMuted: boolean,
+  ): Promise<OrganizationMemberInstance | null> => {
+    const membership = await OrganizationMember.findOne({ where: { organizationId, userId } });
+    if (!membership) return null;
+    return await membership.update({ isMuted });
+  },
+
+  findMutedOrganizationIds: async (userId: string): Promise<string[]> => {
+    const memberships = await OrganizationMember.findAll({
+      where: { userId, isMuted: true },
+      attributes: ['organizationId'],
+    });
+    return memberships.map((m) => m.organizationId);
+  },
 };
 
 export const organizationInviteRepository = {
