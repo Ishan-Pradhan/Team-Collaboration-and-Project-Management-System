@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, Loader2, MessageSquare, Paperclip, Send, Smile, Trash2 } from 'lucide-react';
+import { ChevronDown, History, Loader2, MessageSquare, Paperclip, Send, Smile, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react';
 import { parseApiError } from '@/lib/axios';
@@ -16,6 +16,7 @@ import {
   useDeleteMessage,
   useUploadFile,
 } from '@/hooks/useChannel';
+import { Button } from '@/components/ui/button';
 import { getMessages } from '@/services/channel.service';
 import { useAuthStore } from '@/store/auth.store';
 import { getSocket } from '@/lib/socket';
@@ -316,13 +317,15 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
     <div className="flex h-full flex-col">
       <div className="relative flex-1 overflow-y-auto px-4 py-3" onScroll={handleScroll}>
         {messages && messages.length > 0 && (
-          <button
-            onClick={handleLoadMore}
-            disabled={loadingMore}
-            className="mx-auto mb-3 block rounded text-xs text-primary hover:underline disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {loadingMore ? 'Loading…' : 'Load earlier messages'}
-          </button>
+          <div className="mb-3 flex justify-center">
+            <Button variant="outline" size="sm" onClick={handleLoadMore} disabled={loadingMore}>
+              {loadingMore ? (
+                <><Loader2 size={13} className="mr-1.5 animate-spin" />Loading…</>
+              ) : (
+                <><History size={13} className="mr-1.5" />Load earlier messages</>
+              )}
+            </Button>
+          </div>
         )}
         {messages && messages.length > 0 ? (
           messageGroups.map(({ message, showHeader, dateLabel }) => {
