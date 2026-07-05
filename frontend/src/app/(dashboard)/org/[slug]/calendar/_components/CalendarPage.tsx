@@ -105,7 +105,7 @@ export default function CalendarPage({ params }: Props) {
   const loading = projectsLoading || taskQueries.some((q) => q.isLoading);
 
   return (
-    <div className="flex h-full flex-col rounded-xl border border-border-subtle bg-white overflow-hidden">
+    <div className="flex h-[90vh] flex-col rounded-xl border border-border-subtle bg-white overflow-hidden">
 
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-border-subtle shrink-0">
