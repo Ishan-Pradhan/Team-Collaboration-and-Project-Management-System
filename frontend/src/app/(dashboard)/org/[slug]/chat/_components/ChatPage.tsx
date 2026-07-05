@@ -451,10 +451,23 @@ export default function ChatPage({ params }: Props) {
           />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-text-secondary">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted">
-              <MessageSquare size={24} className="text-text-muted" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-muted">
+              <MessageSquare size={26} className="text-text-muted" />
             </div>
-            <p className="text-sm">Select a channel to start chatting</p>
+            <div>
+              <p className="text-sm font-medium text-text-primary">Select a channel to start chatting</p>
+              <p className="mt-0.5 text-xs text-text-secondary">Or start something new</p>
+            </div>
+            <div className="mt-1 flex gap-2">
+              {isAdmin && (
+                <Button variant="outline" size="sm" onClick={() => setShowCreateModal(true)}>
+                  <Plus size={13} className="mr-1.5" /> New Channel
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={() => setShowDMModal(true)}>
+                <Plus size={13} className="mr-1.5" /> New DM
+              </Button>
+            </div>
           </div>
         )}
       </div>
