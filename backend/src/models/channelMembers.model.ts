@@ -23,6 +23,11 @@ export const ChannelMember = sequelize.define<ChannelMemberInstance>(
       defaultValue: DataTypes.NOW,
       allowNull: false,
     },
+    isMuted: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+    },
   },
   {
     tableName: 'channel_members',

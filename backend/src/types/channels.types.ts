@@ -25,13 +25,14 @@ export interface ChannelMembers {
   channelId: string;
   userId: string;
   joinedAt?: Date;
+  isMuted: boolean;
   user?: UserInstance;
   channel?: ChannelInstance;
 }
 
 export type ChannelMemberCreationAttributes = Optional<
   ChannelMembers,
-  'id' | 'joinedAt'
+  'id' | 'joinedAt' | 'isMuted'
 >;
 
 export interface ChannelMemberInstance

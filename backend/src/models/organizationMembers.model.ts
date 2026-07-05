@@ -28,6 +28,11 @@ export const OrganizationMember = sequelize.define<OrganizationMemberInstance>(
       defaultValue: DataTypes.NOW,
       allowNull: false,
     },
+    isMuted: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+    },
   },
   {
     tableName: 'OrganizationMembers',

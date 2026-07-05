@@ -28,6 +28,7 @@ export interface OrganizationMembers {
   userId: string;
   role: 'ORG_ADMIN' | 'MEMBER';
   joinedAt?: Date;
+  isMuted: boolean;
   createdAt?: Date;
   updatedAt?: Date;
   organization?: OrganizationInstance;
@@ -36,7 +37,7 @@ export interface OrganizationMembers {
 
 export type OrganizationMemberCreationAttributes = Optional<
   OrganizationMembers,
-  'id' | 'role' | 'joinedAt' | 'createdAt' | 'updatedAt'
+  'id' | 'role' | 'joinedAt' | 'isMuted' | 'createdAt' | 'updatedAt'
 >;
 
 export interface OrganizationMemberInstance
