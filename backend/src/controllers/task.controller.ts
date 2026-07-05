@@ -32,6 +32,19 @@ const requireProjectMembership = async (projectId: string, userId: string) => {
   return project;
 };
 
+// Helper — resolve whether the user is a project manager, org admin, or org owner
+async function getTaskPermissionContext(
+  project: { organizationId: string },
+  projectId: string,
+  userId: string,
+): Promise<{ isOrgPrivileged: boolean; isProjectManager: boolean; isPrivileged: boolean }> {
+  const org = await organizationRepository.findById(project.organizationId);
+  const orgMembership = await organizationMemberRepository.findOne({ organizationId: project.organizationId, userId });
+  const isOrgPrivileged = org?.ownerId === userId || orgMembership?.role === 'ORG_ADMIN';
+  const isProjectManager = await projectRepository.isProjectManager(projectId, userId);
+  return { isOrgPrivileged, isProjectManager, isPrivileged: isOrgPrivileged || isProjectManager };
+}
+
 // ─────────────────────────────────────────────────────────────
 // TASK HANDLERS
 // ─────────────────────────────────────────────────────────────
@@ -178,6 +191,11 @@ export const updateTask = asyncHandler(
 
     const project = await requireProjectMembership(projectId, user.id);
 
+    const { isPrivileged } = await getTaskPermissionContext(project, projectId, user.id);
+    if (!isPrivileged) {
+      throw new ApiError(403, 'Only project managers or organization admins can edit this task');
+    }
+
     const task = await taskRepository.findById(taskId);
     if (!task || task.projectId !== projectId)
       throw new ApiError(404, 'Task not found');
@@ -238,11 +256,17 @@ export const moveTask = asyncHandler(
     const user = req.user;
     if (!user) throw new ApiError(401, 'Unauthorized');
 
-    await requireProjectMembership(projectId, user.id);
+    const project = await requireProjectMembership(projectId, user.id);
 
     const task = await taskRepository.findById(taskId);
     if (!task || task.projectId !== projectId)
       throw new ApiError(404, 'Task not found');
+
+    const { isPrivileged } = await getTaskPermissionContext(project, projectId, user.id);
+    const isAssignee = (task.assignees ?? []).some((a) => a.id === user.id);
+    if (!isPrivileged && !isAssignee) {
+      throw new ApiError(403, "Only the task's assignees, project managers, or organization admins can move this task");
+    }
 
     // Verify column belongs to project
     const columns = await kanbanColumnRepository.findByProject(projectId);
@@ -282,16 +306,10 @@ export const deleteTask = asyncHandler(
     if (!task || task.projectId !== projectId)
       throw new ApiError(404, 'Task not found');
 
-    // Only task creator, project creator, or org admin can delete
-    const orgMembership = await organizationMemberRepository.findOne({
-      organizationId: project.organizationId,
-      userId: user.id,
-    });
-    const isOrgAdmin = orgMembership?.role === 'ORG_ADMIN';
-    const isCreator = task.createdById === user.id;
-
-    if (!isOrgAdmin && !isCreator)
-      throw new ApiError(403, 'Only the task creator or org admins can delete tasks');
+    const { isPrivileged } = await getTaskPermissionContext(project, projectId, user.id);
+    if (!isPrivileged) {
+      throw new ApiError(403, 'Only project managers or organization admins can delete tasks');
+    }
 
     const taskTitle = task.title;
     await taskRepository.delete(taskId);
