@@ -144,7 +144,7 @@ export default function KanbanPage({ params }: Props) {
   }, [serverColumns, serverTasks, activeDrag, isMutating]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: isAdmin ? 4 : Infinity } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
   );
   const columnIds = useMemo(() => localColumns.map((c) => c.id), [localColumns]);
 
@@ -390,6 +390,7 @@ export default function KanbanPage({ params }: Props) {
                     tasks={localTaskMap[col.id] || []}
                     projectId={projectId}
                     isAdmin={isAdmin}
+                    currentUserId={currentUser?.id}
                     onAddTask={setAddingTaskColumnId}
                     onEditTask={setEditingTask}
                     onDelete={handleDeleteColumn}

@@ -23,19 +23,24 @@ export function KanbanCard({
   task,
   columnName,
   isAdmin = true,
+  currentUserId,
   onEdit,
   overlay = false,
 }: {
   task: Task;
   columnName?: string;
   isAdmin?: boolean;
+  currentUserId?: string;
   onEdit?: () => void;
   overlay?: boolean;
 }) {
+  const isAssignee = (task.assignees ?? []).some((a) => a.id === currentUserId);
+  const canDrag = isAdmin || isAssignee;
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { type: 'task', task },
-    disabled: overlay || !isAdmin,
+    disabled: overlay || !canDrag,
   });
 
   const p = PRIORITY[task.priority];
@@ -56,7 +61,7 @@ export function KanbanCard({
         'flex flex-col gap-2.5 rounded-lg border border-border-subtle bg-white px-3.5 py-3 select-none touch-none outline-none transition-colors',
         overlay
           ? 'shadow-lg rotate-[1deg] opacity-95 cursor-grabbing'
-          : isAdmin
+          : canDrag
             ? 'cursor-grab hover:border-border-muted active:cursor-grabbing'
             : 'cursor-pointer hover:border-border-muted',
         isDragging && !overlay && 'opacity-0',
@@ -171,12 +176,14 @@ function ColumnTaskArea({
   columnName,
   tasks,
   isAdmin,
+  currentUserId,
   onEditTask,
 }: {
   columnId: string;
   columnName: string;
   tasks: Task[];
   isAdmin: boolean;
+  currentUserId?: string;
   onEditTask: (t: Task) => void;
 }) {
   const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks]);
@@ -206,6 +213,7 @@ function ColumnTaskArea({
             task={task}
             columnName={columnName}
             isAdmin={isAdmin}
+            currentUserId={currentUserId}
             onEdit={() => onEditTask(task)}
           />
         ))}
@@ -220,6 +228,7 @@ function KanbanColumnInner({
   tasks,
   projectId,
   isAdmin,
+  currentUserId,
   onAddTask,
   onEditTask,
   onDelete,
@@ -231,6 +240,7 @@ function KanbanColumnInner({
   tasks: Task[];
   projectId: string;
   isAdmin: boolean;
+  currentUserId?: string;
   onAddTask: (id: string) => void;
   onEditTask: (t: Task) => void;
   onDelete: (id: string) => void;
@@ -347,6 +357,7 @@ function KanbanColumnInner({
         columnName={column.name}
         tasks={tasks}
         isAdmin={isAdmin}
+        currentUserId={currentUserId}
         onEditTask={onEditTask}
       />
 
@@ -369,6 +380,7 @@ export function SortableColumn(props: {
   tasks: Task[];
   projectId: string;
   isAdmin: boolean;
+  currentUserId?: string;
   onAddTask: (id: string) => void;
   onEditTask: (t: Task) => void;
   onDelete: (id: string) => void;
