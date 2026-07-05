@@ -6,10 +6,11 @@ import { useOrganizationBySlug, useOrganizationMembers } from '@/hooks/useOrgani
 import { useOrgProjects, useCreateProject, useArchiveProject, useUnarchiveProject, useDeleteProject } from '@/hooks/useProject';
 import { useAuthStore } from '@/store/auth.store';
 import { parseApiError } from '@/lib/axios';
+import { avatarColor } from '@/lib/avatarColor';
 import { toast } from 'sonner';
 import {
   Archive, ArchiveRestore, ChevronDown, ChevronRight,
-  FolderOpen, Loader2, MoreHorizontal, Plus, Trash2, Users, X,
+  FolderOpen, Loader2, MoreHorizontal, Plus, Search, Trash2, Users, X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,19 +25,28 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
-const BANNER_COLORS = [
-  '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b',
-  '#10b981', '#3b82f6', '#ef4444', '#14b8a6',
-];
-
-function getColor(name: string) {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
-  return BANNER_COLORS[Math.abs(h) % BANNER_COLORS.length];
-}
+type SortOption = 'name' | 'updated' | 'role';
 
 function getInitials(name: string) {
   return name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase()).join('');
+}
+
+function matchesSearch(project: Project, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return project.name.toLowerCase().includes(q) || (project.description ?? '').toLowerCase().includes(q);
+}
+
+function sortProjects(list: Project[], sortBy: SortOption): Project[] {
+  const copy = [...list];
+  if (sortBy === 'name') {
+    copy.sort((a, b) => a.name.localeCompare(b.name));
+  } else if (sortBy === 'updated') {
+    copy.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  } else {
+    copy.sort((a, b) => Number(b.myRole === 'PROJECT_MANAGER') - Number(a.myRole === 'PROJECT_MANAGER'));
+  }
+  return copy;
 }
 
 // ─── ProjectCard ──────────────────────────────────────────────
@@ -55,7 +65,7 @@ function ProjectCard({
   onManageMembers: () => void;
   archived?: boolean;
 }) {
-  const color = getColor(project.name);
+  const color = avatarColor(project.name);
   const initials = getInitials(project.name);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
@@ -76,15 +86,13 @@ function ProjectCard({
 
   return (
     <div className={cn(
-      'group relative flex flex-col rounded-xl bg-white border border-gray-200/80',
-      'shadow-[0_1px_3px_rgba(0,0,0,0.07)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)]',
-      'transition-shadow duration-150 overflow-hidden',
+      'group relative flex flex-col rounded-lg border border-border-subtle bg-white overflow-hidden transition-colors hover:border-border-muted',
       archived && 'opacity-60',
     )}>
       {/* Colored banner */}
       <button
         onClick={onNavigate}
-        className="flex h-[72px] w-full items-center justify-center shrink-0"
+        className="flex h-[72px] w-full items-center justify-center shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         style={{ backgroundColor: color }}
       >
         <span className="text-[1.5rem] font-bold text-white/90 tracking-wide select-none">
@@ -98,9 +106,9 @@ function ProjectCard({
         <div className="flex items-start justify-between gap-2">
           <button
             onClick={onNavigate}
-            className="min-w-0 flex-1 text-left"
+            className="min-w-0 flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
           >
-            <h3 className="truncate text-sm font-semibold text-gray-800 hover:text-gray-600 transition-colors leading-snug">
+            <h3 className="truncate text-sm font-semibold text-text-primary leading-snug">
               {project.name}
             </h3>
           </button>
@@ -111,34 +119,35 @@ function ProjectCard({
               <button
                 onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
                 className={cn(
-                  'rounded-md p-1 text-gray-400 transition-colors',
+                  'rounded-md p-1 text-text-muted transition-colors',
                   'opacity-0 group-hover:opacity-100',
-                  menuOpen && 'opacity-100 bg-gray-100 text-gray-600',
-                  'hover:bg-gray-100 hover:text-gray-600',
+                  menuOpen && 'opacity-100 bg-surface-hover text-text-secondary',
+                  'hover:bg-surface-hover hover:text-text-secondary',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100',
                 )}
               >
                 <MoreHorizontal size={15} />
               </button>
 
               {menuOpen && (
-                <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-lg border border-gray-100 bg-white py-1 shadow-lg">
+                <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-lg border border-border-subtle bg-white py-1 shadow-lg">
                   {!archived && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onManageMembers(); setMenuOpen(false); }}
-                      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
-                      <Users size={13} className="text-gray-400" /> Manage Members
+                      <Users size={13} className="text-text-muted" /> Manage Members
                     </button>
                   )}
                   {!archived && (
                     <>
-                      <div className="mx-2 my-0.5 border-t border-gray-100" />
+                      <div className="mx-2 my-0.5 border-t border-border-subtle" />
                       <button
                         onClick={(e) => { e.stopPropagation(); setShowArchiveConfirm(true); setMenuOpen(false); }}
                         disabled={archiveMutation.isPending}
-                        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-text-secondary hover:bg-surface-muted transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
-                        <Archive size={13} className="text-gray-400" /> Archive
+                        <Archive size={13} className="text-text-muted" /> Archive
                       </button>
                     </>
                   )}
@@ -147,15 +156,15 @@ function ProjectCard({
                       <button
                         onClick={(e) => { e.stopPropagation(); unarchiveMutation.mutate(undefined, { onSuccess: () => toast.success('Restored'), onError: (err) => toast.error(parseApiError(err).message) }); setMenuOpen(false); }}
                         disabled={unarchiveMutation.isPending}
-                        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-muted transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
-                        <ArchiveRestore size={13} className="text-gray-400" /> Restore
+                        <ArchiveRestore size={13} className="text-text-muted" /> Restore
                       </button>
-                      <div className="mx-2 my-0.5 border-t border-gray-100" />
+                      <div className="mx-2 my-0.5 border-t border-border-subtle" />
                       <button
                         onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); setMenuOpen(false); }}
                         disabled={deleteMutation.isPending}
-                        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-danger hover:bg-danger-soft transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <Trash2 size={13} /> Delete permanently
                       </button>
@@ -169,27 +178,48 @@ function ProjectCard({
 
         {/* Description */}
         {project.description ? (
-          <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">
+          <p className="text-xs text-text-muted line-clamp-2 leading-relaxed">
             {project.description}
           </p>
         ) : (
-          <p className="text-xs text-gray-300 italic">No description</p>
+          <p className="text-xs text-text-muted italic">No description</p>
         )}
 
-        {/* Footer */}
-        <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100">
-          <span className="text-xs text-gray-400">
+        {/* Footer row 1 — date + role/archived badges */}
+        <div className="flex items-center justify-between mt-auto pt-2 border-t border-border-subtle">
+          <span className="text-xs text-text-muted">
             {new Date(project.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </span>
           {project.myRole === 'PROJECT_MANAGER' && (
-            <span className="rounded px-1.5 py-0.5 text-[0.7rem] font-semibold bg-violet-50 text-violet-600">
+            <span className="rounded px-1.5 py-0.5 text-[0.7rem] font-semibold bg-primary/10 text-primary">
               Manager
             </span>
           )}
           {archived && (
-            <span className="rounded px-1.5 py-0.5 text-[0.7rem] font-semibold bg-gray-100 text-gray-500">
+            <span className="rounded px-1.5 py-0.5 text-[0.7rem] font-semibold bg-surface-muted text-text-secondary">
               Archived
             </span>
+          )}
+        </div>
+
+        {/* Footer row 2 — member count + task progress */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-1 text-xs text-text-muted">
+            <Users size={11} />
+            {project.memberCount}
+          </span>
+          {project.taskCount > 0 && (
+            <div className="flex flex-1 items-center gap-2 pl-3">
+              <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface-muted">
+                <div
+                  className="h-full rounded-full bg-success"
+                  style={{ width: `${(project.completedTaskCount / project.taskCount) * 100}%` }}
+                />
+              </div>
+              <span className="shrink-0 text-xs tabular-nums text-text-muted">
+                {project.completedTaskCount}/{project.taskCount}
+              </span>
+            </div>
           )}
         </div>
       </div>
@@ -237,24 +267,24 @@ function CreateModal({
   const [description, setDescription] = useState('');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="relative w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+      <div className="relative w-full max-w-md rounded-xl border border-border bg-white p-6 shadow-modal">
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 rounded-md p-1 text-gray-400 hover:bg-gray-100 transition-colors"
+          className="absolute right-4 top-4 rounded-md p-1 text-text-secondary hover:bg-surface-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <X size={15} />
         </button>
 
-        <h2 className="text-base font-semibold text-gray-800">New Project</h2>
-        <p className="mt-0.5 text-xs text-gray-400">Create a project to manage tasks and collaborate with your team.</p>
+        <h2 className="text-base font-semibold text-text-primary">New Project</h2>
+        <p className="mt-0.5 text-xs text-text-secondary">Create a project to manage tasks and collaborate with your team.</p>
 
         <form
           onSubmit={(e) => { e.preventDefault(); if (name.trim()) onSubmit(name.trim(), description.trim()); }}
           className="mt-5 space-y-4"
         >
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-600" htmlFor="new-proj-name">
+            <label className="text-xs font-semibold text-text-secondary" htmlFor="new-proj-name">
               Project name
             </label>
             <Input
@@ -269,8 +299,8 @@ function CreateModal({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-600" htmlFor="new-proj-desc">
-              Description <span className="font-normal text-gray-400">(optional)</span>
+            <label className="text-xs font-semibold text-text-secondary" htmlFor="new-proj-desc">
+              Description <span className="font-normal text-text-muted">(optional)</span>
             </label>
             <textarea
               id="new-proj-desc"
@@ -279,7 +309,7 @@ function CreateModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               disabled={isPending}
-              className="w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none disabled:opacity-50"
+              className="w-full resize-none rounded-lg border border-border-subtle bg-white px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
             />
           </div>
 
@@ -311,6 +341,8 @@ export default function ProjectsPage({ params }: Props) {
   const [showModal, setShowModal] = useState(false);
   const [managingProject, setManagingProject] = useState<Project | null>(null);
   const [archivedOpen, setArchivedOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('name');
 
   if (orgLoading || projectsLoading) return <ProjectsSkeleton />;
   if (orgError || !org) {
@@ -323,10 +355,16 @@ export default function ProjectsPage({ params }: Props) {
     );
   }
 
-  const activeProjects = projects?.filter((p) => p.status === 'ACTIVE') ?? [];
-  const archivedProjects = projects?.filter((p) => p.status === 'ARCHIVED') ?? [];
+  const allProjects = projects ?? [];
+  const activeProjects = allProjects.filter((p) => p.status === 'ACTIVE');
+  const archivedProjects = allProjects.filter((p) => p.status === 'ARCHIVED');
   const currentMembership = orgMembers?.find((m) => m.userId === user?.id);
   const isAdmin = org.ownerId === user?.id || currentMembership?.role === 'ORG_ADMIN';
+
+  const visibleActiveProjects = sortProjects(activeProjects.filter((p) => matchesSearch(p, search)), sortBy);
+  const visibleArchivedProjects = archivedProjects.filter((p) => matchesSearch(p, search));
+
+  const managedCount = allProjects.filter((p) => p.myRole === 'PROJECT_MANAGER').length;
 
   const handleCreate = (name: string, description: string) => {
     createProject.mutate(
@@ -347,8 +385,8 @@ export default function ProjectsPage({ params }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Projects</h1>
-          <p className="mt-0.5 text-sm text-gray-500">
+          <h1 className="text-xl font-semibold text-text-primary">Projects</h1>
+          <p className="mt-0.5 text-sm text-text-secondary">
             {activeProjects.length} active project{activeProjects.length !== 1 ? 's' : ''} in {org.name}
           </p>
         </div>
@@ -359,17 +397,63 @@ export default function ProjectsPage({ params }: Props) {
         )}
       </div>
 
+      {/* Stats strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 rounded-lg border border-border-subtle bg-white overflow-hidden divide-x divide-y sm:divide-y-0 divide-border-subtle">
+        <div className="flex flex-col gap-1 px-6 py-4">
+          <span className="text-xs font-medium text-text-muted uppercase tracking-wide">Total Projects</span>
+          <p className="text-3xl font-bold text-text-primary">{allProjects.length}</p>
+        </div>
+        <div className="flex flex-col gap-1 px-6 py-4">
+          <span className="text-xs font-medium text-text-muted uppercase tracking-wide">Active</span>
+          <p className="text-3xl font-bold text-text-primary">{activeProjects.length}</p>
+        </div>
+        <div className="flex flex-col gap-1 px-6 py-4">
+          <span className="text-xs font-medium text-text-muted uppercase tracking-wide">Archived</span>
+          <p className="text-3xl font-bold text-text-primary">{archivedProjects.length}</p>
+        </div>
+        <div className="flex flex-col gap-1 px-6 py-4">
+          <span className="text-xs font-medium text-text-muted uppercase tracking-wide">I Manage</span>
+          <p className="text-3xl font-bold text-text-primary">{managedCount}</p>
+        </div>
+      </div>
+
+      {/* Search + sort */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+          <Input
+            placeholder="Search projects..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortOption)}
+          className="rounded-md border border-border-subtle bg-white px-3 py-2 text-sm text-text-primary focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <option value="name">Name (A–Z)</option>
+          <option value="updated">Recently Updated</option>
+          <option value="role">My Role</option>
+        </select>
+      </div>
+
       {/* Active projects grid */}
-      {activeProjects.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white py-20 text-center">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-            <FolderOpen size={22} className="text-gray-400" />
+      {visibleActiveProjects.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border-muted bg-white py-20 text-center">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted">
+            <FolderOpen size={22} className="text-text-muted" />
           </div>
-          <h2 className="text-sm font-semibold text-gray-700">No projects yet</h2>
-          <p className="mt-1 max-w-xs text-sm text-gray-400">
-            Create your first project to start organizing your team&apos;s work.
+          <h2 className="text-sm font-semibold text-text-primary">
+            {search ? 'No projects match your search' : 'No projects yet'}
+          </h2>
+          <p className="mt-1 max-w-xs text-sm text-text-muted">
+            {search
+              ? 'Try a different search term.'
+              : "Create your first project to start organizing your team's work."}
           </p>
-          {isAdmin && (
+          {isAdmin && !search && (
             <Button className="mt-5" onClick={() => setShowModal(true)}>
               <Plus size={15} className="mr-1.5" /> Create Project
             </Button>
@@ -377,7 +461,7 @@ export default function ProjectsPage({ params }: Props) {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {activeProjects.map((project) => (
+          {visibleActiveProjects.map((project) => (
             <ProjectCard
               key={project.id}
               project={project}
@@ -388,10 +472,10 @@ export default function ProjectsPage({ params }: Props) {
             />
           ))}
           {/* Inline "New Project" card for admins */}
-          {isAdmin && (
+          {isAdmin && !search && (
             <button
               onClick={() => setShowModal(true)}
-              className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-transparent h-[168px] text-gray-400 hover:border-gray-300 hover:text-gray-500 hover:bg-white/60 transition-all duration-150"
+              className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border-muted bg-transparent h-[168px] text-text-muted hover:border-text-muted hover:text-text-secondary hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Plus size={20} strokeWidth={1.5} />
               <span className="mt-2 text-sm font-medium">New Project</span>
@@ -401,19 +485,19 @@ export default function ProjectsPage({ params }: Props) {
       )}
 
       {/* Archived section */}
-      {archivedProjects.length > 0 && (
+      {visibleArchivedProjects.length > 0 && (
         <div className="space-y-3">
           <button
             onClick={() => setArchivedOpen((o) => !o)}
-            className="flex items-center gap-2 text-xs font-semibold text-gray-400 hover:text-gray-600 uppercase tracking-widest transition-colors"
+            className="flex items-center gap-2 text-xs font-semibold text-text-muted hover:text-text-secondary uppercase tracking-widest transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {archivedOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-            Archived ({archivedProjects.length})
+            Archived ({visibleArchivedProjects.length})
           </button>
 
           {archivedOpen && (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {archivedProjects.map((project) => (
+              {visibleArchivedProjects.map((project) => (
                 <ProjectCard
                   key={project.id}
                   project={project}
