@@ -331,140 +331,139 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
           messageGroups.map(({ message, showHeader, dateLabel }) => {
             const isOwn = message.sender?.id === user?.id;
             return (
-            <div key={message.id} className={dateLabel ? '' : showHeader ? 'mt-3' : 'mt-0.5'}>
-              {dateLabel && (
-                <div className="my-2 flex items-center gap-3">
-                  <div className="h-px flex-1 bg-border-subtle" />
-                  <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-[11px] font-medium text-text-muted">
-                    {dateLabel}
-                  </span>
-                  <div className="h-px flex-1 bg-border-subtle" />
-                </div>
-              )}
-              {message.type === 'SYSTEM' ? (
-                <p className="text-center text-xs italic text-text-secondary">{message.content}</p>
-              ) : (
-                <div className={cn(
-                  'group relative flex items-start gap-2.5 py-0.5',
-                  isOwn && 'flex-row-reverse',
-                )}>
-                  {showHeader ? (
-                    <button
-                      onClick={() => message.sender && setProfileUserId(message.sender.id)}
-                      className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-semibold text-primary transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      {message.sender?.avatarUrl ? (
-                        <img
-                          src={message.sender.avatarUrl}
-                          alt={message.sender.name}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        (message.sender?.name ?? '?').charAt(0).toUpperCase()
-                      )}
-                    </button>
-                  ) : (
-                    <div className="w-7 shrink-0" />
-                  )}
-                  <div className={cn('flex min-w-0 flex-1 flex-col', isOwn ? 'items-end' : 'items-start')}>
-                    {showHeader && (
-                      <div className={cn('flex items-baseline gap-2', isOwn && 'flex-row-reverse')}>
-                        <span className="text-sm font-medium text-text-primary">
-                          {isOwn ? 'You' : message.sender?.name ?? 'Unknown'}
-                        </span>
-                        <span className="text-[10px] text-text-secondary">
-                          {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                    )}
-
-                    {message.deletedAt ? (
-                      <p className="text-sm italic text-text-secondary">This message was deleted</p>
+              <div key={message.id} className={dateLabel ? '' : showHeader ? 'mt-3' : 'mt-0.5'}>
+                {dateLabel && (
+                  <div className="my-2 flex items-center gap-3">
+                    <div className="h-px flex-1 bg-border-subtle" />
+                    <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-[11px] font-medium text-text-muted">
+                      {dateLabel}
+                    </span>
+                    <div className="h-px flex-1 bg-border-subtle" />
+                  </div>
+                )}
+                {message.type === 'SYSTEM' ? (
+                  <p className="text-center text-xs italic text-text-secondary">{message.content}</p>
+                ) : (
+                  <div className={cn(
+                    'group relative flex items-start gap-2.5 py-0.5',
+                    isOwn && 'flex-row-reverse',
+                  )}>
+                    {showHeader ? (
+                      <button
+                        onClick={() => message.sender && setProfileUserId(message.sender.id)}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-semibold text-primary transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {message.sender?.avatarUrl ? (
+                          <img
+                            src={message.sender.avatarUrl}
+                            alt={message.sender.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          (message.sender?.name ?? '?').charAt(0).toUpperCase()
+                        )}
+                      </button>
                     ) : (
-                      <>
-                        <div className="relative w-fit max-w-[75%]">
-                          {message.type === 'FILE' ? (
-                            <FileAttachmentCard message={message} channelId={channel.id} />
-                          ) : (
-                            <p className={cn(
-                              'break-words rounded-lg px-3 py-1.5 text-sm text-text-primary',
-                              isOwn ? 'bg-primary/10' : 'bg-surface-muted',
-                            )}>
-                              {renderMessageContent(message.content)}
-                            </p>
-                          )}
+                      <div className="w-7 shrink-0" />
+                    )}
+                    <div className={cn('flex min-w-0 flex-1 flex-col', isOwn ? 'items-end' : 'items-start')}>
+                      {showHeader && (
+                        <div className={cn('flex items-baseline gap-2', isOwn && 'flex-row-reverse')}>
+                          <span className="text-sm font-medium text-text-primary">
+                            {isOwn ? 'You' : message.sender?.name ?? 'Unknown'}
+                          </span>
+                          <span className="text-[10px] text-text-secondary">
+                            {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      )}
 
-                          <div className="absolute -top-8 left-1/2 flex -translate-x-1/2 translate-y-1 flex-col items-center pb-3 opacity-0 pointer-events-none transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-hover:pointer-events-auto">
-                            <div className={cn(
-                              'flex items-center gap-0.5 rounded-lg border p-0.5 shadow-sm',
-                              isOwn ? 'border-primary/30 bg-primary/10' : 'border-border-subtle bg-white',
-                            )}>
-                              <button
-                                onClick={(e) => {
-                                  if (openPickerFor === message.id) {
-                                    setOpenPickerFor(null);
-                                  } else {
-                                    setPickerAnchor(computePickerPosition(e.currentTarget.getBoundingClientRect()));
-                                    setOpenPickerFor(message.id);
-                                  }
-                                }}
-                                className={cn(
-                                  'rounded p-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                                  isOwn ? 'text-primary hover:bg-primary/15' : 'text-text-secondary hover:bg-surface-muted',
-                                )}
-                                title="Add reaction"
-                              >
-                                <Smile size={14} />
-                              </button>
-                              {(isOwn || isAdmin) && (
+                      {message.deletedAt ? (
+                        <p className="text-sm italic text-text-secondary">This message was deleted</p>
+                      ) : (
+                        <>
+                          <div className="relative w-fit max-w-[75%]">
+                            {message.type === 'FILE' ? (
+                              <FileAttachmentCard message={message} channelId={channel.id} />
+                            ) : (
+                              <p className={cn(
+                                'break-words rounded-lg px-3 py-1.5 text-sm text-text-primary',
+                                isOwn ? 'bg-primary/10' : 'bg-surface-muted',
+                              )}>
+                                {renderMessageContent(message.content)}
+                              </p>
+                            )}
+
+                            <div className="absolute -top-8 left-1/2 flex -translate-x-1/2 translate-y-1 flex-col items-center pb-3 opacity-0 pointer-events-none transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-hover:pointer-events-auto">
+                              <div className={cn(
+                                'flex items-center gap-0.5 rounded-lg border p-0.5 shadow-sm',
+                                isOwn ? 'border-primary/30 bg-white' : 'border-border-subtle bg-white',
+                              )}>
                                 <button
-                                  onClick={() => setDeleteTarget(message.id)}
+                                  onClick={(e) => {
+                                    if (openPickerFor === message.id) {
+                                      setOpenPickerFor(null);
+                                    } else {
+                                      setPickerAnchor(computePickerPosition(e.currentTarget.getBoundingClientRect()));
+                                      setOpenPickerFor(message.id);
+                                    }
+                                  }}
                                   className={cn(
-                                    'rounded p-1 transition-colors hover:bg-danger-soft/20 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                                    isOwn ? 'text-primary' : 'text-text-secondary',
+                                    'rounded p-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                    isOwn ? 'text-primary hover:bg-primary/15' : 'text-text-secondary hover:bg-surface-muted',
                                   )}
-                                  title="Delete message"
+                                  title="Add reaction"
                                 >
-                                  <Trash2 size={14} />
+                                  <Smile size={14} />
                                 </button>
-                              )}
-                            </div>
-                          </div>
-
-                          {openPickerFor === message.id && pickerAnchor && createPortal(
-                            <div className="fixed z-50" style={{ top: pickerAnchor.top, left: pickerAnchor.left }}>
-                              <EmojiPicker onEmojiClick={(emojiData) => handlePickEmoji(message, emojiData)} />
-                            </div>,
-                            document.body,
-                          )}
-
-                          {message.reactions.length > 0 && (
-                            <div className={cn('mt-1 flex w-fit flex-wrap gap-1', !isOwn && 'ml-auto')}>
-                              {message.reactions.map((reaction) => {
-                                const reacted = !!user && reaction.userIds.includes(user.id);
-                                return (
+                                {(isOwn || isAdmin) && (
                                   <button
-                                    key={reaction.emoji}
-                                    onClick={() => handleToggleReaction(message, reaction.emoji)}
-                                    className={`rounded-full border px-1.5 py-0.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                                      reacted
+                                    onClick={() => setDeleteTarget(message.id)}
+                                    className={cn(
+                                      'rounded p-1 transition-colors hover:bg-danger-soft/20 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                      isOwn ? 'text-primary' : 'text-text-secondary',
+                                    )}
+                                    title="Delete message"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {openPickerFor === message.id && pickerAnchor && createPortal(
+                              <div className="fixed z-50" style={{ top: pickerAnchor.top, left: pickerAnchor.left }}>
+                                <EmojiPicker onEmojiClick={(emojiData) => handlePickEmoji(message, emojiData)} />
+                              </div>,
+                              document.body,
+                            )}
+
+                            {message.reactions.length > 0 && (
+                              <div className={cn('mt-1 flex w-fit flex-wrap gap-1', !isOwn && 'ml-auto')}>
+                                {message.reactions.map((reaction) => {
+                                  const reacted = !!user && reaction.userIds.includes(user.id);
+                                  return (
+                                    <button
+                                      key={reaction.emoji}
+                                      onClick={() => handleToggleReaction(message, reaction.emoji)}
+                                      className={`rounded-full border px-1.5 py-0.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${reacted
                                         ? 'border-primary bg-primary/10 text-primary'
                                         : 'border-border-subtle text-text-secondary hover:bg-surface-muted'
-                                    }`}
-                                  >
-                                    {reaction.emoji} {reaction.userIds.length}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    )}
+                                        }`}
+                                    >
+                                      {reaction.emoji} {reaction.userIds.length}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
             );
           })
         ) : (
