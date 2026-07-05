@@ -61,17 +61,26 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
+function toDateInputValue(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function AddEventModal({
   onClose,
   onSubmit,
   isPending,
+  initialDate = '',
 }: {
   onClose: () => void;
   onSubmit: (title: string, dueDate: string) => void;
   isPending: boolean;
+  initialDate?: string;
 }) {
   const [title, setTitle] = useState('');
-  const [dueDate, setDueDate] = useState('');
+  const [dueDate, setDueDate] = useState(initialDate);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
@@ -146,6 +155,7 @@ export default function CalendarPage({ params }: Props) {
     new Date(today.getFullYear(), today.getMonth(), 1),
   );
   const [showAddEvent, setShowAddEvent] = useState(false);
+  const [addEventDate, setAddEventDate] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<PersonalEvent | null>(null);
 
   const { data: org } = useOrganizationBySlug(slug);
@@ -258,7 +268,7 @@ export default function CalendarPage({ params }: Props) {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowAddEvent(true)}
+              onClick={() => { setAddEventDate(''); setShowAddEvent(true); }}
               className="flex items-center gap-1.5 rounded-md border border-border-subtle px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-surface-muted transition-colors"
             >
               <Plus size={14} /> Add Event
@@ -295,6 +305,11 @@ export default function CalendarPage({ params }: Props) {
               onNavigate={(date) => setCurrentDate(new Date(date.getFullYear(), date.getMonth(), 1))}
               toolbar={false}
               eventPropGetter={eventPropGetter}
+              selectable
+              onSelectSlot={(slotInfo) => {
+                setAddEventDate(toDateInputValue(slotInfo.start));
+                setShowAddEvent(true);
+              }}
               onSelectEvent={(event) => {
                 if (event.resource.type === 'personal') {
                   setDeleteTarget(event.resource.event);
@@ -333,6 +348,7 @@ export default function CalendarPage({ params }: Props) {
           onClose={() => setShowAddEvent(false)}
           onSubmit={handleCreateEvent}
           isPending={createPersonalEvent.isPending}
+          initialDate={addEventDate}
         />
       )}
 
