@@ -1,13 +1,16 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Search } from 'lucide-react';
-import { useMyOrganizations } from '@/hooks/useOrganization';
+import { toast } from 'sonner';
+import { Loader2, LogOut, MoreHorizontal, Search, Settings, Users } from 'lucide-react';
+import { useMyOrganizations, useLeaveOrganization } from '@/hooks/useOrganization';
 import { useAuthStore } from '@/store/auth.store';
 import { useOrgStore } from '@/store/org.store';
 import { avatarColor } from '@/lib/avatarColor';
+import { parseApiError } from '@/lib/axios';
 import { Input } from '@/components/ui/input';
+import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 import type { Organization } from '@/types/organization.types';
 
 function OrgAvatar({ name }: { name: string }) {
@@ -25,11 +28,28 @@ function WorkspaceRow({
   org,
   isOwner,
   onEnter,
+  onOpenSettings,
+  onOpenMembers,
+  onRequestLeave,
 }: {
   org: Organization;
   isOwner: boolean;
   onEnter: () => void;
+  onOpenSettings: () => void;
+  onOpenMembers: () => void;
+  onRequestLeave: () => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function outside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    }
+    if (menuOpen) document.addEventListener('mousedown', outside);
+    return () => document.removeEventListener('mousedown', outside);
+  }, [menuOpen]);
+
   return (
     <div className="flex w-full items-center rounded-lg border border-border bg-card transition-all duration-150 hover:border-primary/25 hover:bg-primary/5">
       <button
@@ -42,9 +62,45 @@ function WorkspaceRow({
           <p className="text-xs text-muted-foreground truncate mt-0.5">{org.slug}</p>
         </div>
       </button>
-      <span className="text-xs font-medium text-muted-foreground shrink-0 pr-4">
+      <span className="text-xs font-medium text-muted-foreground shrink-0">
         {isOwner ? 'Owner' : 'Member'}
       </span>
+      <div ref={menuRef} className="relative shrink-0 pl-2 pr-3">
+        <button
+          onClick={() => setMenuOpen((o) => !o)}
+          className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+        >
+          <MoreHorizontal size={16} />
+        </button>
+
+        {menuOpen && (
+          <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-lg border border-border-subtle bg-white py-1 shadow-lg">
+            <button
+              onClick={() => { onOpenSettings(); setMenuOpen(false); }}
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-muted transition-colors"
+            >
+              <Settings size={13} className="text-text-muted" /> Settings
+            </button>
+            <button
+              onClick={() => { onOpenMembers(); setMenuOpen(false); }}
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-muted transition-colors"
+            >
+              <Users size={13} className="text-text-muted" /> Members
+            </button>
+            {!isOwner && (
+              <>
+                <div className="mx-2 my-0.5 border-t border-border-subtle" />
+                <button
+                  onClick={() => { onRequestLeave(); setMenuOpen(false); }}
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-danger hover:bg-danger-soft/20 transition-colors"
+                >
+                  <LogOut size={13} /> Leave workspace
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -52,11 +108,13 @@ function WorkspaceRow({
 export default function ManageWorkspacesPage() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const setCurrentOrg = useOrgStore((s) => s.setCurrentOrg);
+  const { currentOrg, setCurrentOrg, clearCurrentOrg } = useOrgStore();
 
   const [search, setSearch] = useState('');
+  const [leaveTarget, setLeaveTarget] = useState<Organization | null>(null);
 
   const { data: organizations, isLoading } = useMyOrganizations();
+  const leaveMutation = useLeaveOrganization(leaveTarget?.id ?? '');
 
   const filtered = useMemo(() => {
     if (!organizations) return [];
@@ -70,6 +128,18 @@ export default function ManageWorkspacesPage() {
   const handleEnter = (org: Organization) => {
     setCurrentOrg(org);
     router.push(`/org/${org.slug}`);
+  };
+
+  const confirmLeave = () => {
+    if (!leaveTarget) return;
+    leaveMutation.mutate(undefined, {
+      onSuccess: () => {
+        toast.success(`You have left ${leaveTarget.name}`);
+        if (currentOrg?.id === leaveTarget.id) clearCurrentOrg();
+        setLeaveTarget(null);
+      },
+      onError: (err: unknown) => toast.error(parseApiError(err).message),
+    });
   };
 
   return (
@@ -106,10 +176,24 @@ export default function ManageWorkspacesPage() {
               org={org}
               isOwner={org.ownerId === user?.id}
               onEnter={() => handleEnter(org)}
+              onOpenSettings={() => router.push(`/org/${org.slug}/settings`)}
+              onOpenMembers={() => router.push(`/org/${org.slug}/members`)}
+              onRequestLeave={() => setLeaveTarget(org)}
             />
           ))
         )}
       </div>
+
+      <ConfirmationDialog
+        isOpen={!!leaveTarget}
+        onClose={() => setLeaveTarget(null)}
+        onConfirm={confirmLeave}
+        title="Leave Workspace"
+        description={`Leave ${leaveTarget?.name}? You'll need to be invited back to rejoin.`}
+        confirmText="Leave"
+        isDestructive
+        isLoading={leaveMutation.isPending}
+      />
     </div>
   );
 }
