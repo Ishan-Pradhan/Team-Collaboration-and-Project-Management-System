@@ -20,13 +20,7 @@ import type {
   OrganizationInviteInstance,
   OrganizationBanInstance,
 } from '../types/organizations.types.js';
-
-// Mirrors the frontend's `isDoneColumn` (task.constants.ts) — a task sitting
-// in a column whose name matches this is treated as completed, so it should
-// never count toward overdue/due-soon stats regardless of its dueDate.
-const DONE_COLUMN_RE = /\b(done|complet\w*|finish\w*|clos\w*|shipped?|deployed?|released?|delivered?)\b/i;
-const isDoneColumnName = (name: string | null | undefined): boolean =>
-  !!name && DONE_COLUMN_RE.test(name);
+import { isDoneColumnName } from '../utils/doneColumn.utils.js';
 
 export const organizationRepository = {
   create: async (data: OrganizationCreationAttributes): Promise<OrganizationInstance> => {
