@@ -32,6 +32,7 @@ import {
   Trash2,
   UserCog,
   UserPlus,
+  Users,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -88,6 +89,7 @@ export default function MembersPage({ params }: Props) {
 
   const currentUserMembership = members?.find((m) => m.userId === currentUser?.id);
   const isAdmin = org.ownerId === currentUser?.id || currentUserMembership?.role === 'ORG_ADMIN';
+  const adminCount = members?.filter((m) => m.role === 'ORG_ADMIN').length ?? 0;
 
   const handleInviteSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,6 +216,48 @@ export default function MembersPage({ params }: Props) {
             <UserPlus size={16} />
             <span>Invite Member</span>
           </Button>
+        )}
+      </div>
+
+      {/* Stats strip */}
+      <div className={cn(
+        'grid rounded-lg border border-border-subtle bg-white overflow-hidden divide-x divide-border-subtle',
+        isAdmin ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2',
+      )}>
+        <div className="flex flex-col gap-1 px-6 py-4">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-text-muted uppercase tracking-wide">
+            <Users size={12} />
+            Members
+          </div>
+          <p className="text-3xl font-bold text-text-primary">{members?.length ?? 0}</p>
+        </div>
+
+        <div className="flex flex-col gap-1 px-6 py-4">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-text-muted uppercase tracking-wide">
+            <Shield size={12} />
+            Admins
+          </div>
+          <p className="text-3xl font-bold text-text-primary">{adminCount}</p>
+        </div>
+
+        {isAdmin && (
+          <>
+            <div className="flex flex-col gap-1 px-6 py-4">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-text-muted uppercase tracking-wide">
+                <Mail size={12} />
+                Pending Invites
+              </div>
+              <p className="text-3xl font-bold text-text-primary">{pendingInvites?.length ?? 0}</p>
+            </div>
+
+            <div className="flex flex-col gap-1 px-6 py-4">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-text-muted uppercase tracking-wide">
+                <Ban size={12} />
+                Banned
+              </div>
+              <p className="text-3xl font-bold text-text-primary">{bans?.length ?? 0}</p>
+            </div>
+          </>
         )}
       </div>
 
