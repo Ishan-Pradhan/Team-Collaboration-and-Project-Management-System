@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   Bell,
+  BellOff,
   CalendarDays,
   ChevronDown,
   FolderOpen,
@@ -19,7 +20,7 @@ import {
 import Link from 'next/link';
 
 import Logo from '@/components/shared/Logo';
-import { useMyOrganizations } from '@/hooks/useOrganization';
+import { useMyOrganizations, useMutedOrganizations, useMuteOrganization } from '@/hooks/useOrganization';
 import { useOrgStore } from '@/store/org.store';
 import { useAuthStore } from '@/store/auth.store';
 import { useLogout } from '@/hooks/useAuth';
@@ -84,6 +85,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const urlSlug = match ? match[1] : null;
 
   const { data: orgs, isLoading: orgsLoading } = useMyOrganizations();
+  const { data: mutedOrgIds } = useMutedOrganizations();
+  const muteOrganization = useMuteOrganization();
+  const mutedOrgSet = new Set(mutedOrgIds ?? []);
   const { currentOrg, setCurrentOrg } = useOrgStore();
   const { user } = useAuthStore();
   const logout = useLogout();
@@ -224,22 +228,36 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               ) : (
                 <>
                   {orgs?.map((org) => (
-                    <button
+                    <div
                       key={org.id}
-                      onClick={() => handleOrgSwitch(org)}
                       className={cn(
-                        'flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm hover:bg-surface-muted transition-colors',
+                        'flex items-center gap-1 rounded-md pr-1 hover:bg-surface-muted transition-colors',
                         activeOrg?.id === org.id ? 'bg-surface font-medium' : ''
                       )}
                     >
-                      <div
-                        className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-[10px] font-semibold text-white"
-                        style={{ backgroundColor: getOrgColor(org.name) }}
+                      <button
+                        onClick={() => handleOrgSwitch(org)}
+                        className="flex flex-1 min-w-0 items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm"
                       >
-                        {org.name.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="truncate text-primary">{org.name}</span>
-                    </button>
+                        <div
+                          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-[10px] font-semibold text-white"
+                          style={{ backgroundColor: getOrgColor(org.name) }}
+                        >
+                          {org.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="truncate text-primary">{org.name}</span>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          muteOrganization.mutate({ organizationId: org.id, isMuted: !mutedOrgSet.has(org.id) });
+                        }}
+                        className="shrink-0 rounded p-1 text-text-muted hover:bg-surface-hover hover:text-text-secondary transition-colors"
+                        title={mutedOrgSet.has(org.id) ? 'Unmute workspace' : 'Mute workspace'}
+                      >
+                        {mutedOrgSet.has(org.id) ? <BellOff size={13} /> : <Bell size={13} />}
+                      </button>
+                    </div>
                   ))}
                   <div className="my-1 border-t border-border-subtle" />
                   <button
