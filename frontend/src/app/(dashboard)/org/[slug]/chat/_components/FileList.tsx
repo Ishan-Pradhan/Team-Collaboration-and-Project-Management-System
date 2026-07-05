@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Paperclip } from 'lucide-react';
 import { parseApiError } from '@/lib/axios';
 import { useChannelFiles } from '@/hooks/useChannel';
 import { getFiles } from '@/services/channel.service';
@@ -64,7 +64,12 @@ export default function FileList({ channel }: Props) {
           </button>
         </>
       ) : (
-        <p className="py-8 text-center text-sm text-text-secondary">No files shared in this channel yet.</p>
+        <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-text-secondary">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted">
+            <Paperclip size={24} className="text-text-muted" />
+          </div>
+          <p className="text-sm">No files shared in this channel yet.</p>
+        </div>
       )}
     </div>
   );
