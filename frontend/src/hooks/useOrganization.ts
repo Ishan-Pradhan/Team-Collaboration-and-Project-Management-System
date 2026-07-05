@@ -17,6 +17,8 @@ import {
   banMember,
   unbanMember,
   getMemberProfile,
+  muteOrganization,
+  getMutedOrganizations,
 } from '@/services/organization.service';
 
 export const useMyOrganizations = () =>
@@ -145,3 +147,18 @@ export const useMemberProfile = (organizationId: string, userId: string | null) 
     queryFn: () => getMemberProfile(organizationId, userId as string),
     enabled: !!organizationId && !!userId,
   });
+
+export const useMutedOrganizations = () =>
+  useQuery({
+    queryKey: ['organizations', 'muted'],
+    queryFn: getMutedOrganizations,
+  });
+
+export const useMuteOrganization = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ organizationId, isMuted }: { organizationId: string; isMuted: boolean }) =>
+      muteOrganization(organizationId, isMuted),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['organizations', 'muted'] }),
+  });
+};

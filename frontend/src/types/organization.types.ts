@@ -141,3 +141,17 @@ export interface MemberProfileResponse {
   message: string;
   data: MemberProfile;
 }
+
+// ─── Mute ──────────────────────────────────────────────────────
+
+export interface MutedOrganizationsResponse {
+  success: boolean;
+  message: string;
+  data: string[];
+}
+
+export interface MuteOrganizationResponse {
+  success: boolean;
+  message: string;
+  data: { isMuted: boolean };
+}

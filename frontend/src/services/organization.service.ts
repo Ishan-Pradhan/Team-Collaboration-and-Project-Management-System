@@ -13,6 +13,8 @@ import type {
   OrganizationBansResponse,
   MemberProfile,
   MemberProfileResponse,
+  MutedOrganizationsResponse,
+  MuteOrganizationResponse,
 } from '@/types/organization.types';
 
 export async function getMyOrganizations(): Promise<Organization[]> {
@@ -108,5 +110,15 @@ export async function unbanMember(organizationId: string, userId: string): Promi
 
 export async function getMemberProfile(organizationId: string, userId: string): Promise<MemberProfile> {
   const res = await api.get<MemberProfileResponse>(`/organizations/${organizationId}/members/${userId}/profile`);
+  return res.data.data;
+}
+
+export async function muteOrganization(organizationId: string, isMuted: boolean): Promise<boolean> {
+  const res = await api.patch<MuteOrganizationResponse>(`/organizations/${organizationId}/mute`, { isMuted });
+  return res.data.data.isMuted;
+}
+
+export async function getMutedOrganizations(): Promise<string[]> {
+  const res = await api.get<MutedOrganizationsResponse>('/organizations/muted');
   return res.data.data;
 }
