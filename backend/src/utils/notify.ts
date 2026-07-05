@@ -1,6 +1,18 @@
 import { notificationRepository } from '../repositories/notification.repository.js';
 import { serializeNotification } from '../serializers/notification.serializer.js';
 import { getIO } from '../socket/index.js';
+import { channelMemberRepository } from '../repositories/channel.repository.js';
+import { organizationMemberRepository } from '../repositories/organization.repository.js';
+
+async function isOrgMuted(userId: string, organizationId: string): Promise<boolean> {
+  const membership = await organizationMemberRepository.findOne({ organizationId, userId });
+  return membership?.isMuted ?? false;
+}
+
+async function isChannelMuted(userId: string, channelId: string): Promise<boolean> {
+  const membership = await channelMemberRepository.findMember(channelId, userId);
+  return membership?.isMuted ?? false;
+}
 
 interface NotifyEmailOptions {
   to: string;
@@ -23,6 +35,8 @@ interface NotifyUserParams {
 
 export async function notifyUser(params: NotifyUserParams): Promise<void> {
   const { email, userId, organizationId, projectId, type, title, body, entityType, entityId } = params;
+
+  if (await isOrgMuted(userId, organizationId)) return;
 
   try {
     const notification = await notificationRepository.create({
@@ -62,6 +76,11 @@ interface NotifyNewMessageParams {
 // Sibling to notifyUser(), not a variant of it — this event type has no
 // email option at all, so a message-frequency email can never happen.
 export async function notifyNewMessage(params: NotifyNewMessageParams): Promise<void> {
+  const { userId, organizationId, channelId } = params;
+
+  if (await isOrgMuted(userId, organizationId)) return;
+  if (await isChannelMuted(userId, channelId)) return;
+
   try {
     const notification = await notificationRepository.upsertMessageNotification(params);
     getIO().to(`user:${params.userId}`).emit('notification:new', serializeNotification(notification));
