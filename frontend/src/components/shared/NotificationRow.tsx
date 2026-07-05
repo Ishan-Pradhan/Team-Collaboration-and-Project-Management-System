@@ -1,7 +1,7 @@
 'use client';
 
 import type { LucideIcon } from 'lucide-react';
-import { Bell, Building2, CheckSquare, FolderOpen, Hash } from 'lucide-react';
+import { Bell, Building2, CalendarClock, CheckSquare, FolderOpen, Hash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Notification } from '@/types/notification.types';
 
@@ -15,6 +15,7 @@ const ENTITY_ICON: Record<string, LucideIcon> = {
   project: FolderOpen,
   task: CheckSquare,
   organization: Building2,
+  personal_event: CalendarClock,
 };
 
 function timeAgo(iso: string): string {

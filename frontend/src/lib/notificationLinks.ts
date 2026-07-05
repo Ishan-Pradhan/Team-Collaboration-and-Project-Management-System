@@ -16,6 +16,8 @@ export function resolveNotificationLink(
       return notification.projectId
         ? `/org/${org.slug}/projects/${notification.projectId}?taskId=${notification.entityId}`
         : null;
+    case 'personal_event':
+      return `/org/${org.slug}/calendar`;
     default:
       return null;
   }

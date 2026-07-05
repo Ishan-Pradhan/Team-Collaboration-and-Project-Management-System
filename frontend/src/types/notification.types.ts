@@ -1,4 +1,4 @@
-export type NotificationEntityType = 'channel' | 'project' | 'task' | 'organization';
+export type NotificationEntityType = 'channel' | 'project' | 'task' | 'organization' | 'personal_event';
 
 export interface Notification {
   id: string;
