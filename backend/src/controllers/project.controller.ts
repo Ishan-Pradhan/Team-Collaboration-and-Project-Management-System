@@ -80,7 +80,24 @@ export const listProjects = asyncHandler(
     }
 
     const projects = await projectRepository.findByOrgForUser(organizationId, user.id);
-    return ok(res, projects.map((p) => ({ ...p.toJSON(), myRole: p.myRole })), 'Projects retrieved successfully');
+    const projectIds = projects.map((p) => p.id);
+    const [memberCounts, taskCounts, completedTaskCounts] = await Promise.all([
+      projectRepository.findMemberCountsByProjectIds(projectIds),
+      projectRepository.findTaskCountsByProjectIds(projectIds),
+      projectRepository.findCompletedTaskCountsByProjectIds(projectIds),
+    ]);
+
+    return ok(
+      res,
+      projects.map((p) => ({
+        ...p.toJSON(),
+        myRole: p.myRole,
+        memberCount: memberCounts.get(p.id) ?? 0,
+        taskCount: taskCounts.get(p.id) ?? 0,
+        completedTaskCount: completedTaskCounts.get(p.id) ?? 0,
+      })),
+      'Projects retrieved successfully'
+    );
   }
 );
 

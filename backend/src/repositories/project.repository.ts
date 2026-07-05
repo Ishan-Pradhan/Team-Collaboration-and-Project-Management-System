@@ -1,4 +1,5 @@
-import { Project, ProjectMember, User } from '../models/index.js';
+import { Op, fn, col } from 'sequelize';
+import { Project, ProjectMember, User, Task, KanbanColumn } from '../models/index.js';
 import type {
   ProjectCreationAttributes,
   ProjectInstance,
@@ -39,6 +40,55 @@ export const projectRepository = {
       const myRole = (members?.[0]?.role ?? 'MEMBER') as 'PROJECT_MANAGER' | 'MEMBER';
       return Object.assign(project, { myRole });
     });
+  },
+
+  findMemberCountsByProjectIds: async (projectIds: string[]): Promise<Map<string, number>> => {
+    if (projectIds.length === 0) return new Map();
+    const rows = await ProjectMember.findAll({
+      where: { projectId: { [Op.in]: projectIds } },
+      attributes: ['projectId', [fn('COUNT', col('id')), 'count']],
+      group: ['projectId'],
+      raw: true,
+    });
+    return new Map(
+      (rows as unknown as { projectId: string; count: string }[]).map((r) => [r.projectId, parseInt(r.count, 10)])
+    );
+  },
+
+  findTaskCountsByProjectIds: async (projectIds: string[]): Promise<Map<string, number>> => {
+    if (projectIds.length === 0) return new Map();
+    const rows = await Task.findAll({
+      where: { projectId: { [Op.in]: projectIds } },
+      attributes: ['projectId', [fn('COUNT', col('id')), 'count']],
+      group: ['projectId'],
+      raw: true,
+    });
+    return new Map(
+      (rows as unknown as { projectId: string; count: string }[]).map((r) => [r.projectId, parseInt(r.count, 10)])
+    );
+  },
+
+  findCompletedTaskCountsByProjectIds: async (projectIds: string[]): Promise<Map<string, number>> => {
+    if (projectIds.length === 0) return new Map();
+    const donePatterns = ['%done%', '%complet%', '%finish%', '%clos%', '%shipped%', '%deployed%', '%released%', '%delivered%'];
+    const rows = await Task.findAll({
+      where: { projectId: { [Op.in]: projectIds } },
+      include: [
+        {
+          model: KanbanColumn,
+          as: 'column',
+          attributes: [],
+          required: true,
+          where: { [Op.or]: donePatterns.map((pattern) => ({ name: { [Op.iLike]: pattern } })) },
+        },
+      ],
+      attributes: ['projectId', [fn('COUNT', col('Task.id')), 'count']],
+      group: ['projectId'],
+      raw: true,
+    });
+    return new Map(
+      (rows as unknown as { projectId: string; count: string }[]).map((r) => [r.projectId, parseInt(r.count, 10)])
+    );
   },
 
   update: async (
