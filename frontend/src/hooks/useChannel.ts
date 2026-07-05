@@ -16,6 +16,8 @@ import {
   uploadFile,
   getDMs,
   startDM,
+  muteChannel,
+  getMutedChannels,
 } from '@/services/channel.service';
 
 export const useChannels = (organizationId: string) =>
@@ -146,5 +148,20 @@ export const useStartDM = (organizationId: string) => {
   return useMutation({
     mutationFn: (userId: string) => startDM(organizationId, userId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['organizations', organizationId, 'dms'] }),
+  });
+};
+
+export const useMutedChannels = () =>
+  useQuery({
+    queryKey: ['channels', 'muted'],
+    queryFn: getMutedChannels,
+  });
+
+export const useMuteChannel = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ channelId, isMuted }: { channelId: string; isMuted: boolean }) =>
+      muteChannel(channelId, isMuted),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['channels', 'muted'] }),
   });
 };

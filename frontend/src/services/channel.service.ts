@@ -7,6 +7,8 @@ import type {
   ChannelMembersResponse,
   Message,
   MessagesResponse,
+  MutedChannelsResponse,
+  MuteChannelResponse,
 } from '@/types/channel.types';
 
 export async function getChannels(organizationId: string): Promise<Channel[]> {
@@ -101,5 +103,15 @@ export async function getDMs(organizationId: string): Promise<Channel[]> {
 
 export async function startDM(organizationId: string, userId: string): Promise<Channel> {
   const res = await api.post<ChannelResponse>(`/organizations/${organizationId}/dms`, { userId });
+  return res.data.data;
+}
+
+export async function muteChannel(channelId: string, isMuted: boolean): Promise<boolean> {
+  const res = await api.patch<MuteChannelResponse>(`/channels/${channelId}/mute`, { isMuted });
+  return res.data.data.isMuted;
+}
+
+export async function getMutedChannels(): Promise<string[]> {
+  const res = await api.get<MutedChannelsResponse>('/channels/muted');
   return res.data.data;
 }

@@ -80,3 +80,15 @@ export interface MessagesResponse {
   message: string;
   data: Message[];
 }
+
+export interface MutedChannelsResponse {
+  success: boolean;
+  message: string;
+  data: string[];
+}
+
+export interface MuteChannelResponse {
+  success: boolean;
+  message: string;
+  data: { isMuted: boolean };
+}
