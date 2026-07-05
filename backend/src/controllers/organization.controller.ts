@@ -617,3 +617,23 @@ export const getMemberProfile = asyncHandler(
     }, 'Member profile retrieved successfully');
   }
 );
+
+export const muteOrganization = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { organizationId } = req.params as { organizationId: string };
+  const { isMuted } = req.body as { isMuted: boolean };
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  const updated = await organizationMemberRepository.setMuted(organizationId, user.id, isMuted);
+  if (!updated) throw new ApiError(404, 'You are not a member of this organization');
+
+  return ok(res, { isMuted: updated.isMuted }, isMuted ? 'Organization muted' : 'Organization unmuted');
+});
+
+export const listMutedOrganizations = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  const organizationIds = await organizationMemberRepository.findMutedOrganizationIds(user.id);
+  return ok(res, organizationIds, 'Muted organizations retrieved successfully');
+});

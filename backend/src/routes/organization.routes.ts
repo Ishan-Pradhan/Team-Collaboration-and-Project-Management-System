@@ -25,6 +25,8 @@ import {
   unbanOrganizationMember,
   listOrganizationBans,
   getMemberProfile,
+  muteOrganization,
+  listMutedOrganizations,
 } from '../controllers/organization.controller.js';
 import {
   createOrganizationSchema,
@@ -36,6 +38,7 @@ import {
   slugParamSchema,
   inviteParamSchema,
   changeMemberRoleSchema,
+  muteOrganizationSchema,
 } from '../validations/organization.validation.js';
 
 const router = Router();
@@ -131,6 +134,14 @@ router
 router
   .route('/accept-invite')
   .post(verifyJWT, validate(acceptInviteSchema), acceptOrganizationInvitation);
+
+router
+  .route('/muted')
+  .get(verifyJWT, listMutedOrganizations);
+
+router
+  .route('/:organizationId/mute')
+  .patch(verifyJWT, isOrganizationMember, validate(muteOrganizationSchema), muteOrganization);
 
 /**
  * @swagger

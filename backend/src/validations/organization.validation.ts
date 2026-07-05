@@ -27,6 +27,15 @@ export const organizationParamSchema = {
   }),
 };
 
+export const muteOrganizationSchema = {
+  params: z.object({
+    organizationId: z.string().uuid('Invalid organization ID'),
+  }),
+  body: z.object({
+    isMuted: z.boolean(),
+  }),
+};
+
 export const memberParamSchema = {
   params: z.object({
     organizationId: z.string().uuid('Invalid organization ID'),
