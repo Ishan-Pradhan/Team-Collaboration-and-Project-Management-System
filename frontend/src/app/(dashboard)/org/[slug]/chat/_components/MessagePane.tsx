@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, MessageSquare, Paperclip, Send, Smile, Trash2 } from 'lucide-react';
+import { ChevronDown, Loader2, MessageSquare, Paperclip, Send, Smile, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react';
 import { parseApiError } from '@/lib/axios';
@@ -169,9 +169,30 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
   const typingTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const lastTypingEmitRef = useRef(0);
 
+  const isNearBottomRef = useRef(true);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isNearBottomRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      setShowJumpToLatest(false);
+    } else {
+      setShowJumpToLatest(true);
+    }
   }, [messages?.length]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    isNearBottomRef.current = nearBottom;
+    if (nearBottom) setShowJumpToLatest(false);
+  };
+
+  const handleJumpToLatest = () => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    isNearBottomRef.current = true;
+    setShowJumpToLatest(false);
+  };
 
   useEffect(() => {
     const socket = getSocket();
@@ -293,7 +314,7 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto px-4 py-3">
+      <div className="relative flex-1 overflow-y-auto px-4 py-3" onScroll={handleScroll}>
         {messages && messages.length > 0 && (
           <button
             onClick={handleLoadMore}
@@ -452,6 +473,15 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
           </div>
         )}
         <div ref={bottomRef} />
+        {showJumpToLatest && (
+          <button
+            onClick={handleJumpToLatest}
+            className="absolute bottom-3 right-4 flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs text-white shadow-modal transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ChevronDown size={13} />
+            Jump to latest
+          </button>
+        )}
       </div>
 
       {typingUsers.size > 0 && (
