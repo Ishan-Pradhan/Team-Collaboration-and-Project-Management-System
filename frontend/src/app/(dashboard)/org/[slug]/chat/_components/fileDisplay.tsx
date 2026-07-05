@@ -3,9 +3,9 @@ import { getFileDownloadUrl } from '@/services/channel.service';
 import type { Message } from '@/types/channel.types';
 
 export function fileIcon(type: string) {
-  if (type.startsWith('image/')) return <ImageIcon size={14} className="text-blue-500" />;
-  if (type === 'application/pdf') return <FileText size={14} className="text-red-500" />;
-  return <File size={14} className="text-gray-400" />;
+  if (type.startsWith('image/')) return <ImageIcon size={14} className="text-text-secondary" />;
+  if (type === 'application/pdf') return <FileText size={14} className="text-text-secondary" />;
+  return <File size={14} className="text-text-secondary" />;
 }
 
 export function formatBytes(bytes: number) {
