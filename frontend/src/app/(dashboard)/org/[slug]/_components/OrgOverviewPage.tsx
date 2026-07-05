@@ -7,7 +7,7 @@ import { useOrganizationBySlug } from '@/hooks/useOrganization';
 import { useOrgDashboard } from '@/hooks/useProject';
 import { useAuthStore } from '@/store/auth.store';
 import { cn } from '@/lib/utils';
-import { PRIORITY } from '@/constants/task.constants';
+import { PRIORITY, isDoneColumn } from '@/constants/task.constants';
 import {
   AlertTriangle, ArrowRight, CheckSquare,
   Clock, FolderOpen, MessageSquare,
@@ -20,7 +20,8 @@ import type { DashboardData } from '@/types/project.types';
 
 // ─── Helpers ─────────────────────────────────────────────────
 
-function getDueDateLabel(dueDate: string | null): { label: string; cls: string } | null {
+function getDueDateLabel(dueDate: string | null, columnName?: string | null): { label: string; cls: string } | null {
+  if (isDoneColumn(columnName)) return { label: 'Completed', cls: 'text-success' };
   if (!dueDate) return null;
   const due = new Date(dueDate + 'T12:00:00');
   const now = new Date(); now.setHours(0, 0, 0, 0);
@@ -219,7 +220,7 @@ export default function OrgOverviewPage({ params }: Props) {
           ) : (
             <ul className="divide-y divide-border-subtle max-h-[320px] overflow-y-auto">
               {dashboard.assignedTasks.map((task) => {
-                const due = getDueDateLabel(task.dueDate);
+                const due = getDueDateLabel(task.dueDate, task.columnName);
                 return (
                   <li key={task.id}>
                     <button

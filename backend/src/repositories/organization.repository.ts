@@ -21,6 +21,13 @@ import type {
   OrganizationBanInstance,
 } from '../types/organizations.types.js';
 
+// Mirrors the frontend's `isDoneColumn` (task.constants.ts) — a task sitting
+// in a column whose name matches this is treated as completed, so it should
+// never count toward overdue/due-soon stats regardless of its dueDate.
+const DONE_COLUMN_RE = /\b(done|complet\w*|finish\w*|clos\w*|shipped?|deployed?|released?|delivered?)\b/i;
+const isDoneColumnName = (name: string | null | undefined): boolean =>
+  !!name && DONE_COLUMN_RE.test(name);
+
 export const organizationRepository = {
   create: async (data: OrganizationCreationAttributes): Promise<OrganizationInstance> => {
     return await Organization.create(data);
@@ -265,15 +272,25 @@ export const dashboardRepository = {
     ] = await Promise.all([
       Task.count({ include: [assigneeInclude, orgProjectInclude] }),
 
-      Task.count({
+      Task.findAll({
         where: { dueDate: { [Op.lt]: today } },
-        include: [assigneeInclude, orgProjectInclude],
-      }),
+        include: [
+          assigneeInclude,
+          orgProjectInclude,
+          { model: KanbanColumn, as: 'column', required: true, attributes: ['name'] },
+        ],
+        attributes: ['id'],
+      }).then((rows) => rows.filter((t) => !isDoneColumnName((t as any).column?.name)).length),
 
-      Task.count({
+      Task.findAll({
         where: { dueDate: { [Op.between]: [today, in7Days] } },
-        include: [assigneeInclude, orgProjectInclude],
-      }),
+        include: [
+          assigneeInclude,
+          orgProjectInclude,
+          { model: KanbanColumn, as: 'column', required: true, attributes: ['name'] },
+        ],
+        attributes: ['id'],
+      }).then((rows) => rows.filter((t) => !isDoneColumnName((t as any).column?.name)).length),
 
       Task.findAll({
         include: [
