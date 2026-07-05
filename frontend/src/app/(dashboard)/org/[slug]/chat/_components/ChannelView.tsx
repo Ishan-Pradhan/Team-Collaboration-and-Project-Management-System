@@ -32,19 +32,32 @@ export default function ChannelView({ channel, organizationId, isAdmin, onLeftOr
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {channel.type === 'DM' ? (
             <>
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
-                {(channel.dmParticipant?.name ?? '?').charAt(0).toUpperCase()}
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                {channel.dmParticipant?.avatarUrl ? (
+                  <img
+                    src={channel.dmParticipant.avatarUrl}
+                    alt={channel.dmParticipant.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  (channel.dmParticipant?.name ?? '?').charAt(0).toUpperCase()
+                )}
               </div>
-              <h2 className="text-sm font-semibold text-text-primary">{channel.dmParticipant?.name ?? 'Unknown'}</h2>
+              <h2 className="text-base font-semibold text-text-primary">{channel.dmParticipant?.name ?? 'Unknown'}</h2>
             </>
           ) : (
             <>
-              {channel.type === 'PUBLIC' ? <Hash size={15} className="text-text-secondary" /> : <Lock size={15} className="text-text-secondary" />}
-              <h2 className="text-sm font-semibold text-text-primary">{channel.name}</h2>
-              <span className="text-xs text-text-secondary">{members?.length ?? 0} members</span>
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-muted">
+                {channel.type === 'PUBLIC' ? <Hash size={15} className="text-text-secondary" /> : <Lock size={15} className="text-text-secondary" />}
+              </div>
+              <h2 className="text-base font-semibold text-text-primary">{channel.name}</h2>
+              <span className="inline-flex items-center gap-1 rounded-full bg-surface-muted px-2 py-0.5 text-xs font-medium text-text-secondary">
+                <Users size={11} />
+                {members?.length ?? 0}
+              </span>
             </>
           )}
         </div>
