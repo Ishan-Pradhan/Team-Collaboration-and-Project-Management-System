@@ -544,3 +544,23 @@ export async function autoJoinUserToPublicChannels(
     io.in(`user:${userId}`).socketsJoin(`channel:${channelId}`);
   });
 }
+
+export const muteChannel = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const channelId = req.params.channelId as string;
+  const { isMuted } = req.body as { isMuted: boolean };
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  const updated = await channelMemberRepository.setMuted(channelId, user.id, isMuted);
+  if (!updated) throw new ApiError(404, 'You are not a member of this channel');
+
+  return ok(res, { isMuted: updated.isMuted }, isMuted ? 'Channel muted' : 'Channel unmuted');
+});
+
+export const listMutedChannels = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  const channelIds = await channelMemberRepository.findMutedChannelIds(user.id);
+  return ok(res, channelIds, 'Muted channels retrieved successfully');
+});

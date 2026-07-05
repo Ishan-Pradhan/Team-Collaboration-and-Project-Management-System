@@ -22,6 +22,15 @@ export const channelParamSchema = {
   }),
 };
 
+export const muteChannelSchema = {
+  params: z.object({
+    channelId: z.string().uuid('Invalid channel ID'),
+  }),
+  body: z.object({
+    isMuted: z.boolean(),
+  }),
+};
+
 export const inviteChannelMemberSchema = {
   params: z.object({
     channelId: z.string().uuid('Invalid channel ID'),

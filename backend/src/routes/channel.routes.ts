@@ -26,6 +26,8 @@ import {
   downloadFile,
   startDM,
   listDMs,
+  muteChannel,
+  listMutedChannels,
 } from '../controllers/channel.controller.js';
 import {
   createChannelSchema,
@@ -39,6 +41,7 @@ import {
   removeReactionSchema,
   messageParamSchema,
   startDMSchema,
+  muteChannelSchema,
 } from '../validations/channel.validation.js';
 
 const router = Router();
@@ -49,8 +52,16 @@ router
   .get(verifyJWT, isOrganizationMember, validate(organizationChannelsParamSchema), listChannels);
 
 router
+  .route('/channels/muted')
+  .get(verifyJWT, listMutedChannels);
+
+router
   .route('/channels/:channelId')
   .delete(verifyJWT, isChannelOrgAdmin, validate(channelParamSchema), deleteChannel);
+
+router
+  .route('/channels/:channelId/mute')
+  .patch(verifyJWT, isChannelMember, validate(muteChannelSchema), muteChannel);
 
 router
   .route('/channels/:channelId/members')
