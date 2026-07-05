@@ -2,10 +2,10 @@
 
 import { use, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Hash, Lock, Loader2, MessageSquare, Plus, X } from 'lucide-react';
+import { BellOff, Hash, Lock, Loader2, MessageSquare, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOrganizationBySlug, useOrganizationMembers } from '@/hooks/useOrganization';
-import { useChannels, useCreateChannel, useDMs, useStartDM } from '@/hooks/useChannel';
+import { useChannels, useCreateChannel, useDMs, useStartDM, useMutedChannels } from '@/hooks/useChannel';
 import { useUnreadChannels, useMarkReadByEntity } from '@/hooks/useNotification';
 import { useAuthStore } from '@/store/auth.store';
 import { useChatStore } from '@/store/chat.store';
@@ -161,6 +161,7 @@ export default function ChatPage({ params }: Props) {
   const { data: dms } = useDMs(org?.id ?? '');
   const { data: orgMembers } = useOrganizationMembers(org?.id ?? '');
   const { data: unreadChannels } = useUnreadChannels();
+  const { data: mutedChannelIds } = useMutedChannels();
   const createChannel = useCreateChannel(org?.id ?? '');
   const startDM = useStartDM(org?.id ?? '');
   const markReadByEntity = useMarkReadByEntity();
@@ -171,6 +172,7 @@ export default function ChatPage({ params }: Props) {
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
 
   const unreadMap = new Map((unreadChannels ?? []).map((c) => [c.channelId, c]));
+  const mutedSet = new Set(mutedChannelIds ?? []);
 
   useEffect(() => {
     if (
@@ -295,6 +297,7 @@ export default function ChatPage({ params }: Props) {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-1.5">
                       <span className="truncate">{channel.name}</span>
+                      {mutedSet.has(channel.id) && <BellOff size={11} className="shrink-0 text-text-muted" />}
                       {unread && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
                     </span>
                     {unread && (
@@ -353,6 +356,7 @@ export default function ChatPage({ params }: Props) {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-1.5">
                       <span className="truncate">{dm.dmParticipant?.name ?? 'Unknown'}</span>
+                      {mutedSet.has(dm.id) && <BellOff size={11} className="shrink-0 text-text-muted" />}
                       {unread && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
                     </span>
                     {unread && (
