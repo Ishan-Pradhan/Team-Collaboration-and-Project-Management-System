@@ -35,24 +35,24 @@ function CreateChannelModal({
   const [type, setType] = useState<'PUBLIC' | 'PRIVATE'>('PUBLIC');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="relative w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+      <div className="relative w-full max-w-md rounded-xl border border-border bg-white p-6 shadow-modal">
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 rounded-md p-1 text-gray-400 hover:bg-gray-100 transition-colors"
+          className="absolute right-4 top-4 rounded-md p-1 text-text-secondary hover:bg-surface-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <X size={15} />
         </button>
 
-        <h2 className="text-base font-semibold text-gray-800">New Channel</h2>
-        <p className="mt-0.5 text-xs text-gray-400">Create a channel for your organization to chat in.</p>
+        <h2 className="text-base font-semibold text-text-primary">New Channel</h2>
+        <p className="mt-0.5 text-xs text-text-secondary">Create a channel for your organization to chat in.</p>
 
         <form
           onSubmit={(e) => { e.preventDefault(); if (name.trim()) onSubmit(name.trim(), type); }}
           className="mt-5 space-y-4"
         >
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-600" htmlFor="new-channel-name">
+            <label className="text-xs font-semibold text-text-secondary" htmlFor="new-channel-name">
               Channel name
             </label>
             <Input
@@ -67,27 +67,27 @@ function CreateChannelModal({
           </div>
 
           <div className="space-y-1.5">
-            <span className="text-xs font-semibold text-gray-600">Visibility</span>
+            <span className="text-xs font-semibold text-text-secondary">Visibility</span>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setType('PUBLIC')}
-                className={`flex-1 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
-                  type === 'PUBLIC' ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200 text-gray-600'
+                className={`flex-1 rounded-lg border px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  type === 'PUBLIC' ? 'border-primary bg-primary/5 text-primary' : 'border-border-subtle text-text-secondary'
                 }`}
               >
                 <span className="flex items-center gap-1.5 font-medium"><Hash size={13} /> Public</span>
-                <span className="text-xs text-gray-400">All org members auto-join</span>
+                <span className="text-xs text-text-secondary">All org members auto-join</span>
               </button>
               <button
                 type="button"
                 onClick={() => setType('PRIVATE')}
-                className={`flex-1 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
-                  type === 'PRIVATE' ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200 text-gray-600'
+                className={`flex-1 rounded-lg border px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  type === 'PRIVATE' ? 'border-primary bg-primary/5 text-primary' : 'border-border-subtle text-text-secondary'
                 }`}
               >
                 <span className="flex items-center gap-1.5 font-medium"><Lock size={13} /> Private</span>
-                <span className="text-xs text-gray-400">Invite-only</span>
+                <span className="text-xs text-text-secondary">Invite-only</span>
               </button>
             </div>
           </div>
@@ -118,17 +118,17 @@ function NewDMModal({
   isPending: boolean;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="relative w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+      <div className="relative w-full max-w-md rounded-xl border border-border bg-white p-6 shadow-modal">
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 rounded-md p-1 text-gray-400 hover:bg-gray-100 transition-colors"
+          className="absolute right-4 top-4 rounded-md p-1 text-text-secondary hover:bg-surface-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <X size={15} />
         </button>
 
-        <h2 className="text-base font-semibold text-gray-800">New Direct Message</h2>
-        <p className="mt-0.5 text-xs text-gray-400">Pick someone in your organization to message.</p>
+        <h2 className="text-base font-semibold text-text-primary">New Direct Message</h2>
+        <p className="mt-0.5 text-xs text-text-secondary">Pick someone in your organization to message.</p>
 
         <div className="mt-4 max-h-80 space-y-1 overflow-y-auto">
           {members.map((m) => (
@@ -136,7 +136,7 @@ function NewDMModal({
               key={m.userId}
               onClick={() => onSelect(m.userId)}
               disabled={isPending}
-              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-text-primary hover:bg-surface-muted transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                 {(m.user?.name ?? '?').charAt(0).toUpperCase()}
@@ -338,9 +338,17 @@ export default function ChatPage({ params }: Props) {
                       e.stopPropagation();
                       if (dm.dmParticipant) setProfileUserId(dm.dmParticipant.id);
                     }}
-                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary hover:opacity-80 transition-opacity"
+                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-[10px] font-semibold text-primary hover:opacity-80 transition-opacity"
                   >
-                    {(dm.dmParticipant?.name ?? '?').charAt(0).toUpperCase()}
+                    {dm.dmParticipant?.avatarUrl ? (
+                      <img
+                        src={dm.dmParticipant.avatarUrl}
+                        alt={dm.dmParticipant.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      (dm.dmParticipant?.name ?? '?').charAt(0).toUpperCase()
+                    )}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-1.5">
@@ -369,8 +377,10 @@ export default function ChatPage({ params }: Props) {
             onLeftOrDeleted={() => setSelectedChannel(null)}
           />
         ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-text-secondary">
-            <MessageSquare size={28} className="text-gray-300" />
+          <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-text-secondary">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted">
+              <MessageSquare size={24} className="text-text-muted" />
+            </div>
             <p className="text-sm">Select a channel to start chatting</p>
           </div>
         )}
