@@ -394,7 +394,7 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                             </p>
                           )}
 
-                          <div className="absolute -top-8 left-1/2 hidden -translate-x-1/2 flex-col items-center pb-3 group-hover:flex">
+                          <div className="absolute -top-8 left-1/2 flex -translate-x-1/2 translate-y-1 flex-col items-center pb-3 opacity-0 pointer-events-none transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-hover:pointer-events-auto">
                             <div className={cn(
                               'flex items-center gap-0.5 rounded-lg border p-0.5 shadow-sm',
                               isOwn ? 'border-primary/30 bg-primary/10' : 'border-border-subtle bg-white',
