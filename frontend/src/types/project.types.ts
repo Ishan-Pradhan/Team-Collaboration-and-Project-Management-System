@@ -13,6 +13,9 @@ export interface Project {
   createdAt: string;
   updatedAt: string;
   myRole?: ProjectMemberRole | null;
+  memberCount: number;
+  taskCount: number;
+  completedTaskCount: number;
 }
 
 // ─── Project Member ────────────────────────────────────────────

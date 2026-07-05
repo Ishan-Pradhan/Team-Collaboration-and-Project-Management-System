@@ -156,11 +156,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     },
     ...(activeOrg?.ownerId === user?.id
       ? [{
-          name: 'Settings',
-          href: `/org/${currentSlug}/settings`,
-          icon: Settings,
-          disabled: false,
-        }]
+        name: 'Settings',
+        href: `/org/${currentSlug}/settings`,
+        icon: Settings,
+        disabled: false,
+      }]
       : []),
   ];
 
@@ -398,7 +398,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main Content wrapper */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Topbar */}
-        <header className="flex h-14 items-center justify-between border-b border-border-subtle bg-white px-4 lg:px-6">
+        <header className="flex h-14 items-center justify-between border-b border-border-subtle bg-white px-4 lg:px-6 sm:hidden">
           <div className="flex items-center gap-4">
             <button
               className="rounded p-1 text-primary hover:bg-surface-muted lg:hidden"

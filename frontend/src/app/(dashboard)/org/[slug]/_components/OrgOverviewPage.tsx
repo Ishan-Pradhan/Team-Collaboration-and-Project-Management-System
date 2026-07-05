@@ -15,16 +15,10 @@ import {
 import { ErrorState } from '@/components/shared/ErrorState';
 import { ActivityRow } from '@/components/shared/ActivityRow';
 import { getSocket } from '@/lib/socket';
+import { avatarColor } from '@/lib/avatarColor';
 import type { DashboardData } from '@/types/project.types';
 
 // ─── Helpers ─────────────────────────────────────────────────
-
-const AVATAR_COLORS = ['#22302a', '#d4a84f', '#6f8c78', '#a86c58', '#4b7f52', '#c38a2d'];
-function avatarColor(name: string) {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
-  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
-}
 
 function getDueDateLabel(dueDate: string | null): { label: string; cls: string } | null {
   if (!dueDate) return null;
