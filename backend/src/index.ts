@@ -9,6 +9,7 @@ import { limiter } from './middlewares/rateLimiter.middleware.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import { swaggerSpec } from './config/swagger.config.js';
 import { initSocket } from './socket/index.js';
+import { startDueDateReminderJob } from './jobs/dueDateReminders.job.js';
 import './models/index.js';
 
 dotenv.config();
@@ -82,6 +83,7 @@ export const connectDB = async () => {
   try {
     await sequelize.authenticate();
     console.log("Database connected successfully");
+    startDueDateReminderJob();
   } catch (error) {
     console.error("DB connection failed:", error);
     process.exit(1);
