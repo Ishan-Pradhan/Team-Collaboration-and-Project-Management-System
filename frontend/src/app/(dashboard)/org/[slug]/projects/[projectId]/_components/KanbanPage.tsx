@@ -435,10 +435,10 @@ export default function KanbanPage({ params }: Props) {
                     tasks={localTaskMap[activeDrag.column.id] || []}
                     projectId={projectId}
                     isAdmin={isAdmin}
-                    onAddTask={() => {}}
-                    onEditTask={() => {}}
-                    onDelete={() => {}}
-                    onLocalRename={() => {}}
+                    onAddTask={() => { }}
+                    onEditTask={() => { }}
+                    onDelete={() => { }}
+                    onLocalRename={() => { }}
                   />
                 </div>
               )}
@@ -460,32 +460,32 @@ export default function KanbanPage({ params }: Props) {
                 const colName = localColumns.find((c) => c.id === task.columnId)?.name;
                 const dueStatus = getDueStatus(task.dueDate, colName);
                 return (
-                <div key={task.id} onClick={() => setEditingTask(task)}
-                  className="grid grid-cols-12 gap-4 px-5 py-3.5 text-sm items-center hover:bg-gray-50 cursor-pointer transition-colors">
-                  <div className="col-span-4 font-medium text-gray-900 truncate">{task.title}</div>
-                  <div className="col-span-2">
-                    <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs font-medium">
-                      {localColumns.find((c) => c.id === task.columnId)?.name || '—'}
-                    </span>
-                  </div>
-                  <div className="col-span-2">
-                    <span className={cn('px-2 py-0.5 rounded-full text-xs font-semibold', PRIORITY[task.priority].chip)}>
-                      {PRIORITY[task.priority].label}
-                    </span>
-                  </div>
-                  <div className="col-span-2">
-                    {dueStatus ? (
-                      <span className={cn('px-2 py-0.5 rounded-full text-xs font-semibold', DUE_STATUS[dueStatus].chip)}>
-                        {DUE_STATUS[dueStatus].label}
+                  <div key={task.id} onClick={() => setEditingTask(task)}
+                    className="grid grid-cols-12 gap-4 px-5 py-3.5 text-sm items-center hover:bg-gray-50 cursor-pointer transition-colors">
+                    <div className="col-span-4 font-medium text-gray-900 truncate">{task.title}</div>
+                    <div className="col-span-2">
+                      <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs font-medium">
+                        {localColumns.find((c) => c.id === task.columnId)?.name || '—'}
                       </span>
-                    ) : (
-                      <span className="text-gray-400 text-xs">—</span>
-                    )}
+                    </div>
+                    <div className="col-span-2">
+                      <span className={cn('px-2 py-0.5 rounded-full text-xs font-semibold', PRIORITY[task.priority].chip)}>
+                        {PRIORITY[task.priority].label}
+                      </span>
+                    </div>
+                    <div className="col-span-2">
+                      {dueStatus ? (
+                        <span className={cn('px-2 py-0.5 rounded-full text-xs font-semibold', DUE_STATUS[dueStatus].chip)}>
+                          {DUE_STATUS[dueStatus].label}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-xs">—</span>
+                      )}
+                    </div>
+                    <div className="col-span-2 text-right text-gray-400 text-xs">
+                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '—'}
+                    </div>
                   </div>
-                  <div className="col-span-2 text-right text-gray-400 text-xs">
-                    {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '—'}
-                  </div>
-                </div>
                 );
               })}
               {allTasks.length === 0 && (
