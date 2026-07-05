@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { BellOff, Hash, Lock, Loader2, MessageSquare, Plus, X } from 'lucide-react';
+import { BellOff, ChevronDown, ChevronRight, Hash, Lock, Loader2, MessageSquare, Plus, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOrganizationBySlug, useOrganizationMembers } from '@/hooks/useOrganization';
 import { useChannels, useCreateChannel, useDMs, useStartDM, useMutedChannels } from '@/hooks/useChannel';
@@ -16,6 +16,7 @@ import { ChatSkeleton } from '@/components/shared/skeletons/ChatSkeleton';
 import { ErrorState } from '@/components/shared/ErrorState';
 import UserProfileDialog from '@/components/shared/UserProfileDialog';
 import type { Channel } from '@/types/channel.types';
+import { sortChannels } from '@/lib/channelSort';
 import ChannelView from './ChannelView';
 
 interface Props {
@@ -72,9 +73,8 @@ function CreateChannelModal({
               <button
                 type="button"
                 onClick={() => setType('PUBLIC')}
-                className={`flex-1 rounded-lg border px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                  type === 'PUBLIC' ? 'border-primary bg-primary/5 text-primary' : 'border-border-subtle text-text-secondary'
-                }`}
+                className={`flex-1 rounded-lg border px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${type === 'PUBLIC' ? 'border-primary bg-primary/5 text-primary' : 'border-border-subtle text-text-secondary'
+                  }`}
               >
                 <span className="flex items-center gap-1.5 font-medium"><Hash size={13} /> Public</span>
                 <span className="text-xs text-text-secondary">All org members auto-join</span>
@@ -82,9 +82,8 @@ function CreateChannelModal({
               <button
                 type="button"
                 onClick={() => setType('PRIVATE')}
-                className={`flex-1 rounded-lg border px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                  type === 'PRIVATE' ? 'border-primary bg-primary/5 text-primary' : 'border-border-subtle text-text-secondary'
-                }`}
+                className={`flex-1 rounded-lg border px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${type === 'PRIVATE' ? 'border-primary bg-primary/5 text-primary' : 'border-border-subtle text-text-secondary'
+                  }`}
               >
                 <span className="flex items-center gap-1.5 font-medium"><Lock size={13} /> Private</span>
                 <span className="text-xs text-text-secondary">Invite-only</span>
@@ -170,9 +169,20 @@ export default function ChatPage({ params }: Props) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDMModal, setShowDMModal] = useState(false);
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [channelsOpen, setChannelsOpen] = useState(true);
+  const [dmsOpen, setDmsOpen] = useState(true);
 
   const unreadMap = new Map((unreadChannels ?? []).map((c) => [c.channelId, c]));
   const mutedSet = new Set(mutedChannelIds ?? []);
+
+  const sortedChannels = sortChannels(channels ?? []);
+  const sortedDMs = [...(dms ?? [])].sort((a, b) =>
+    (a.dmParticipant?.name ?? 'Unknown').localeCompare(b.dmParticipant?.name ?? 'Unknown', undefined, { sensitivity: 'base' })
+  );
+  const searchQuery = search.trim().toLowerCase();
+  const filteredChannels = sortedChannels.filter((c) => (c.name ?? '').toLowerCase().includes(searchQuery));
+  const filteredDMs = sortedDMs.filter((dm) => (dm.dmParticipant?.name ?? 'Unknown').toLowerCase().includes(searchQuery));
 
   useEffect(() => {
     if (
@@ -285,9 +295,27 @@ export default function ChatPage({ params }: Props) {
 
   return (
     <div className="flex h-full gap-4">
-      <aside className="flex w-64 shrink-0 flex-col overflow-y-auto rounded-xl border border-border-subtle bg-white">
+      <aside className="flex w-64 shrink-0 flex-col overflow-y-auto rounded-xl border border-border-subtle h-[100vh] bg-white">
+        <div className="border-b border-border-subtle p-2">
+          <div className="relative">
+            <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+            <Input
+              placeholder="Search channels & DMs..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 pl-8 text-sm"
+            />
+          </div>
+        </div>
+
         <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2.5">
-          <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Channels</span>
+          <button
+            onClick={() => setChannelsOpen((v) => !v)}
+            className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-text-secondary transition-colors hover:text-text-primary"
+          >
+            {channelsOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            Channels
+          </button>
           {isAdmin && (
             <button
               onClick={() => setShowCreateModal(true)}
@@ -298,41 +326,50 @@ export default function ChatPage({ params }: Props) {
             </button>
           )}
         </div>
-        <div className="space-y-0.5 p-2">
-          {channels && channels.length > 0 ? (
-            channels.map((channel) => {
-              const unread = unreadMap.get(channel.id);
-              return (
-                <button
-                  key={channel.id}
-                  onClick={() => setSelectedChannel(channel)}
-                  className={`flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors ${
-                    selectedChannel?.id === channel.id
+        {channelsOpen && (
+          <div className="space-y-0.5 p-2">
+            {filteredChannels.length > 0 ? (
+              filteredChannels.map((channel) => {
+                const unread = unreadMap.get(channel.id);
+                return (
+                  <button
+                    key={channel.id}
+                    onClick={() => setSelectedChannel(channel)}
+                    className={`flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors ${selectedChannel?.id === channel.id
                       ? 'bg-primary/10 text-primary font-medium'
                       : 'text-text-secondary hover:bg-surface-muted'
-                  }`}
-                >
-                  {channel.type === 'PUBLIC' ? <Hash size={13} className="mt-0.5 shrink-0" /> : <Lock size={13} className="mt-0.5 shrink-0" />}
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-1.5">
-                      <span className="truncate">{channel.name}</span>
-                      {mutedSet.has(channel.id) && <BellOff size={11} className="shrink-0 text-text-muted" />}
-                      {unread && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
+                      }`}
+                  >
+                    {channel.type === 'PUBLIC' ? <Hash size={13} className="mt-0.5 shrink-0" /> : <Lock size={13} className="mt-0.5 shrink-0" />}
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-1.5">
+                        <span className="truncate">{channel.name}</span>
+                        {mutedSet.has(channel.id) && <BellOff size={11} className="shrink-0 text-text-muted" />}
+                        {unread && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
+                      </span>
+                      {unread && (
+                        <span className="block truncate text-xs font-semibold text-text-primary">{unread.body}</span>
+                      )}
                     </span>
-                    {unread && (
-                      <span className="block truncate text-xs font-semibold text-text-primary">{unread.body}</span>
-                    )}
-                  </span>
-                </button>
-              );
-            })
-          ) : (
-            <p className="px-2.5 py-2 text-xs text-text-secondary italic">No channels yet.</p>
-          )}
-        </div>
+                  </button>
+                );
+              })
+            ) : (
+              <p className="px-2.5 py-2 text-xs text-text-secondary italic">
+                {search ? 'No matches.' : 'No channels yet.'}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="flex items-center justify-between border-b border-t border-border-subtle px-3 py-2.5">
-          <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Direct Messages</span>
+          <button
+            onClick={() => setDmsOpen((v) => !v)}
+            className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-text-secondary transition-colors hover:text-text-primary"
+          >
+            {dmsOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            Direct Messages
+          </button>
           <button
             onClick={() => setShowDMModal(true)}
             className="rounded p-1 text-text-secondary hover:bg-surface-muted transition-colors"
@@ -341,54 +378,57 @@ export default function ChatPage({ params }: Props) {
             <Plus size={15} />
           </button>
         </div>
-        <div className="space-y-0.5 p-2">
-          {dms && dms.length > 0 ? (
-            dms.map((dm) => {
-              const unread = unreadMap.get(dm.id);
-              return (
-                <button
-                  key={dm.id}
-                  onClick={() => setSelectedChannel(dm)}
-                  className={`flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors ${
-                    selectedChannel?.id === dm.id
+        {dmsOpen && (
+          <div className="space-y-0.5 p-2">
+            {filteredDMs.length > 0 ? (
+              filteredDMs.map((dm) => {
+                const unread = unreadMap.get(dm.id);
+                return (
+                  <button
+                    key={dm.id}
+                    onClick={() => setSelectedChannel(dm)}
+                    className={`flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors ${selectedChannel?.id === dm.id
                       ? 'bg-primary/10 text-primary font-medium'
                       : 'text-text-secondary hover:bg-surface-muted'
-                  }`}
-                >
-                  <span
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (dm.dmParticipant) setProfileUserId(dm.dmParticipant.id);
-                    }}
-                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-[10px] font-semibold text-primary hover:opacity-80 transition-opacity"
+                      }`}
                   >
-                    {dm.dmParticipant?.avatarUrl ? (
-                      <img
-                        src={dm.dmParticipant.avatarUrl}
-                        alt={dm.dmParticipant.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      (dm.dmParticipant?.name ?? '?').charAt(0).toUpperCase()
-                    )}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-1.5">
-                      <span className="truncate">{dm.dmParticipant?.name ?? 'Unknown'}</span>
-                      {mutedSet.has(dm.id) && <BellOff size={11} className="shrink-0 text-text-muted" />}
-                      {unread && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (dm.dmParticipant) setProfileUserId(dm.dmParticipant.id);
+                      }}
+                      className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-[10px] font-semibold text-primary hover:opacity-80 transition-opacity"
+                    >
+                      {dm.dmParticipant?.avatarUrl ? (
+                        <img
+                          src={dm.dmParticipant.avatarUrl}
+                          alt={dm.dmParticipant.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        (dm.dmParticipant?.name ?? '?').charAt(0).toUpperCase()
+                      )}
                     </span>
-                    {unread && (
-                      <span className="block truncate text-xs font-semibold text-text-primary">{unread.body}</span>
-                    )}
-                  </span>
-                </button>
-              );
-            })
-          ) : (
-            <p className="px-2.5 py-2 text-xs text-text-secondary italic">No direct messages yet.</p>
-          )}
-        </div>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-1.5">
+                        <span className="truncate">{dm.dmParticipant?.name ?? 'Unknown'}</span>
+                        {mutedSet.has(dm.id) && <BellOff size={11} className="shrink-0 text-text-muted" />}
+                        {unread && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
+                      </span>
+                      {unread && (
+                        <span className="block truncate text-xs font-semibold text-text-primary">{unread.body}</span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })
+            ) : (
+              <p className="px-2.5 py-2 text-xs text-text-secondary italic">
+                {search ? 'No matches.' : 'No direct messages yet.'}
+              </p>
+            )}
+          </div>
+        )}
       </aside>
 
       <div className="flex-1 rounded-xl border border-border-subtle bg-white overflow-hidden">
