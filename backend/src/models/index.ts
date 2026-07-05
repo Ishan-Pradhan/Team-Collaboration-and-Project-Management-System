@@ -18,6 +18,7 @@ import { Message } from './messages.model.js';
 import { MessageReaction } from './messageReactions.model.js';
 import { Notification } from './notifications.model.js';
 import { ActivityLog } from './activityLog.model.js';
+import { PersonalEvent } from './personalEvents.model.js';
 
 // Setup associations
 
@@ -99,6 +100,10 @@ OrganizationBan.belongsTo(User, { foreignKey: 'bannedBy', as: 'bannedByUser' });
 // Notifications
 Notification.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
+// Personal Events
+PersonalEvent.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+PersonalEvent.belongsTo(Organization, { foreignKey: 'organizationId', as: 'organization' });
+
 // Activity Logs
 ActivityLog.belongsTo(Project, { foreignKey: 'projectId', as: 'project' });
 ActivityLog.belongsTo(User, { foreignKey: 'actorId', as: 'actor' });
@@ -128,4 +133,5 @@ export {
   MessageReaction,
   Notification,
   ActivityLog,
+  PersonalEvent,
 };
