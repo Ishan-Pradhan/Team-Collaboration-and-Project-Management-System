@@ -82,8 +82,8 @@ export const projectRepository = {
           where: { [Op.or]: donePatterns.map((pattern) => ({ name: { [Op.iLike]: pattern } })) },
         },
       ],
-      attributes: ['projectId', [fn('COUNT', col('Task.id')), 'count']],
-      group: ['projectId'],
+      attributes: [[col('Task.projectId'), 'projectId'], [fn('COUNT', col('Task.id')), 'count']],
+      group: ['Task.projectId'],
       raw: true,
     });
     return new Map(
