@@ -316,7 +316,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   <span className="block px-3 py-1.5 text-xs text-text-muted">Loading projects...</span>
                 ) : (
                   <>
-                    {projects && projects.slice(0, 4).map((project) => {
+                    {projects && projects.filter((project) => project.status === 'ACTIVE').slice(0, 4).map((project) => {
                       const projectHref = `/org/${currentSlug}/projects/${project.id}`;
                       const isProjectActive = pathname.startsWith(projectHref);
                       const color = getProjectColor(project.name);
