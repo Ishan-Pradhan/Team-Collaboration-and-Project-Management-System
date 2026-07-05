@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Hash, Lock, LogOut, MoreVertical, Paperclip, Trash2, Users } from 'lucide-react';
+import { Bell, BellOff, Hash, Lock, LogOut, MoreVertical, Paperclip, Trash2, Users } from 'lucide-react';
 import { parseApiError } from '@/lib/axios';
-import { useChannelMembers, useLeaveChannel, useDeleteChannel } from '@/hooks/useChannel';
+import { useChannelMembers, useLeaveChannel, useDeleteChannel, useMutedChannels, useMuteChannel } from '@/hooks/useChannel';
 import ManageChannelMembersModal from '@/components/shared/ManageChannelMembersModal';
 import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 import type { Channel } from '@/types/channel.types';
@@ -22,6 +22,9 @@ export default function ChannelView({ channel, organizationId, isAdmin, onLeftOr
   const { data: members } = useChannelMembers(channel.id);
   const leaveChannel = useLeaveChannel(organizationId, channel.id);
   const deleteChannel = useDeleteChannel(organizationId);
+  const { data: mutedChannelIds } = useMutedChannels();
+  const muteChannel = useMuteChannel();
+  const isMuted = mutedChannelIds?.includes(channel.id) ?? false;
 
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -81,6 +84,16 @@ export default function ChannelView({ channel, organizationId, isAdmin, onLeftOr
               >
                 <Paperclip size={13} />
                 {activeView === 'files' ? 'View Messages' : 'View Files'}
+              </button>
+              <button
+                onClick={() => {
+                  muteChannel.mutate({ channelId: channel.id, isMuted: !isMuted });
+                  setShowMenu(false);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-secondary hover:bg-surface-muted transition-colors"
+              >
+                {isMuted ? <BellOff size={13} /> : <Bell size={13} />}
+                {isMuted ? 'Unmute Channel' : 'Mute Channel'}
               </button>
               {channel.type !== 'DM' && (
                 <>
