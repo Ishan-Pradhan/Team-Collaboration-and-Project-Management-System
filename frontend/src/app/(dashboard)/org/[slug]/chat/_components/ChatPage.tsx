@@ -335,8 +335,8 @@ export default function ChatPage({ params }: Props) {
                   <button
                     key={channel.id}
                     onClick={() => setSelectedChannel(channel)}
-                    className={`flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors ${selectedChannel?.id === channel.id
-                      ? 'bg-primary/10 text-primary font-medium'
+                    className={`relative flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors ${selectedChannel?.id === channel.id
+                      ? 'bg-primary/10 text-primary font-medium before:absolute before:bottom-1 before:left-0 before:top-1 before:w-0.5 before:rounded-full before:bg-primary'
                       : 'text-text-secondary hover:bg-surface-muted'
                       }`}
                   >
@@ -354,9 +354,19 @@ export default function ChatPage({ params }: Props) {
                   </button>
                 );
               })
+            ) : search ? (
+              <p className="px-2.5 py-2 text-xs text-text-secondary italic">No matches.</p>
             ) : (
               <p className="px-2.5 py-2 text-xs text-text-secondary italic">
-                {search ? 'No matches.' : 'No channels yet.'}
+                No channels yet.
+                {isAdmin && (
+                  <>
+                    {' '}
+                    <button onClick={() => setShowCreateModal(true)} className="text-primary not-italic hover:underline">
+                      Create one
+                    </button>
+                  </>
+                )}
               </p>
             )}
           </div>
@@ -387,8 +397,8 @@ export default function ChatPage({ params }: Props) {
                   <button
                     key={dm.id}
                     onClick={() => setSelectedChannel(dm)}
-                    className={`flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors ${selectedChannel?.id === dm.id
-                      ? 'bg-primary/10 text-primary font-medium'
+                    className={`relative flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors ${selectedChannel?.id === dm.id
+                      ? 'bg-primary/10 text-primary font-medium before:absolute before:bottom-1 before:left-0 before:top-1 before:w-0.5 before:rounded-full before:bg-primary'
                       : 'text-text-secondary hover:bg-surface-muted'
                       }`}
                   >
