@@ -395,7 +395,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                         const isChannelActive = activeChannelId === channel.id;
                         const unread = unreadMap.get(channel.id);
                         const isMuted = mutedSet.has(channel.id);
-                        
+
                         return (
                           <Link
                             key={channel.id}
@@ -460,7 +460,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                         const isMuted = mutedSet.has(dm.id);
                         const participantName = dm.dmParticipant?.name ?? 'Unknown';
                         const avatarUrl = dm.dmParticipant?.avatarUrl;
-                        
+
                         return (
                           <Link
                             key={dm.id}
@@ -568,7 +568,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Children content area */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-transparent">
-          <div className="mx-auto h-[90vh] bg-transparent">
+          <div className="mx-auto  bg-transparent">
             {children}
           </div>
         </main>

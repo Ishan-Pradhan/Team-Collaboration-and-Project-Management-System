@@ -3,6 +3,7 @@ import {
   getChannels,
   createChannel,
   deleteChannel,
+  renameChannel,
   getChannelMembers,
   inviteChannelMember,
   leaveChannel,
@@ -39,6 +40,14 @@ export const useDeleteChannel = (organizationId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (channelId: string) => deleteChannel(channelId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['organizations', organizationId, 'channels'] }),
+  });
+};
+
+export const useRenameChannel = (organizationId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ channelId, name }: { channelId: string; name: string }) => renameChannel(channelId, name),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['organizations', organizationId, 'channels'] }),
   });
 };

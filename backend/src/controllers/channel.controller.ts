@@ -78,6 +78,50 @@ export const deleteChannel = asyncHandler(async (req: AuthRequest, res: Response
   return ok(res, null, 'Channel deleted successfully');
 });
 
+export const updateChannel = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const channelId = req.params.channelId as string;
+  const { name } = req.body as { name: string };
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+
+  const channel = await channelRepository.findById(channelId);
+  if (!channel) throw new ApiError(404, 'Channel not found');
+  if (channel.type === 'DM') throw new ApiError(400, 'Not applicable to direct messages');
+
+  // Auth: Creator or Org Admin
+  const isCreator = channel.createdBy === user.id;
+  let isOrgAdmin = false;
+
+  const org = await organizationRepository.findById(channel.organizationId);
+  if (org?.ownerId === user.id) {
+    isOrgAdmin = true;
+  } else {
+    const membership = await organizationMemberRepository.findOne({
+      organizationId: channel.organizationId,
+      userId: user.id,
+    });
+    isOrgAdmin = membership?.role === 'ORG_ADMIN';
+  }
+
+  if (!isCreator && !isOrgAdmin) {
+    throw new ApiError(403, 'Unauthorized. Only the channel creator or organization admins can rename this channel.');
+  }
+
+  const trimmedName = name.trim();
+  if (trimmedName.toLowerCase() !== channel.name?.toLowerCase()) {
+    const existing = await channelRepository.findByOrgAndName(channel.organizationId, trimmedName);
+    if (existing) {
+      throw new ApiError(409, 'A channel with this name already exists in this organization');
+    }
+  }
+
+  const updatedChannel = await channelRepository.update(channelId, { name: trimmedName });
+
+  getIO().to(`org:${channel.organizationId}`).emit('channel:updated', updatedChannel);
+
+  return ok(res, updatedChannel, 'Channel renamed successfully');
+});
+
 export async function removeMemberAndNotify(
   channel: ChannelInstance,
   userId: string,

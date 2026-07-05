@@ -96,3 +96,12 @@ export const startDMSchema = {
     userId: z.string().uuid('Invalid user ID'),
   }),
 };
+
+export const updateChannelSchema = {
+  params: z.object({
+    channelId: z.string().uuid('Invalid channel ID'),
+  }),
+  body: z.object({
+    name: z.string().min(1, 'Channel name is required').max(100, 'Name must be 100 characters or less'),
+  }),
+};

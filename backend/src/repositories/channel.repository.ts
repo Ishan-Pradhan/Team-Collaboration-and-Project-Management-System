@@ -1,4 +1,5 @@
 import { Op } from 'sequelize';
+import { sequelize } from '../config/db.js';
 import { Channel, ChannelMember, Message, MessageReaction, User } from '../models/index.js';
 import type {
   ChannelCreationAttributes,
@@ -36,6 +37,12 @@ export const channelRepository = {
     return await Channel.findByPk(id);
   },
 
+  update: async (id: string, data: { name: string }): Promise<ChannelInstance | null> => {
+    const channel = await Channel.findByPk(id);
+    if (!channel) return null;
+    return await channel.update(data);
+  },
+
   findByOrgAndName: async (organizationId: string, name: string): Promise<ChannelInstance | null> => {
     return await Channel.findOne({ where: { organizationId, name } });
   },
@@ -53,7 +60,11 @@ export const channelRepository = {
         type: { [Op.ne]: 'DM' },
         [Op.or]: [{ type: 'PUBLIC' }, { id: { [Op.in]: memberChannelIds } }],
       },
-      order: [['createdAt', 'ASC']],
+      order: [
+        // PUBLIC (0) before PRIVATE (1), then alphabetically within each group
+        [sequelize.literal(`CASE WHEN type = 'PUBLIC' THEN 0 ELSE 1 END`), 'ASC'],
+        ['name', 'ASC'],
+      ],
     });
   },
 

@@ -295,7 +295,7 @@ export default function ChatPage({ params }: Props) {
 
   return (
     <div className="flex h-full gap-4">
-      <aside className="flex w-64 shrink-0 flex-col overflow-y-auto rounded-xl border border-border-subtle h-[100vh] bg-white">
+      <aside className="flex h-[90vh] w-64 shrink-0 flex-col overflow-y-auto rounded-xl border border-border-subtle bg-white">
         <div className="border-b border-border-subtle p-2">
           <div className="relative">
             <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
@@ -441,7 +441,7 @@ export default function ChatPage({ params }: Props) {
         )}
       </aside>
 
-      <div className="flex-1 rounded-xl border border-border-subtle bg-white overflow-hidden">
+      <div className="h-[90vh] flex-1 rounded-xl border border-border-subtle bg-white overflow-hidden">
         {selectedChannel ? (
           <ChannelView
             channel={selectedChannel}

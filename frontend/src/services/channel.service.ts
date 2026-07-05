@@ -28,6 +28,11 @@ export async function deleteChannel(channelId: string): Promise<void> {
   await api.delete(`/channels/${channelId}`);
 }
 
+export async function renameChannel(channelId: string, name: string): Promise<Channel> {
+  const res = await api.patch<ChannelResponse>(`/channels/${channelId}`, { name });
+  return res.data.data;
+}
+
 export async function getChannelMembers(channelId: string): Promise<ChannelMember[]> {
   const res = await api.get<ChannelMembersResponse>(`/channels/${channelId}/members`);
   return res.data.data;

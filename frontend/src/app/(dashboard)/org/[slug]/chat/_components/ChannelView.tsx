@@ -2,9 +2,12 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Bell, BellOff, Hash, Lock, LogOut, MoreVertical, Paperclip, Trash2, Users } from 'lucide-react';
+import { Bell, BellOff, Edit2, Hash, Lock, Loader2, LogOut, MoreVertical, Paperclip, Trash2, Users, X } from 'lucide-react';
 import { parseApiError } from '@/lib/axios';
-import { useChannelMembers, useLeaveChannel, useDeleteChannel, useMutedChannels, useMuteChannel } from '@/hooks/useChannel';
+import { useChannelMembers, useLeaveChannel, useDeleteChannel, useMutedChannels, useMuteChannel, useRenameChannel } from '@/hooks/useChannel';
+import { useAuthStore } from '@/store/auth.store';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import ManageChannelMembersModal from '@/components/shared/ManageChannelMembersModal';
 import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 import type { Channel } from '@/types/channel.types';
@@ -19,9 +22,11 @@ interface Props {
 }
 
 export default function ChannelView({ channel, organizationId, isAdmin, onLeftOrDeleted }: Props) {
+  const user = useAuthStore((s) => s.user);
   const { data: members } = useChannelMembers(channel.id);
   const leaveChannel = useLeaveChannel(organizationId, channel.id);
   const deleteChannel = useDeleteChannel(organizationId);
+  const renameChannel = useRenameChannel(organizationId);
   const { data: mutedChannelIds } = useMutedChannels();
   const muteChannel = useMuteChannel();
   const isMuted = mutedChannelIds?.includes(channel.id) ?? false;
@@ -29,8 +34,12 @@ export default function ChannelView({ channel, organizationId, isAdmin, onLeftOr
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showRenameModal, setShowRenameModal] = useState(false);
   const [activeView, setActiveView] = useState<'messages' | 'files'>('messages');
   const [showMenu, setShowMenu] = useState(false);
+
+  const isCreator = channel.createdBy === user?.id;
+  const canRename = isCreator || isAdmin;
 
   return (
     <div className="flex h-full flex-col">
@@ -97,6 +106,17 @@ export default function ChannelView({ channel, organizationId, isAdmin, onLeftOr
               </button>
               {channel.type !== 'DM' && (
                 <>
+                  {canRename && (
+                    <button
+                      onClick={() => {
+                        setShowRenameModal(true);
+                        setShowMenu(false);
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-xs text-text-secondary hover:bg-surface-muted transition-colors"
+                    >
+                      <Edit2 size={13} /> Rename Channel
+                    </button>
+                  )}
                   <button
                     onClick={() => {
                       setShowMembersModal(true);
@@ -181,6 +201,91 @@ export default function ChannelView({ channel, organizationId, isAdmin, onLeftOr
         isDestructive
         isLoading={deleteChannel.isPending}
       />
+
+      {showRenameModal && (
+        <RenameChannelModal
+          currentName={channel.name ?? ''}
+          isPending={renameChannel.isPending}
+          onClose={() => setShowRenameModal(false)}
+          onSubmit={(newName) =>
+            renameChannel.mutate(
+              { channelId: channel.id, name: newName },
+              {
+                onSuccess: () => {
+                  toast.success('Channel renamed');
+                  setShowRenameModal(false);
+                },
+                onError: (err) => toast.error(parseApiError(err).message),
+              },
+            )
+          }
+        />
+      )}
+    </div>
+  );
+}
+
+function RenameChannelModal({
+  currentName,
+  isPending,
+  onClose,
+  onSubmit,
+}: {
+  currentName: string;
+  isPending: boolean;
+  onClose: () => void;
+  onSubmit: (name: string) => void;
+}) {
+  const [name, setName] = useState(currentName);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+      <div className="relative w-full max-w-sm rounded-xl border border-border bg-white p-6 shadow-modal">
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-md p-1 text-text-secondary hover:bg-surface-muted transition-colors"
+        >
+          <X size={15} />
+        </button>
+
+        <h2 className="text-base font-semibold text-text-primary">Rename Channel</h2>
+        <p className="mt-0.5 text-xs text-text-secondary">Enter a new name for this channel.</p>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const trimmed = name.trim();
+            if (trimmed && trimmed !== currentName) onSubmit(trimmed);
+          }}
+          className="mt-5 space-y-4"
+        >
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-text-secondary" htmlFor="rename-channel-name">
+              Channel name
+            </label>
+            <Input
+              id="rename-channel-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={isPending}
+              autoFocus
+              required
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isPending || !name.trim() || name.trim() === currentName}
+            >
+              {isPending ? <><Loader2 size={14} className="animate-spin mr-1.5" />Renaming…</> : 'Rename'}
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

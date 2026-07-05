@@ -12,6 +12,7 @@ import {
   createChannel,
   listChannels,
   deleteChannel,
+  updateChannel,
   listChannelMembers,
   inviteChannelMember,
   leaveChannel,
@@ -31,6 +32,7 @@ import {
 } from '../controllers/channel.controller.js';
 import {
   createChannelSchema,
+  updateChannelSchema,
   organizationChannelsParamSchema,
   channelParamSchema,
   inviteChannelMemberSchema,
@@ -57,7 +59,8 @@ router
 
 router
   .route('/channels/:channelId')
-  .delete(verifyJWT, isChannelOrgAdmin, validate(channelParamSchema), deleteChannel);
+  .delete(verifyJWT, isChannelOrgAdmin, validate(channelParamSchema), deleteChannel)
+  .patch(verifyJWT, isChannelMember, validate(updateChannelSchema), updateChannel);
 
 router
   .route('/channels/:channelId/mute')
