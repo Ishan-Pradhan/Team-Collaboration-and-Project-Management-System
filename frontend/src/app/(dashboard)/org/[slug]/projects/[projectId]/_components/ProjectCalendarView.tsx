@@ -85,7 +85,7 @@ export default function ProjectCalendarView({ tasks, columns, onOpenTask }: Prop
     currentDate.getMonth() === today.getMonth();
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden p-6">
+    <div className="h-[80vh] flex flex-col overflow-hidden p-6">
       <div className="flex h-full flex-col rounded-xl border border-border-subtle bg-white overflow-hidden">
 
         {/* Header */}
