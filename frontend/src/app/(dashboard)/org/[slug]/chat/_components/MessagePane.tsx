@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, Paperclip, Send, Smile, Trash2 } from 'lucide-react';
+import { Loader2, MessageSquare, Paperclip, Send, Smile, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react';
 import { parseApiError } from '@/lib/axios';
@@ -60,6 +60,59 @@ function formatDateSeparator(iso: string): string {
     month: 'long',
     day: 'numeric',
     year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+  });
+}
+
+type ContentToken =
+  | { type: 'text'; value: string }
+  | { type: 'code'; value: string }
+  | { type: 'link'; value: string }
+  | { type: 'mention'; value: string };
+
+const TOKEN_REGEX = /`([^`]+)`|(https?:\/\/[^\s]+)|(@\w+)/g;
+
+function tokenizeMessageContent(content: string): ContentToken[] {
+  const tokens: ContentToken[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  TOKEN_REGEX.lastIndex = 0;
+  while ((match = TOKEN_REGEX.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      tokens.push({ type: 'text', value: content.slice(lastIndex, match.index) });
+    }
+    if (match[1] !== undefined) tokens.push({ type: 'code', value: match[1] });
+    else if (match[2] !== undefined) tokens.push({ type: 'link', value: match[2] });
+    else tokens.push({ type: 'mention', value: match[3] });
+    lastIndex = TOKEN_REGEX.lastIndex;
+  }
+  if (lastIndex < content.length) tokens.push({ type: 'text', value: content.slice(lastIndex) });
+  return tokens;
+}
+
+function renderMessageContent(content: string) {
+  return tokenizeMessageContent(content).map((token, i) => {
+    if (token.type === 'code') {
+      return (
+        <code key={i} className="rounded bg-surface px-1 py-0.5 font-mono text-[0.8em]">
+          {token.value}
+        </code>
+      );
+    }
+    if (token.type === 'link') {
+      return (
+        <a key={i} href={token.value} target="_blank" rel="noreferrer" className="text-primary underline hover:no-underline">
+          {token.value}
+        </a>
+      );
+    }
+    if (token.type === 'mention') {
+      return (
+        <span key={i} className="rounded bg-primary/10 px-1 font-medium text-primary">
+          {token.value}
+        </span>
+      );
+    }
+    return token.value;
   });
 }
 
@@ -313,7 +366,7 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                               'break-words rounded-lg px-3 py-1.5 text-sm text-text-primary',
                               isOwn ? 'bg-primary/10' : 'bg-surface-muted',
                             )}>
-                              {message.content}
+                              {renderMessageContent(message.content)}
                             </p>
                           )}
 
@@ -391,7 +444,12 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
             );
           })
         ) : (
-          <p className="py-8 text-center text-sm text-text-secondary">No messages yet. Say hello!</p>
+          <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-text-secondary">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted">
+              <MessageSquare size={24} className="text-text-muted" />
+            </div>
+            <p className="text-sm">No messages yet. Say hello!</p>
+          </div>
         )}
         <div ref={bottomRef} />
       </div>
