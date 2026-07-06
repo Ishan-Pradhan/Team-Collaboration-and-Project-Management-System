@@ -15,6 +15,8 @@ import { userRepository } from '../repositories/users.repository.js';
 import { Notification } from '../models/index.js';
 import crypto from 'crypto';
 import { cascadeRemoveUserFromOrgChannels, autoJoinUserToPublicChannels } from './channel.controller.js';
+import { notifyUser } from '../utils/notify.js';
+import { adminActionLogRepository } from '../repositories/adminActionLog.repository.js';
 
 async function notifyAdminsOfMemberLeave(
   organizationId: string,
@@ -408,6 +410,30 @@ export const toggleSuspendOrganization = asyncHandler(
 
     org.isSuspended = !org.isSuspended;
     await org.save();
+
+    const actor = req.user;
+    if (actor) {
+      await adminActionLogRepository.create({
+        actorId: actor.id,
+        action: org.isSuspended ? 'org_suspended' : 'org_unsuspended',
+        targetType: 'organization',
+        targetId: org.id,
+      });
+    }
+
+    await notifyUser({
+      userId: org.ownerId,
+      organizationId: org.id,
+      type: org.isSuspended ? 'org_suspended' : 'org_unsuspended',
+      title: org.isSuspended
+        ? 'Your organization has been suspended'
+        : 'Your organization has been unsuspended',
+      body: org.isSuspended
+        ? `${org.name} has been suspended by a super admin.`
+        : `${org.name} has been unsuspended and is active again.`,
+      entityType: 'organization',
+      entityId: org.id,
+    });
 
     return ok(
       res,
