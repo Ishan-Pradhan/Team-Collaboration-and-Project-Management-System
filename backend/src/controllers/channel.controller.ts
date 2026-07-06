@@ -25,6 +25,10 @@ export const createChannel = asyncHandler(async (req: AuthRequest, res: Response
   const user = req.user;
   if (!user) throw new ApiError(401, 'Unauthorized');
 
+  const org = await organizationRepository.findById(organizationId);
+  if (!org) throw new ApiError(404, 'Organization not found');
+  if (!org.featureFlags.chatEnabled) throw new ApiError(403, 'Chat has been disabled for this organization');
+
   const existing = await channelRepository.findByOrgAndName(organizationId, name.trim());
   if (existing) {
     throw new ApiError(409, 'A channel with this name already exists in this organization');
@@ -59,6 +63,10 @@ export const listChannels = asyncHandler(async (req: AuthRequest, res: Response)
   const organizationId = req.params.organizationId as string;
   const user = req.user;
   if (!user) throw new ApiError(401, 'Unauthorized');
+
+  const org = await organizationRepository.findById(organizationId);
+  if (!org) throw new ApiError(404, 'Organization not found');
+  if (!org.featureFlags.chatEnabled) throw new ApiError(403, 'Chat has been disabled for this organization');
 
   const channels = await channelRepository.findVisibleToUser(organizationId, user.id);
   return ok(res, channels, 'Channels retrieved successfully');
@@ -516,6 +524,9 @@ export const startDM = asyncHandler(async (req: AuthRequest, res: Response) => {
   if (targetUserId === user.id) throw new ApiError(400, 'Cannot start a DM with yourself');
 
   const org = await organizationRepository.findById(organizationId);
+  if (org && !org.featureFlags.chatEnabled) {
+    throw new ApiError(403, 'Chat has been disabled for this organization');
+  }
   const targetMembership = await organizationMemberRepository.findOne({ organizationId, userId: targetUserId });
   if (!targetMembership && org?.ownerId !== targetUserId) {
     throw new ApiError(400, 'User is not a member of this organization');
@@ -546,6 +557,10 @@ export const listDMs = asyncHandler(async (req: AuthRequest, res: Response) => {
   const organizationId = req.params.organizationId as string;
   const user = req.user;
   if (!user) throw new ApiError(401, 'Unauthorized');
+
+  const org = await organizationRepository.findById(organizationId);
+  if (!org) throw new ApiError(404, 'Organization not found');
+  if (!org.featureFlags.chatEnabled) throw new ApiError(403, 'Chat has been disabled for this organization');
 
   const channels = await channelRepository.findDMsForUser(organizationId, user.id);
 

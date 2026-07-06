@@ -199,6 +199,10 @@ export const isChannelOrgAdmin = async (
     throw new ApiError(403, 'This organization has been suspended');
   }
 
+  if (!org.featureFlags.chatEnabled) {
+    throw new ApiError(403, 'Chat has been disabled for this organization');
+  }
+
   if (org.ownerId === user.id) {
     return next();
   }
@@ -235,6 +239,10 @@ export const isChannelMember = async (
 
   if (org.isSuspended) {
     throw new ApiError(403, 'This organization has been suspended');
+  }
+
+  if (!org.featureFlags.chatEnabled) {
+    throw new ApiError(403, 'Chat has been disabled for this organization');
   }
 
   const membership = await ChannelMember.findOne({ where: { channelId, userId: user.id } });
