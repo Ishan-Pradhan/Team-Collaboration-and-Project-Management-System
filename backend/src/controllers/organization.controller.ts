@@ -566,6 +566,20 @@ export const getOrgDashboard = asyncHandler(
   }
 );
 
+// Org-wide analytics (owner/org admins only) — completion trend, status
+// breakdown, member workload, project health
+export const getOrgAnalytics = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { organizationId } = req.params as { organizationId: string };
+
+    const org = await organizationRepository.findById(organizationId);
+    if (!org) throw new ApiError(404, 'Organization not found');
+
+    const data = await dashboardRepository.getOrgAnalytics(organizationId);
+    return ok(res, data, 'Analytics retrieved successfully');
+  }
+);
+
 // Ban Member from Organization
 export const banOrganizationMember = asyncHandler(
   async (req: AuthRequest, res: Response) => {

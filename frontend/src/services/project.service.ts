@@ -15,10 +15,18 @@ import type {
   DashboardData,
   ActivityEntry,
 } from '@/types/project.types';
+import type { OrgAnalytics } from '@/types/analytics.types';
 
 export async function getOrgDashboard(organizationId: string): Promise<DashboardData> {
   const res = await api.get<{ success: boolean; data: DashboardData }>(
     `/organizations/${organizationId}/dashboard`
+  );
+  return res.data.data;
+}
+
+export async function getOrgAnalytics(organizationId: string): Promise<OrgAnalytics> {
+  const res = await api.get<{ success: boolean; data: OrgAnalytics }>(
+    `/organizations/${organizationId}/analytics`
   );
   return res.data.data;
 }

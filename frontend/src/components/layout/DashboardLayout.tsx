@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import {
   Bell,
   BellOff,
+  BarChart3,
   CalendarDays,
   ChevronDown,
   LayoutDashboard,
@@ -22,7 +23,7 @@ import {
 import Link from 'next/link';
 
 import Logo from '@/components/shared/Logo';
-import { useMyOrganizations, useMutedOrganizations, useMuteOrganization } from '@/hooks/useOrganization';
+import { useMyOrganizations, useMutedOrganizations, useMuteOrganization, useOrganizationMembers } from '@/hooks/useOrganization';
 import { useOrgStore } from '@/store/org.store';
 import { useAuthStore } from '@/store/auth.store';
 import { useLogout } from '@/hooks/useAuth';
@@ -101,6 +102,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   // of degrading to a slug-less state.
   const activeOrg = (urlSlug ? orgs?.find((o) => o.slug === urlSlug) : currentOrg) || null;
   const currentSlug = activeOrg?.slug ?? null;
+  const { data: orgMembers } = useOrganizationMembers(activeOrg?.id || '');
+  const isOrgOwnerOrAdmin =
+    activeOrg?.ownerId === user?.id ||
+    orgMembers?.some((m) => m.userId === user?.id && m.role === 'ORG_ADMIN');
   const { data: projects, isLoading: projectsLoading } = useOrgProjects(activeOrg?.id || '');
   const { connected: chatConnected } = useChatSocket(activeOrg?.id);
   useNotificationSocket();
@@ -166,6 +171,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       disabled: !currentSlug || activeOrg?.featureFlags?.chatEnabled === false,
       badgeCount: currentSlug ? unreadChannels?.length : undefined,
     },
+    ...(isOrgOwnerOrAdmin
+      ? [{
+        name: 'Analytics',
+        href: `/org/${currentSlug}/analytics`,
+        icon: BarChart3,
+        disabled: false,
+      }]
+      : []),
     ...(activeOrg?.ownerId === user?.id
       ? [{
         name: 'Settings',

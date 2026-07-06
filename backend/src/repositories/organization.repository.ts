@@ -472,6 +472,160 @@ export const dashboardRepository = {
       })),
     };
   },
+
+  getOrgAnalytics: async (organizationId: string) => {
+    const projects = await Project.findAll({ where: { organizationId }, attributes: ['id', 'name'] });
+    const projectIds = projects.map((p) => p.id);
+
+    if (projectIds.length === 0) {
+      return {
+        completionTrend: { created: [], completed: [] },
+        statusBreakdown: [],
+        memberWorkload: [],
+        projectHealth: [],
+      };
+    }
+
+    const since = new Date();
+    since.setHours(0, 0, 0, 0);
+    since.setDate(since.getDate() - 29);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const in2Days = new Date(today);
+    in2Days.setDate(today.getDate() + 2);
+
+    const [createdRows, movedLogs, tasks, members, lastActivityRows] = await Promise.all([
+      Task.findAll({
+        where: { projectId: { [Op.in]: projectIds }, createdAt: { [Op.gte]: since } },
+        attributes: [
+          [fn('DATE', col('createdAt')), 'date'],
+          [fn('COUNT', col('id')), 'count'],
+        ],
+        group: [fn('DATE', col('createdAt'))],
+        order: [[fn('DATE', col('createdAt')), 'ASC']],
+        raw: true,
+      }),
+      ActivityLog.findAll({
+        where: { projectId: { [Op.in]: projectIds }, type: 'task_moved', createdAt: { [Op.gte]: since } },
+        attributes: ['createdAt', 'metadata'],
+        raw: true,
+      }),
+      Task.findAll({
+        where: { projectId: { [Op.in]: projectIds } },
+        include: [
+          { model: KanbanColumn, as: 'column', attributes: ['name'] },
+          { model: User, as: 'assignees', attributes: ['id', 'name', 'avatarUrl'], through: { attributes: [] } },
+        ],
+        attributes: ['id', 'projectId', 'dueDate'],
+      }),
+      OrganizationMember.findAll({
+        where: { organizationId },
+        include: [{ model: User, as: 'user', attributes: ['id', 'name', 'avatarUrl'] }],
+        attributes: ['userId'],
+      }),
+      ActivityLog.findAll({
+        where: { projectId: { [Op.in]: projectIds } },
+        attributes: ['projectId', [fn('MAX', col('createdAt')), 'lastActivityAt']],
+        group: ['projectId'],
+        raw: true,
+      }),
+    ]);
+
+    // Task completion trend — "created" is a plain Task.createdAt count;
+    // "completed" has no dedicated column, so it's inferred from ActivityLog's
+    // task_moved entries landing in a done-named column (same convention as
+    // isDoneColumnName elsewhere).
+    const createdMap = new Map<string, number>(
+      (createdRows as unknown as { date: string; count: string }[]).map((r) => [r.date, parseInt(r.count, 10)]),
+    );
+    const completedMap = new Map<string, number>();
+    for (const log of movedLogs as unknown as { createdAt: string; metadata: { toColumn?: string } | null }[]) {
+      if (!isDoneColumnName(log.metadata?.toColumn)) continue;
+      const date = new Date(log.createdAt).toISOString().slice(0, 10);
+      completedMap.set(date, (completedMap.get(date) ?? 0) + 1);
+    }
+    const completionTrend = {
+      created: [] as { date: string; count: number }[],
+      completed: [] as { date: string; count: number }[],
+    };
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(since);
+      d.setDate(since.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      completionTrend.created.push({ date: key, count: createdMap.get(key) ?? 0 });
+      completionTrend.completed.push({ date: key, count: completedMap.get(key) ?? 0 });
+    }
+
+    // Task status breakdown — counts across all org projects, grouped by the
+    // task's current column name (column names vary per project, so this is
+    // reduced in JS rather than a SQL group-by on the joined column).
+    const statusMap = new Map<string, number>();
+    for (const task of tasks as any[]) {
+      const name = (task.column?.name as string | undefined) ?? 'Unknown';
+      statusMap.set(name, (statusMap.get(name) ?? 0) + 1);
+    }
+    const statusBreakdown = [...statusMap.entries()].map(([name, count]) => ({ name, count }));
+
+    // Member workload — count of currently-open (non-done-column) task
+    // assignments per org member.
+    const workloadMap = new Map<string, { userId: string; name: string; avatarUrl: string | null; count: number }>();
+    for (const m of members as any[]) {
+      if (m.user) {
+        workloadMap.set(m.userId, {
+          userId: m.userId,
+          name: m.user.name as string,
+          avatarUrl: (m.user.avatarUrl as string | null) ?? null,
+          count: 0,
+        });
+      }
+    }
+    for (const task of tasks as any[]) {
+      if (isDoneColumnName(task.column?.name)) continue;
+      for (const assignee of task.assignees ?? []) {
+        const entry = workloadMap.get(assignee.id);
+        if (entry) entry.count += 1;
+      }
+    }
+    const memberWorkload = [...workloadMap.values()].sort((a, b) => b.count - a.count);
+
+    // Project health — per-project overdue/due-soon counts (non-done tasks
+    // only) plus last activity timestamp.
+    const tasksByProject = new Map<string, any[]>();
+    for (const task of tasks as any[]) {
+      const list = tasksByProject.get(task.projectId as string) ?? [];
+      list.push(task);
+      tasksByProject.set(task.projectId as string, list);
+    }
+    const lastActivityMap = new Map(
+      (lastActivityRows as unknown as { projectId: string; lastActivityAt: string }[]).map((r) => [
+        r.projectId,
+        r.lastActivityAt,
+      ]),
+    );
+
+    const projectHealth = projects.map((project) => {
+      const projectTasks = tasksByProject.get(project.id) ?? [];
+      let overdueCount = 0;
+      let dueSoonCount = 0;
+      for (const task of projectTasks) {
+        if (isDoneColumnName(task.column?.name) || !task.dueDate) continue;
+        const due = new Date(task.dueDate);
+        if (due < today) overdueCount += 1;
+        else if (due <= in2Days) dueSoonCount += 1;
+      }
+      return {
+        id: project.id,
+        name: project.name,
+        taskCount: projectTasks.length,
+        overdueCount,
+        dueSoonCount,
+        lastActivityAt: lastActivityMap.get(project.id) ?? null,
+      };
+    });
+
+    return { completionTrend, statusBreakdown, memberWorkload, projectHealth };
+  },
 };
 
 export const organizationBanRepository = {

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Task } from '@/types/project.types';
 import {
   getOrgDashboard,
+  getOrgAnalytics,
   getOrgProjects,
   getProject,
   getProjectActivity,
@@ -43,6 +44,13 @@ export const useOrgDashboard = (organizationId: string) =>
   useQuery({
     queryKey: ['organizations', organizationId, 'dashboard'],
     queryFn: () => getOrgDashboard(organizationId),
+    enabled: !!organizationId,
+  });
+
+export const useOrgAnalytics = (organizationId: string) =>
+  useQuery({
+    queryKey: ['organizations', organizationId, 'analytics'],
+    queryFn: () => getOrgAnalytics(organizationId),
     enabled: !!organizationId,
   });
 

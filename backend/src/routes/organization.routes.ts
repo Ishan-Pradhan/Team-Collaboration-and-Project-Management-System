@@ -21,6 +21,7 @@ import {
   revokeInvite,
   changeMemberRole,
   getOrgDashboard,
+  getOrgAnalytics,
   banOrganizationMember,
   unbanOrganizationMember,
   listOrganizationBans,
@@ -376,6 +377,14 @@ router.get(
   isOrganizationMember,
   validate(organizationParamSchema),
   getOrgDashboard,
+);
+
+router.get(
+  '/:organizationId/analytics',
+  verifyJWT,
+  isOrganizationAdmin,
+  validate(organizationParamSchema),
+  getOrgAnalytics,
 );
 
 export default router;
