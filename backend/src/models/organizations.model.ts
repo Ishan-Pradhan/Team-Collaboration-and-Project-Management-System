@@ -37,6 +37,11 @@ export const Organization = sequelize.define<OrganizationInstance>(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    featureFlags: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: { chatEnabled: true, calendarEnabled: true },
+    },
   },
   {
     tableName: 'Organizations',

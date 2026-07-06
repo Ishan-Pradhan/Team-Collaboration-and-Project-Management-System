@@ -1,6 +1,11 @@
 import { Model, type Optional } from 'sequelize';
 import type { UserInstance } from './users.types.js';
 
+export interface OrganizationFeatureFlags {
+  chatEnabled: boolean;
+  calendarEnabled: boolean;
+}
+
 export interface Organizations {
   id: string;
   name: string;
@@ -9,6 +14,7 @@ export interface Organizations {
   logoUrl: string | null;
   ownerId: string;
   isSuspended: boolean;
+  featureFlags: OrganizationFeatureFlags;
   createdAt?: Date;
   updatedAt?: Date;
   owner?: UserInstance;
@@ -16,7 +22,7 @@ export interface Organizations {
 
 export type OrganizationCreationAttributes = Optional<
   Organizations,
-  'id' | 'description' | 'logoUrl' | 'isSuspended' | 'createdAt' | 'updatedAt'
+  'id' | 'description' | 'logoUrl' | 'isSuspended' | 'featureFlags' | 'createdAt' | 'updatedAt'
 >;
 
 export interface OrganizationInstance
