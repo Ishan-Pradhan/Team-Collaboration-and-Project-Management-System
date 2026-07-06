@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Building2, Loader2, ShieldAlert, ShieldCheck } from 'lucide-react';
 import {
   useAdminOrganizations,
   useAdminOrganizationDetail,
@@ -10,10 +10,12 @@ import {
   useToggleOrgFeature,
 } from '@/hooks/useAdmin';
 import { parseApiError } from '@/lib/axios';
-import { Badge } from '@/components/ui/badge';
+import { avatarColor } from '@/lib/avatarColor';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
+import { AdminListSkeleton } from '@/components/shared/skeletons/AdminListSkeleton';
 
 export default function AdminOrganizationsPage() {
   const { data: organizations, isLoading } = useAdminOrganizations();
@@ -42,39 +44,56 @@ export default function AdminOrganizationsPage() {
     });
   };
 
+  if (isLoading) return <AdminListSkeleton rows={6} />;
+
   return (
     <div className="space-y-4">
       <h1 className="text-lg font-semibold text-text-primary">Organizations</h1>
 
-      {isLoading ? (
-        <p className="text-sm text-text-muted">Loading organizations…</p>
-      ) : (
-        <div className="overflow-hidden rounded-xl border border-border-subtle bg-white">
-          {organizations?.map((org) => (
-            <div
-              key={org.id}
-              className="flex items-center justify-between border-b border-border-subtle px-4 py-3 last:border-b-0"
-            >
-              <button onClick={() => setSelectedOrgId(org.id)} className="flex-1 text-left">
-                <p className="text-sm font-medium text-text-primary">{org.name}</p>
-                <p className="text-xs text-text-muted">{org.owner?.email ?? 'Unknown owner'}</p>
-              </button>
-              <div className="flex items-center gap-3">
-                {org.isSuspended ? <Badge variant="danger">Suspended</Badge> : <Badge>Active</Badge>}
-                <button
-                  onClick={() => setSuspendTarget({ id: org.id, name: org.name, isSuspended: org.isSuspended })}
-                  className="rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-muted transition-colors"
-                >
-                  {org.isSuspended ? 'Unsuspend' : 'Suspend'}
-                </button>
+      <div className="overflow-hidden rounded-xl border border-border-subtle bg-white">
+        {organizations?.map((org) => (
+          <div
+            key={org.id}
+            className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3 last:border-b-0 hover:bg-surface-hover transition-colors"
+          >
+            <button onClick={() => setSelectedOrgId(org.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
+                style={{ backgroundColor: avatarColor(org.name) }}
+              >
+                {org.name.charAt(0).toUpperCase()}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-text-primary">{org.name}</p>
+                <p className="truncate text-xs text-text-muted">{org.owner?.email ?? 'Unknown owner'}</p>
               </div>
+            </button>
+            <div className="flex shrink-0 items-center gap-3">
+              {org.isSuspended ? (
+                <span className="badge-danger">Suspended</span>
+              ) : (
+                <span className="badge-success">Active</span>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSuspendTarget({ id: org.id, name: org.name, isSuspended: org.isSuspended })}
+              >
+                {org.isSuspended ? 'Unsuspend' : 'Suspend'}
+              </Button>
             </div>
-          ))}
-          {organizations?.length === 0 && (
-            <p className="px-4 py-6 text-center text-sm text-text-muted">No organizations yet</p>
-          )}
-        </div>
-      )}
+          </div>
+        ))}
+        {organizations?.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-14 text-center">
+            <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-surface-muted">
+              <Building2 className="text-text-muted" size={18} />
+            </div>
+            <p className="text-sm font-medium text-text-primary">No organizations yet</p>
+            <p className="mt-1 text-sm text-text-muted">Workspaces will show up here once people create them.</p>
+          </div>
+        )}
+      </div>
 
       <Dialog open={!!selectedOrgId} onOpenChange={(open) => !open && setSelectedOrgId(null)}>
         <DialogContent className="sm:max-w-[480px]">

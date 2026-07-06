@@ -2,14 +2,29 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { ShieldMinus, ShieldPlus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ShieldMinus, ShieldPlus, Users } from 'lucide-react';
 import { useAdminUsers, useToggleBlockUser, usePromoteUser, useDemoteUser } from '@/hooks/useAdmin';
 import { useAuthStore } from '@/store/auth.store';
 import { parseApiError } from '@/lib/axios';
+import { avatarColor } from '@/lib/avatarColor';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
+import { AdminListSkeleton } from '@/components/shared/skeletons/AdminListSkeleton';
 import type { AdminUser } from '@/types/admin.types';
+
+function UserAvatar({ name, url }: { name: string; url: string | null }) {
+  if (url) return <img src={url} alt={name} className="h-9 w-9 shrink-0 rounded-full object-cover" />;
+  return (
+    <span
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold uppercase text-white"
+      style={{ backgroundColor: avatarColor(name) }}
+    >
+      {name.charAt(0)}
+    </span>
+  );
+}
 
 export default function AdminUsersPage() {
   const { user: currentUser } = useAuthStore();
@@ -42,6 +57,8 @@ export default function AdminUsersPage() {
     });
   };
 
+  if (isLoading || !data) return <AdminListSkeleton rows={8} withToolbar />;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -57,67 +74,65 @@ export default function AdminUsersPage() {
         />
       </div>
 
-      {isLoading || !data ? (
-        <p className="text-sm text-text-muted">Loading users…</p>
-      ) : (
-        <>
-          <div className="overflow-hidden rounded-xl border border-border-subtle bg-white">
-            {data.items.map((u) => (
-              <div key={u.id} className="flex items-center justify-between border-b border-border-subtle px-4 py-3 last:border-b-0">
-                <div>
-                  <p className="text-sm font-medium text-text-primary">{u.name}</p>
-                  <p className="text-xs text-text-muted">{u.email}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {u.role === 'SUPER_ADMIN' && <Badge>Super Admin</Badge>}
-                  {!u.isActive && <Badge variant="danger">Blocked</Badge>}
-                  {u.id !== currentUser?.id && (
-                    <>
-                      <button
-                        onClick={() => handleToggleBlock(u.id)}
-                        className="rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-muted transition-colors"
-                      >
-                        {u.isActive ? 'Block' : 'Unblock'}
-                      </button>
-                      <button
-                        onClick={() => setRoleTarget({ user: u, action: u.role === 'SUPER_ADMIN' ? 'demote' : 'promote' })}
-                        className="flex items-center gap-1 rounded-md border border-border-subtle px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-muted transition-colors"
-                      >
-                        {u.role === 'SUPER_ADMIN' ? <ShieldMinus size={13} /> : <ShieldPlus size={13} />}
-                        {u.role === 'SUPER_ADMIN' ? 'Demote' : 'Promote'}
-                      </button>
-                    </>
-                  )}
-                </div>
+      <div className="overflow-hidden rounded-xl border border-border-subtle bg-white">
+        {data.items.map((u) => (
+          <div key={u.id} className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3 last:border-b-0 hover:bg-surface-hover transition-colors">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <UserAvatar name={u.name} url={u.avatarUrl} />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-text-primary">{u.name}</p>
+                <p className="truncate text-xs text-text-muted">{u.email}</p>
               </div>
-            ))}
-            {data.items.length === 0 && (
-              <p className="px-4 py-6 text-center text-sm text-text-muted">No users found</p>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between text-xs text-text-secondary">
-            <span>
-              Page {data.meta.currentPage} of {Math.max(1, data.meta.totalPages)}
-            </span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="rounded-md border border-border-subtle px-3 py-1.5 disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <button
-                onClick={() => setPage((p) => p + 1)}
-                disabled={page >= data.meta.totalPages}
-                className="rounded-md border border-border-subtle px-3 py-1.5 disabled:opacity-50"
-              >
-                Next
-              </button>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {u.role === 'SUPER_ADMIN' && <Badge>Super Admin</Badge>}
+              {!u.isActive && <span className="badge-danger">Blocked</span>}
+              {u.id !== currentUser?.id && (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => handleToggleBlock(u.id)}>
+                    {u.isActive ? 'Block' : 'Unblock'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1"
+                    onClick={() => setRoleTarget({ user: u, action: u.role === 'SUPER_ADMIN' ? 'demote' : 'promote' })}
+                  >
+                    {u.role === 'SUPER_ADMIN' ? <ShieldMinus size={13} /> : <ShieldPlus size={13} />}
+                    {u.role === 'SUPER_ADMIN' ? 'Demote' : 'Promote'}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
-        </>
+        ))}
+        {data.items.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-14 text-center">
+            <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-surface-muted">
+              <Users className="text-text-muted" size={18} />
+            </div>
+            <p className="text-sm font-medium text-text-primary">No users found</p>
+            <p className="mt-1 text-sm text-text-muted">Try a different name or email.</p>
+          </div>
+        )}
+      </div>
+
+      {data.items.length > 0 && (
+        <div className="flex items-center justify-between text-xs text-text-secondary">
+          <span>
+            Page {data.meta.currentPage} of {Math.max(1, data.meta.totalPages)}
+          </span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className="gap-1">
+              <ChevronLeft size={14} />
+              Previous
+            </Button>
+            <Button variant="outline" size="sm" disabled={page >= data.meta.totalPages} onClick={() => setPage((p) => p + 1)} className="gap-1">
+              Next
+              <ChevronRight size={14} />
+            </Button>
+          </div>
+        </div>
       )}
 
       <ConfirmationDialog
