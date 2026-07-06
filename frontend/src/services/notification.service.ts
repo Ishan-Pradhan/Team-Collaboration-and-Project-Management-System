@@ -8,8 +8,8 @@ import type {
   UnreadChannelsResponse,
 } from '@/types/notification.types';
 
-export async function getNotifications(page = 1): Promise<{ notifications: Notification[]; meta: PaginationMeta }> {
-  const res = await api.get<NotificationsResponse>('/notifications', { params: { page } });
+export async function getNotifications(page = 1, limit = 30): Promise<{ notifications: Notification[]; meta: PaginationMeta }> {
+  const res = await api.get<NotificationsResponse>('/notifications', { params: { page, limit } });
   return res.data.data;
 }
 
@@ -24,6 +24,10 @@ export async function markNotificationRead(id: string): Promise<void> {
 
 export async function markAllNotificationsRead(): Promise<void> {
   await api.post('/notifications/mark-all-read');
+}
+
+export async function deleteNotification(id: string): Promise<void> {
+  await api.delete(`/notifications/${id}`);
 }
 
 export async function getUnreadChannels(): Promise<UnreadChannel[]> {

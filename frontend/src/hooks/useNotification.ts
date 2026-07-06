@@ -4,15 +4,16 @@ import {
   getUnreadCount,
   markNotificationRead,
   markAllNotificationsRead,
+  deleteNotification,
   getUnreadChannels,
   markReadByEntity,
 } from '@/services/notification.service';
 import type { UnreadChannel } from '@/types/notification.types';
 
-export const useNotifications = (page = 1) =>
+export const useNotifications = (page = 1, limit = 30) =>
   useQuery({
-    queryKey: ['notifications', { page }],
-    queryFn: () => getNotifications(page),
+    queryKey: ['notifications', { page, limit }],
+    queryFn: () => getNotifications(page, limit),
   });
 
 export const useUnreadCount = () =>
@@ -35,6 +36,16 @@ export const useMarkAllNotificationsRead = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => markAllNotificationsRead(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+};
+
+export const useDeleteNotification = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteNotification(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['notifications'] });
     },

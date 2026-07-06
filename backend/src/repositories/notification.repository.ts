@@ -28,6 +28,10 @@ export const notificationRepository = {
     return count;
   },
 
+  deleteById: async (id: string, userId: string): Promise<number> => {
+    return await Notification.destroy({ where: { id, userId } });
+  },
+
   markAllRead: async (userId: string): Promise<void> => {
     await Notification.update({ isRead: true }, { where: { userId, isRead: false } });
   },

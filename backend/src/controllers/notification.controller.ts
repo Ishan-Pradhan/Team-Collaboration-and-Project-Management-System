@@ -55,6 +55,17 @@ export const markAllNotificationsRead = asyncHandler(async (req: AuthRequest, re
   return ok(res, null, 'All notifications marked as read');
 });
 
+export const deleteNotification = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const user = req.user;
+  if (!user) throw new ApiError(401, 'Unauthorized');
+  const { id } = req.params as { id: string };
+
+  const deleted = await notificationRepository.deleteById(id, user.id);
+  if (deleted === 0) throw new ApiError(404, 'Notification not found');
+
+  return ok(res, null, 'Notification deleted');
+});
+
 export const getUnreadChannels = asyncHandler(async (req: AuthRequest, res: Response) => {
   const user = req.user;
   if (!user) throw new ApiError(401, 'Unauthorized');

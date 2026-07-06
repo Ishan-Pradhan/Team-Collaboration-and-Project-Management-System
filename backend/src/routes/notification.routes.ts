@@ -8,6 +8,7 @@ import {
   markAllNotificationsRead,
   getUnreadChannels,
   markReadByEntity,
+  deleteNotification,
 } from '../controllers/notification.controller.js';
 import { notificationParamSchema, readByEntitySchema } from '../validations/notification.validation.js';
 
@@ -19,5 +20,6 @@ router.route('/notifications/unread-channels').get(verifyJWT, getUnreadChannels)
 router.route('/notifications/mark-all-read').post(verifyJWT, markAllNotificationsRead);
 router.route('/notifications/read-by-entity').post(verifyJWT, validate(readByEntitySchema), markReadByEntity);
 router.route('/notifications/:id/read').patch(verifyJWT, validate(notificationParamSchema), markNotificationRead);
+router.route('/notifications/:id').delete(verifyJWT, validate(notificationParamSchema), deleteNotification);
 
 export default router;
