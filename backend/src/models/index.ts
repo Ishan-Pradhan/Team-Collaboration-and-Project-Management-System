@@ -19,6 +19,7 @@ import { MessageReaction } from './messageReactions.model.js';
 import { Notification } from './notifications.model.js';
 import { ActivityLog } from './activityLog.model.js';
 import { PersonalEvent } from './personalEvents.model.js';
+import { AdminActionLog } from './adminActionLog.model.js';
 
 // Setup associations
 
@@ -108,6 +109,9 @@ PersonalEvent.belongsTo(Organization, { foreignKey: 'organizationId', as: 'organ
 ActivityLog.belongsTo(Project, { foreignKey: 'projectId', as: 'project' });
 ActivityLog.belongsTo(User, { foreignKey: 'actorId', as: 'actor' });
 
+// Admin Action Logs
+AdminActionLog.belongsTo(User, { foreignKey: 'actorId', as: 'actor' });
+
 // User ↔ Verification (if still needed)
 User.hasMany(Verification, { foreignKey: 'userId', as: 'verifications' });
 Verification.belongsTo(User, { foreignKey: 'userId', as: 'user' });
@@ -134,4 +138,5 @@ export {
   Notification,
   ActivityLog,
   PersonalEvent,
+  AdminActionLog,
 };
