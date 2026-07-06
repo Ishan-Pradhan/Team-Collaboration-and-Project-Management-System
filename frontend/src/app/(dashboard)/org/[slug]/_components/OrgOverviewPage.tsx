@@ -10,13 +10,13 @@ import { cn } from '@/lib/utils';
 import { PRIORITY, isDoneColumn } from '@/constants/task.constants';
 import {
   AlertTriangle, ArrowRight, CheckSquare,
-  Clock, FolderOpen, MessageSquare,
+  Clock, FolderOpen, MessageSquare, Users,
 } from 'lucide-react';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { ActivityRow } from '@/components/shared/ActivityRow';
+import { OrgOverviewSkeleton } from '@/components/shared/skeletons/OrgOverviewSkeleton';
 import { getSocket } from '@/lib/socket';
 import { avatarColor } from '@/lib/avatarColor';
-import type { DashboardData } from '@/types/project.types';
 
 // ─── Helpers ─────────────────────────────────────────────────
 
@@ -82,24 +82,43 @@ function EmptyState({ icon, label }: { icon: React.ReactNode; label: string }) {
   );
 }
 
-// ─── Skeleton ────────────────────────────────────────────────
+// ─── Stat tile ───────────────────────────────────────────────
 
-function DashboardSkeleton() {
+function StatTile({
+  icon: Icon,
+  color,
+  value,
+  label,
+  glow,
+  onClick,
+}: {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  color: string;
+  value: number;
+  label: string;
+  glow?: boolean;
+  onClick?: () => void;
+}) {
+  const Wrapper = onClick ? 'button' : 'div';
   return (
-    <div className="flex flex-col gap-6 animate-pulse">
-      <div className="h-16 w-64 rounded-lg bg-surface-muted" />
-      <div className="grid grid-cols-4 rounded-lg border border-border-subtle overflow-hidden divide-x divide-border-subtle">
-        {[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-white" />)}
+    <Wrapper
+      onClick={onClick}
+      className={cn(
+        'flex items-center gap-3 px-6 py-5',
+        onClick && 'text-left hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset'
+      )}
+    >
+      <span
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white"
+        style={{ backgroundColor: color, boxShadow: glow ? `0 0 0 4px color-mix(in srgb, ${color} 20%, transparent)` : undefined }}
+      >
+        <Icon size={17} />
+      </span>
+      <div className="min-w-0">
+        <p className="text-2xl font-bold leading-tight text-text-primary">{value}</p>
+        <p className="truncate text-xs font-medium text-text-secondary">{label}</p>
       </div>
-      <div className="grid gap-5 lg:grid-cols-5">
-        <div className="lg:col-span-3 h-64 rounded-lg bg-surface-muted" />
-        <div className="lg:col-span-2 h-64 rounded-lg bg-surface-muted" />
-      </div>
-      <div className="grid gap-5 lg:grid-cols-5">
-        <div className="lg:col-span-3 h-64 rounded-lg bg-surface-muted" />
-        <div className="lg:col-span-2 h-64 rounded-lg bg-surface-muted" />
-      </div>
-    </div>
+    </Wrapper>
   );
 }
 
@@ -133,7 +152,7 @@ export default function OrgOverviewPage({ params }: Props) {
     };
   }, [org, dashboard, qc]);
 
-  if (isLoading || !org) return <DashboardSkeleton />;
+  if (isLoading || !org) return <OrgOverviewSkeleton />;
   if (error || !dashboard) {
     return (
       <ErrorState
@@ -158,53 +177,48 @@ export default function OrgOverviewPage({ params }: Props) {
           <p className="text-sm text-text-muted">{greeting},</p>
           <h1 className="text-2xl font-semibold text-text-primary tracking-tight">{firstName}</h1>
         </div>
-        <div className="text-right hidden sm:block">
-          <p className="text-sm text-text-muted">{today}</p>
-          <p className="text-sm font-medium text-text-secondary">{org.name}</p>
+        <div className="hidden items-center gap-2.5 sm:flex">
+          <div className="text-right">
+            <p className="text-sm text-text-muted">{today}</p>
+            <p className="text-sm font-medium text-text-secondary">{org.name}</p>
+          </div>
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
+            style={{ backgroundColor: avatarColor(org.name) }}
+          >
+            {org.name.charAt(0).toUpperCase()}
+          </div>
         </div>
       </div>
 
       {/* Stats strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 rounded-lg border border-border-subtle bg-white overflow-hidden divide-x divide-y sm:divide-y-0 divide-border-subtle">
-        <button
+        <StatTile
+          icon={FolderOpen}
+          color="var(--color-workspace-northpeak)"
+          value={dashboard.stats.projectCount}
+          label="Projects"
           onClick={() => router.push(`/org/${slug}/projects`)}
-          className="flex flex-col gap-1 px-6 py-5 text-left hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-        >
-          <div className="flex items-center gap-1.5 text-xs font-medium text-text-muted uppercase tracking-wide">
-            <FolderOpen size={12} />
-            Projects
-          </div>
-          <p className="text-3xl font-bold text-text-primary">{dashboard.stats.projectCount}</p>
-        </button>
-
-        <div className="flex flex-col gap-1 px-6 py-5">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-text-muted uppercase tracking-wide">
-            <CheckSquare size={12} />
-            Assigned
-          </div>
-          <p className="text-3xl font-bold text-text-primary">{dashboard.stats.assignedTaskCount}</p>
-        </div>
-
-        <div className="flex flex-col gap-1 px-6 py-5">
-          <div className={cn(
-            'flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide',
-            dashboard.stats.overdueCount > 0 ? 'text-danger' : 'text-text-muted',
-          )}>
-            <AlertTriangle size={12} />
-            Overdue
-          </div>
-          <p className={cn('text-3xl font-bold', dashboard.stats.overdueCount > 0 ? 'text-danger' : 'text-text-primary')}>
-            {dashboard.stats.overdueCount}
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-1 px-6 py-5">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-text-muted uppercase tracking-wide">
-            <Clock size={12} />
-            Due Soon
-          </div>
-          <p className="text-3xl font-bold text-text-primary">{dashboard.stats.dueSoonCount}</p>
-        </div>
+        />
+        <StatTile
+          icon={CheckSquare}
+          color="var(--color-workspace-velocity)"
+          value={dashboard.stats.assignedTaskCount}
+          label="Assigned"
+        />
+        <StatTile
+          icon={AlertTriangle}
+          color="var(--color-danger)"
+          value={dashboard.stats.overdueCount}
+          label="Overdue"
+          glow={dashboard.stats.overdueCount > 0}
+        />
+        <StatTile
+          icon={Clock}
+          color="var(--color-warning)"
+          value={dashboard.stats.dueSoonCount}
+          label="Due Soon"
+        />
       </div>
 
       {/* Row 1: Assigned tasks + My Projects */}
@@ -334,7 +348,7 @@ export default function OrgOverviewPage({ params }: Props) {
           }
         >
           {dashboard.members.length === 0 ? (
-            <EmptyState icon={<FolderOpen size={28} />} label="No members yet" />
+            <EmptyState icon={<Users size={28} />} label="No members yet" />
           ) : (
             <ul className="divide-y divide-border-subtle max-h-[320px] overflow-y-auto">
               {dashboard.members.map((member) => (
