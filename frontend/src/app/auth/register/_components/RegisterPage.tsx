@@ -41,21 +41,21 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex bg-background w-full">
       <div className="flex-1 flex flex-col justify-center px-6 py-12 md:px-16 lg:px-24">
-        <div className="mx-auto w-full max-w-md">
+        <div className="animate-auth-rise-in mx-auto w-full max-w-md">
           <Logo className="mb-10" />
 
-          <h1 className="text-h1 text-foreground tracking-tight mb-2">Create an account</h1>
-          <p className="text-body text-muted-foreground mb-8">Get started with your collaborative workspace today.</p>
+          <h1 className="text-h1 text-text-primary tracking-tight mb-2">Create an account</h1>
+          <p className="text-body text-text-secondary mb-8">Get started with your collaborative workspace today.</p>
 
           {apiError && (
-            <div className="mb-6 p-3.5 rounded-md text-sm bg-destructive/10 border border-destructive/20 text-destructive">
+            <div className="mb-6 p-3.5 bg-danger-soft border border-danger/20 rounded-md text-sm text-danger">
               {apiError}
             </div>
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="name">Full name</Label>
+              <Label htmlFor="name" className="text-text-primary">Full name</Label>
               <Input
                 id="name"
                 type="text"
@@ -63,11 +63,11 @@ export default function RegisterPage() {
                 className={errors.name ? 'border-destructive focus-visible:ring-destructive/30' : ''}
                 {...register('name')}
               />
-              {errors.name && <span className="text-xs text-destructive">{errors.name.message}</span>}
+              {errors.name && <span className="text-xs text-danger">{errors.name.message}</span>}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="email">Email address</Label>
+              <Label htmlFor="email" className="text-text-primary">Email address</Label>
               <Input
                 id="email"
                 type="email"
@@ -75,11 +75,11 @@ export default function RegisterPage() {
                 className={errors.email ? 'border-destructive focus-visible:ring-destructive/30' : ''}
                 {...register('email')}
               />
-              {errors.email && <span className="text-xs text-destructive">{errors.email.message}</span>}
+              {errors.email && <span className="text-xs text-danger">{errors.email.message}</span>}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-text-primary">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -91,16 +91,16 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              {errors.password && <span className="text-xs text-destructive">{errors.password.message}</span>}
+              {errors.password && <span className="text-xs text-danger">{errors.password.message}</span>}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="confirmPassword">Confirm password</Label>
+              <Label htmlFor="confirmPassword" className="text-text-primary">Confirm password</Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"
@@ -112,12 +112,12 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
                 >
                   {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              {errors.confirmPassword && <span className="text-xs text-destructive">{errors.confirmPassword.message}</span>}
+              {errors.confirmPassword && <span className="text-xs text-danger">{errors.confirmPassword.message}</span>}
             </div>
 
             <Button type="submit" disabled={isPending} className="w-full h-11 mt-2">
@@ -126,21 +126,24 @@ export default function RegisterPage() {
           </form>
 
           <div className="relative my-7">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border-subtle" /></div>
             <div className="relative flex justify-center">
-              <span className="bg-background px-3 text-xs uppercase tracking-wider text-muted-foreground">Or sign up with</span>
+              <span className="bg-background px-3 text-xs uppercase tracking-wider text-text-muted">Or sign up with</span>
             </div>
           </div>
 
           <OAuthButtons label="Sign up with" />
 
-          <p className="mt-8 text-center text-sm text-muted-foreground">
+          <p className="mt-8 text-center text-sm text-text-secondary">
             Already have an account?{' '}
-            <Link href="/auth/login" className="font-medium text-foreground hover:underline transition-colors">Sign in</Link>
+            <Link href="/auth/login" className="text-brand hover:text-brand-hover font-medium transition-colors">Sign in</Link>
           </p>
         </div>
       </div>
-      <AuthSideBar />
+      <AuthSideBar
+        headline={<>Start shipping<br />with your team.</>}
+        subtext="Boards, tasks, and chat — set up your workspace in minutes."
+      />
     </div>
   );
 }

@@ -40,7 +40,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex bg-background w-full">
       <div className="flex-1 flex flex-col justify-center px-6 py-12 md:px-16 lg:px-24">
-        <div className="mx-auto w-full max-w-md">
+        <div className="animate-auth-rise-in mx-auto w-full max-w-md">
           <Logo className="mb-10" />
 
           <h1 className="text-h1 text-text-primary tracking-tight mb-2">Welcome back</h1>
@@ -54,7 +54,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="email">Email address</Label>
+              <Label htmlFor="email" className="text-text-primary">Email address</Label>
               <Input
                 id="email"
                 type="email"
@@ -62,13 +62,13 @@ export default function LoginPage() {
                 className={errors.email ? 'border-destructive focus-visible:ring-destructive/30' : ''}
                 {...register('email')}
               />
-              {errors.email && <span className="text-xs text-destructive">{errors.email.message}</span>}
+              {errors.email && <span className="text-xs text-danger">{errors.email.message}</span>}
             </div>
 
             <div className="flex flex-col gap-1.5">
               <div className="flex justify-between items-center">
-                <Label htmlFor="password">Password</Label>
-                <Link href="/auth/forgot-password" className="text-xs text-muted-foreground hover:text-foreground transition-colors font-medium">
+                <Label htmlFor="password" className="text-text-primary">Password</Label>
+                <Link href="/auth/forgot-password" className="text-xs text-text-muted hover:text-text-primary transition-colors font-medium">
                   Forgot password?
                 </Link>
               </div>
@@ -83,12 +83,12 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              {errors.password && <span className="text-xs text-destructive">{errors.password.message}</span>}
+              {errors.password && <span className="text-xs text-danger">{errors.password.message}</span>}
             </div>
 
             <Button type="submit" disabled={isPending} className="w-full h-11 mt-2">
@@ -97,23 +97,26 @@ export default function LoginPage() {
           </form>
 
           <div className="relative my-7">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border-subtle" /></div>
             <div className="relative flex justify-center">
-              <span className="bg-background px-3 text-xs uppercase tracking-wider text-muted-foreground">Or continue with</span>
+              <span className="bg-background px-3 text-xs uppercase tracking-wider text-text-muted">Or continue with</span>
             </div>
           </div>
 
           <OAuthButtons />
 
-          <p className="mt-8 text-center text-sm text-muted-foreground">
+          <p className="mt-8 text-center text-sm text-text-secondary">
             Don&apos;t have an account?{' '}
-            <Link href="/auth/register" className="text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium transition-colors">
+            <Link href="/auth/register" className="text-brand hover:text-brand-hover font-medium transition-colors">
               Create one
             </Link>
           </p>
         </div>
       </div>
-      <AuthSideBar />
+      <AuthSideBar
+        headline={<>Pick up right<br />where you left off.</>}
+        subtext="Your boards, tasks, and team are exactly as you left them."
+      />
     </div>
   );
 }
