@@ -24,6 +24,15 @@ import type {
 } from '../types/organizations.types.js';
 import { isDoneColumnName } from '../utils/doneColumn.utils.js';
 
+// Server-local calendar day (not toISOString, which is UTC and drifts the
+// key a day back/forward whenever the server's UTC offset isn't 0).
+function toLocalDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export const organizationRepository = {
   create: async (data: OrganizationCreationAttributes): Promise<OrganizationInstance> => {
     return await Organization.create(data);
@@ -499,7 +508,10 @@ export const dashboardRepository = {
       Task.findAll({
         where: { projectId: { [Op.in]: projectIds }, createdAt: { [Op.gte]: since } },
         attributes: [
-          [fn('DATE', col('createdAt')), 'date'],
+          // TO_CHAR forces a plain string — node-postgres otherwise parses a
+          // bare DATE() result into a JS Date, which then never matches the
+          // string keys built on the JS side (see createdMap below).
+          [fn('TO_CHAR', fn('DATE', col('createdAt')), 'YYYY-MM-DD'), 'date'],
           [fn('COUNT', col('id')), 'count'],
         ],
         group: [fn('DATE', col('createdAt'))],
@@ -542,7 +554,7 @@ export const dashboardRepository = {
     const completedMap = new Map<string, number>();
     for (const log of movedLogs as unknown as { createdAt: string; metadata: { toColumn?: string } | null }[]) {
       if (!isDoneColumnName(log.metadata?.toColumn)) continue;
-      const date = new Date(log.createdAt).toISOString().slice(0, 10);
+      const date = toLocalDateKey(new Date(log.createdAt));
       completedMap.set(date, (completedMap.get(date) ?? 0) + 1);
     }
     const completionTrend = {
@@ -552,7 +564,7 @@ export const dashboardRepository = {
     for (let i = 0; i < 30; i++) {
       const d = new Date(since);
       d.setDate(since.getDate() + i);
-      const key = d.toISOString().slice(0, 10);
+      const key = toLocalDateKey(d);
       completionTrend.created.push({ date: key, count: createdMap.get(key) ?? 0 });
       completionTrend.completed.push({ date: key, count: completedMap.get(key) ?? 0 });
     }
