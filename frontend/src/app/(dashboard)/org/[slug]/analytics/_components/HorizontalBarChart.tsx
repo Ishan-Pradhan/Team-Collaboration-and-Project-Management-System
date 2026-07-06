@@ -21,14 +21,14 @@ export default function HorizontalBarChart({ data, emptyLabel }: HorizontalBarCh
 
   return (
     <div className="space-y-3">
-      {data.map((entry) => (
-        <div key={entry.label} className="flex items-center gap-3">
+      {data.map((entry, index) => (
+        <div key={`${entry.label}-${index}`} className="flex items-center gap-3">
           <span className="w-28 shrink-0 truncate text-xs text-text-secondary" title={entry.label}>
             {entry.label}
           </span>
           <div className="h-4 flex-1 overflow-hidden rounded-full bg-surface-muted">
             <div
-              className="h-full rounded-full bg-primary"
+              className="h-full rounded-full bg-brand transition-[width] duration-500 ease-out"
               style={{ width: `${(entry.count / max) * 100}%` }}
             />
           </div>
