@@ -73,4 +73,8 @@ export const taskRepository = {
   countByColumn: async (columnId: string): Promise<number> => {
     return await Task.count({ where: { columnId } });
   },
+
+  countAll: async (): Promise<number> => {
+    return await Task.count();
+  },
 };

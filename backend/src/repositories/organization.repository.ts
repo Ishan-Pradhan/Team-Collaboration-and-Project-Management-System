@@ -8,6 +8,7 @@ import {
   Project,
   ProjectMember,
   Task,
+  TaskAttachment,
   KanbanColumn,
   ActivityLog,
 } from '../models/index.js';
@@ -19,6 +20,7 @@ import type {
   OrganizationInviteCreationAttributes,
   OrganizationInviteInstance,
   OrganizationBanInstance,
+  OrganizationFeatureFlags,
 } from '../types/organizations.types.js';
 import { isDoneColumnName } from '../utils/doneColumn.utils.js';
 
@@ -73,6 +75,78 @@ export const organizationRepository = {
     if (!org) return false;
     await org.destroy();
     return true;
+  },
+
+  count: async (): Promise<number> => {
+    return await Organization.count();
+  },
+
+  countSuspended: async (): Promise<number> => {
+    return await Organization.count({ where: { isSuspended: true } });
+  },
+
+  countCreatedSince: async (since: Date): Promise<{ date: string; count: number }[]> => {
+    const rows = await Organization.findAll({
+      attributes: [
+        [fn('DATE', col('createdAt')), 'date'],
+        [fn('COUNT', col('id')), 'count'],
+      ],
+      where: { createdAt: { [Op.gte]: since } },
+      group: [fn('DATE', col('createdAt'))],
+      order: [[fn('DATE', col('createdAt')), 'ASC']],
+      raw: true,
+    });
+    return (rows as unknown as { date: string; count: string }[]).map((r) => ({
+      date: r.date,
+      count: parseInt(r.count, 10),
+    }));
+  },
+
+  findDetailById: async (id: string) => {
+    const org = await Organization.findByPk(id, {
+      include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'email'] }],
+    });
+    if (!org) return null;
+
+    const projects = await Project.findAll({ where: { organizationId: id }, attributes: ['id'] });
+    const projectIds = projects.map((p) => p.id);
+
+    const [memberCount, taskCount, attachmentCount, lastActivity] = await Promise.all([
+      OrganizationMember.count({ where: { organizationId: id } }),
+      projectIds.length > 0
+        ? Task.count({ where: { projectId: { [Op.in]: projectIds } } })
+        : Promise.resolve(0),
+      projectIds.length > 0
+        ? TaskAttachment.count({ where: { projectId: { [Op.in]: projectIds } } })
+        : Promise.resolve(0),
+      projectIds.length > 0
+        ? ActivityLog.findOne({
+            where: { projectId: { [Op.in]: projectIds } },
+            order: [['createdAt', 'DESC']],
+            attributes: ['createdAt'],
+          })
+        : Promise.resolve(null),
+    ]);
+
+    return {
+      org,
+      memberCount,
+      projectCount: projectIds.length,
+      taskCount,
+      attachmentCount,
+      lastActivityAt: lastActivity?.createdAt ?? null,
+    };
+  },
+
+  updateFeatureFlags: async (
+    id: string,
+    flag: keyof OrganizationFeatureFlags,
+    enabled: boolean,
+  ): Promise<OrganizationInstance | null> => {
+    const org = await Organization.findByPk(id);
+    if (!org) return null;
+    const featureFlags = { ...org.featureFlags, [flag]: enabled };
+    return await org.update({ featureFlags });
   },
 };
 

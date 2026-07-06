@@ -173,4 +173,8 @@ export const projectRepository = {
     });
     return !!membership;
   },
+
+  countAll: async (): Promise<number> => {
+    return await Project.count();
+  },
 };

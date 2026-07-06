@@ -1,4 +1,4 @@
-import { Op, type WhereOptions } from 'sequelize';
+import { Op, fn, col, type WhereOptions } from 'sequelize';
 import { User } from '../models/users.model.js';
 import type {
   UserCreationAttributes,
@@ -91,5 +91,22 @@ export const userRepository = {
       blockedCount,
       adminsCount,
     };
+  },
+
+  countCreatedSince: async (since: Date): Promise<{ date: string; count: number }[]> => {
+    const rows = await User.findAll({
+      attributes: [
+        [fn('DATE', col('createdAt')), 'date'],
+        [fn('COUNT', col('id')), 'count'],
+      ],
+      where: { createdAt: { [Op.gte]: since } },
+      group: [fn('DATE', col('createdAt'))],
+      order: [[fn('DATE', col('createdAt')), 'ASC']],
+      raw: true,
+    });
+    return (rows as unknown as { date: string; count: string }[]).map((r) => ({
+      date: r.date,
+      count: parseInt(r.count, 10),
+    }));
   },
 };
