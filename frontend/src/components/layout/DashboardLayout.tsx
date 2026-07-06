@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Plus,
   Settings,
+  ShieldCheck,
   Users,
   X,
   Hash,
@@ -156,13 +157,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       name: 'Calendar',
       href: currentSlug ? `/org/${currentSlug}/calendar` : '#',
       icon: CalendarDays,
-      disabled: !currentSlug,
+      disabled: !currentSlug || activeOrg?.featureFlags?.calendarEnabled === false,
     },
     {
       name: 'Chat',
       href: currentSlug ? `/org/${currentSlug}/chat` : '#',
       icon: MessageSquare,
-      disabled: !currentSlug,
+      disabled: !currentSlug || activeOrg?.featureFlags?.chatEnabled === false,
       badgeCount: currentSlug ? unreadChannels?.length : undefined,
     },
     ...(activeOrg?.ownerId === user?.id
@@ -504,6 +505,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
           )}
         </nav>
+
+        {user?.role === 'SUPER_ADMIN' && (
+          <div className="border-t border-border-subtle p-3">
+            <Link
+              href="/admin"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white hover:bg-primary-foreground hover:text-primary transition-all"
+            >
+              <ShieldCheck size={18} />
+              <span>Super Admin</span>
+            </Link>
+          </div>
+        )}
 
         {/* Sidebar Footer */}
         <div className="border-t border-border-subtle p-3">
