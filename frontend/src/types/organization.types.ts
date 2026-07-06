@@ -1,5 +1,10 @@
 // ─── Organization ──────────────────────────────────────────────
 
+export interface OrganizationFeatureFlags {
+  chatEnabled: boolean;
+  calendarEnabled: boolean;
+}
+
 export interface Organization {
   id: string;
   name: string;
@@ -8,6 +13,7 @@ export interface Organization {
   logoUrl: string | null;
   ownerId: string;
   isSuspended: boolean;
+  featureFlags: OrganizationFeatureFlags;
   createdAt: string;
   updatedAt: string;
 }
