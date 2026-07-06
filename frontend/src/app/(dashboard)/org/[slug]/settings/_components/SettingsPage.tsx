@@ -2,16 +2,19 @@
 
 import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useOrganizationBySlug } from '@/hooks/useOrganization';
+import { useOrganizationBySlug, useOrganizationMembers } from '@/hooks/useOrganization';
 import { useUpdateOrganization, useDeleteOrganization } from '@/hooks/useOrganization';
 import { useAuthStore } from '@/store/auth.store';
 import { useOrgStore } from '@/store/org.store';
 import { parseApiError } from '@/lib/axios';
+import { avatarColor } from '@/lib/avatarColor';
 import { toast } from 'sonner';
-import { AlertTriangle, Loader2, Save, Trash2 } from 'lucide-react';
+import { AlertTriangle, Check, Copy, Loader2, Save, Trash2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ErrorState } from '@/components/shared/ErrorState';
+import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
+import { SettingsSkeleton } from '@/components/shared/skeletons/SettingsSkeleton';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -24,9 +27,12 @@ export default function SettingsPage({ params }: Props) {
   const { clearCurrentOrg } = useOrgStore();
 
   const { data: org, isLoading, error, refetch } = useOrganizationBySlug(slug);
+  const { data: members } = useOrganizationMembers(org?.id ?? '');
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (org) {
@@ -38,7 +44,7 @@ export default function SettingsPage({ params }: Props) {
   const updateMutation = useUpdateOrganization(org?.id ?? '');
   const deleteMutation = useDeleteOrganization();
 
-  if (isLoading) return null;
+  if (isLoading) return <SettingsSkeleton />;
   if (error || !org) {
     return (
       <ErrorState
@@ -63,8 +69,17 @@ export default function SettingsPage({ params }: Props) {
     );
   };
 
+  const handleCopySlug = () => {
+    navigator.clipboard.writeText(org.slug).then(
+      () => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      },
+      () => toast.error('Could not copy to clipboard')
+    );
+  };
+
   const handleDelete = () => {
-    if (!confirm(`Permanently delete "${org.name}"? This cannot be undone. All projects, tasks, and members will be removed.`)) return;
     deleteMutation.mutate(org.id, {
       onSuccess: () => {
         toast.success('Workspace deleted');
@@ -76,12 +91,34 @@ export default function SettingsPage({ params }: Props) {
   };
 
   return (
-    <div className="max-w-2xl space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight text-text-primary">Manage Workspace</h1>
-        <p className="mt-0.5 text-xs text-text-secondary">
-          Configure your workspace settings and preferences.
-        </p>
+    <div className="max-w-2xl space-y-6">
+      {/* Identity header — same color as this workspace's avatar everywhere else in the app */}
+      <div className="flex items-center gap-4 rounded-xl border border-border-subtle bg-white p-6">
+        <div
+          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-2xl font-bold text-white"
+          style={{ backgroundColor: avatarColor(org.name) }}
+        >
+          {org.name.charAt(0).toUpperCase()}
+        </div>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-xl font-semibold tracking-tight text-text-primary">{org.name}</h1>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary">
+            <button
+              onClick={handleCopySlug}
+              title="Copy workspace URL"
+              className="flex items-center gap-1 text-text-secondary transition-colors hover:text-text-primary"
+            >
+              /org/{org.slug}
+              {copied ? <Check size={12} className="text-success" /> : <Copy size={12} />}
+            </button>
+            <span className="text-border-muted">·</span>
+            <span className="flex items-center gap-1">
+              <Users size={12} /> {members?.length ?? '—'} members
+            </span>
+            <span className="text-border-muted">·</span>
+            <span>Created {new Date(org.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+          </div>
+        </div>
       </div>
 
       {/* General settings — admin + owner */}
@@ -137,7 +174,7 @@ export default function SettingsPage({ params }: Props) {
             Permanently deletes this workspace, all its projects, tasks, and removes all members. This cannot be undone.
           </p>
           <button
-            onClick={handleDelete}
+            onClick={() => setShowDeleteConfirm(true)}
             disabled={deleteMutation.isPending}
             className="inline-flex items-center gap-1.5 rounded-lg border border-danger/40 bg-white px-4 py-2 text-sm font-medium text-danger hover:bg-danger hover:text-white transition-colors disabled:opacity-50"
           >
@@ -151,7 +188,16 @@ export default function SettingsPage({ params }: Props) {
         </section>
       )}
 
-
+      <ConfirmationDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete Workspace"
+        description={`Permanently delete "${org.name}"? This cannot be undone. All projects, tasks, and members will be removed.`}
+        confirmText="Delete"
+        isDestructive
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   );
 }
