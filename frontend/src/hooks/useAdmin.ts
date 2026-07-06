@@ -63,7 +63,13 @@ export const useToggleSuspendOrganization = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: toggleSuspendOrganization,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'organizations'] }),
+    // Also invalidate the member-facing org queries (sidebar org switcher,
+    // org overview) — otherwise anyone with the org already cached (staleTime
+    // is 60s and refetchOnWindowFocus is off) keeps seeing pre-suspend state.
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'organizations'] });
+      qc.invalidateQueries({ queryKey: ['organizations'] });
+    },
   });
 };
 
@@ -79,9 +85,13 @@ export const useToggleOrgFeature = () => {
       flag: 'chatEnabled' | 'calendarEnabled';
       enabled: boolean;
     }) => toggleOrgFeature(organizationId, flag, enabled),
+    // Same reasoning as useToggleSuspendOrganization: the sidebar's nav-hiding
+    // reads featureFlags off the member-facing ['organizations'] query, which
+    // this mutation would otherwise leave stale for up to a minute.
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['admin', 'organizations'] });
       qc.invalidateQueries({ queryKey: ['admin', 'organizations', variables.organizationId] });
+      qc.invalidateQueries({ queryKey: ['organizations'] });
     },
   });
 };
