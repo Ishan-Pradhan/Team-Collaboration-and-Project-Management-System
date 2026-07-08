@@ -19,6 +19,7 @@ import {
   X,
   Hash,
   Lock,
+  MoveRight,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -314,10 +315,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all',
+                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all ease-in duration-75',
                     active
                       ? 'bg-white text-primary font-medium'
-                      : 'text-white hover:bg-primary-foreground  hover:text-primary'
+                      : 'text-white hover:bg-brand  hover:text-white '
                   )}
                 >
                   <Icon size={18} />
@@ -353,7 +354,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                             'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all truncate',
                             isProjectActive
                               ? 'bg-primary-foreground text-primary   font-medium'
-                              : 'text-white hover:bg-surface-muted hover:text-text-primary'
+                              : 'text-white hover:bg-brand hover:text-white'
                           )}
                         >
                           <div
@@ -373,10 +374,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     )}
                     <Link
                       href={`/org/${currentSlug}/projects`}
-                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium hover:text-primary text-white hover:bg-surface-muted transition-all group"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium  text-white  transition-all group hover:underline"
                     >
-                      <Plus size={16} className="text-white group-hover:text-primary transition-all" />
                       <span>View all projects</span>
+                      <MoveRight size={16} className="text-white group-hover:translate-x-1 transition-all duration-100" />
                     </Link>
                   </>
                 )}
@@ -393,7 +394,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </span>
                 <Link
                   href={`/org/${currentSlug}/chat?createChannel=true`}
-                  className="rounded p-0.5 text-text-muted hover:bg-surface-muted hover:text-white transition-colors"
+                  className="rounded p-0.5 text-text-muted hover:bg-brand hover:text-white transition-colors"
                   title="Create channel"
                 >
                   <Plus size={14} />
@@ -420,7 +421,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                                 ? 'bg-primary-foreground text-primary font-medium'
                                 : unread
                                   ? 'text-white font-semibold'
-                                  : 'text-white/80 hover:bg-surface-muted hover:text-text-primary',
+                                  : 'text-white/80 hover:bg-brand hover:text-white',
                               isMuted && 'opacity-50'
                             )}
                           >
@@ -456,7 +457,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </span>
                 <Link
                   href={`/org/${currentSlug}/chat?startDM=true`}
-                  className="rounded p-0.5 text-text-muted hover:bg-surface-muted hover:text-white transition-colors"
+                  className="rounded p-0.5 text-text-muted hover:bg-brand hover:text-white transition-colors"
                   title="New direct message"
                 >
                   <Plus size={14} />
@@ -485,7 +486,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                                 ? 'bg-primary-foreground text-primary font-medium'
                                 : unread
                                   ? 'text-white font-semibold'
-                                  : 'text-white/80 hover:bg-surface-muted hover:text-text-primary',
+                                  : 'text-white/80 hover:bg-brand hover:text-white',
                               isMuted && 'opacity-50'
                             )}
                           >
@@ -523,7 +524,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="border-t border-border-subtle p-3">
             <Link
               href="/admin"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white hover:bg-primary-foreground hover:text-primary transition-all"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white hover:bg-brand  transition-all"
             >
               <ShieldCheck size={18} />
               <span>Super Admin</span>

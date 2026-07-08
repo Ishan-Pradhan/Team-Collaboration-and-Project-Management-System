@@ -170,6 +170,7 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
   const typingTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const lastTypingEmitRef = useRef(0);
 
+
   const isNearBottomRef = useRef(true);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
 
@@ -491,6 +492,8 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
           {typingLabel([...typingUsers.values()])}
         </p>
       )}
+
+      {uploadFile.isPending && <div className='w-full p-4 border-t border-border-subtle bg-surface-muted/50 flex items-center justify-left gap-2'><span><Loader2 className='animate-spin' size={16} /></span><span>Uploading file...</span></div>}
 
       <form onSubmit={handleSend} className="border-t border-border-subtle p-3">
         <input ref={fileInputRef} type="file" onChange={handleFileSelect} className="hidden" />
