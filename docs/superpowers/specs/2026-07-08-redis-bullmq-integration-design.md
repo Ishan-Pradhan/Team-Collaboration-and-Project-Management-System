@@ -186,7 +186,7 @@ new Worker('notification-queue', async (job) => {
     { name: 'due-date-check' }
   );
   ```
-  Called once from `src/index.ts` at startup, replacing the removed `startDueDateReminderJob()` call. Unlike the old `setInterval`, this does not run immediately on startup — the first run happens up to an hour after boot. (The original job's comment noted immediate-on-startup was chosen specifically to avoid delay after a deploy; if that property needs to be preserved, `index.ts` can additionally call `notificationQueue.add('due-date-check', {})` once at boot. Flagging this as a call to confirm rather than assuming either way.)
+  Called once from `src/index.ts` at startup, replacing the removed `startDueDateReminderJob()` call. `upsertJobScheduler` alone does not run immediately — the first scheduled run happens up to an hour after boot. The original job intentionally ran immediately on startup to avoid reminders lagging by up to an hour after every deploy, so that property is preserved explicitly: `index.ts` also calls `notificationQueue.add('due-date-check', {})` once at startup, in addition to registering the scheduler.
 
 ## 6. File-level summary
 
