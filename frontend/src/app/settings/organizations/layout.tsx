@@ -27,7 +27,7 @@ export default function ManageWorkspacesLayout({ children }: { children: React.R
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b border-border-subtle bg-white px-4 lg:px-6">
+      <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b border-border-subtle bg-surface px-4 lg:px-6">
         <button
           onClick={() => router.back()}
           className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-text-secondary hover:bg-surface-muted hover:text-text-primary transition-colors"

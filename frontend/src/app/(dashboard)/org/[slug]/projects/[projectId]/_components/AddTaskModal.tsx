@@ -39,47 +39,47 @@ export function AddTaskModal({ projectId, columns, defaultColumnId, onClose }: P
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-2xl">
-        <button onClick={onClose} className="absolute right-4 top-4 rounded p-1 text-gray-400 hover:bg-gray-100 transition-colors">
+      <div className="relative w-full max-w-md rounded-xl border border-border-subtle bg-surface p-6 shadow-2xl">
+        <button onClick={onClose} className="absolute right-4 top-4 rounded p-1 text-text-muted hover:bg-surface-muted transition-colors">
           <X size={16} />
         </button>
-        <h2 className="text-base font-semibold text-gray-900">Add Card</h2>
+        <h2 className="text-base font-semibold text-text-primary">Add Card</h2>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-500">Title *</label>
+            <label className="text-xs font-semibold text-text-secondary">Title *</label>
             <Input autoFocus placeholder="What needs to be done?" value={title} onChange={(e) => setTitle(e.target.value)} required disabled={createTask.isPending} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-gray-500">Column</label>
+              <label className="text-xs font-semibold text-text-secondary">Column</label>
               <select value={columnId} onChange={(e) => setColumnId(e.target.value)} disabled={createTask.isPending}
-                className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none">
+                className="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm focus:border-blue-400 focus:outline-none">
                 {columns.map((col) => <option key={col.id} value={col.id}>{col.name}</option>)}
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-gray-500">Priority</label>
+              <label className="text-xs font-semibold text-text-secondary">Priority</label>
               <select value={priority} onChange={(e) => setPriority(e.target.value as Task['priority'])} disabled={createTask.isPending}
-                className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none">
+                className="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm focus:border-blue-400 focus:outline-none">
                 {(Object.keys(PRIORITY) as Task['priority'][]).map((p) => <option key={p} value={p}>{PRIORITY[p].label}</option>)}
               </select>
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-500">Due Date</label>
+            <label className="text-xs font-semibold text-text-secondary">Due Date</label>
             <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={createTask.isPending} />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-500">
-              Description <span className="font-normal text-gray-400">(optional)</span>
+            <label className="text-xs font-semibold text-text-secondary">
+              Description <span className="font-normal text-text-muted">(optional)</span>
             </label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Add details..."
               disabled={createTask.isPending}
-              className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none resize-none" />
+              className="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm focus:border-blue-400 focus:outline-none resize-none" />
           </div>
 
           <div className="flex justify-end gap-2 pt-1">

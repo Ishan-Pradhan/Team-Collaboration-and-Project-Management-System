@@ -50,7 +50,7 @@ export default function AdminOrganizationsPage() {
     <div className="space-y-4">
       <h1 className="text-lg font-semibold text-text-primary">Organizations</h1>
 
-      <div className="overflow-hidden rounded-xl border border-border-subtle bg-white">
+      <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface">
         {organizations?.map((org) => (
           <div
             key={org.id}

@@ -2,7 +2,7 @@
 
 export default function CalendarLoading() {
   return (
-    <div className="flex h-full flex-col rounded-xl border border-border-subtle bg-white overflow-hidden animate-pulse">
+    <div className="flex h-full flex-col rounded-xl border border-border-subtle bg-surface overflow-hidden animate-pulse">
       {/* Header skeleton */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle">
         <div className="flex items-center gap-3">

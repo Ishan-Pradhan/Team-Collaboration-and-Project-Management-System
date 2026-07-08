@@ -398,7 +398,7 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                             <div className="absolute -top-8 left-1/2 flex -translate-x-1/2 translate-y-1 flex-col items-center pb-3 opacity-0 pointer-events-none transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-hover:pointer-events-auto">
                               <div className={cn(
                                 'flex items-center gap-0.5 rounded-lg border p-0.5 shadow-sm',
-                                isOwn ? 'border-primary/30 bg-white' : 'border-border-subtle bg-white',
+                                isOwn ? 'border-primary/30 bg-surface' : 'border-border-subtle bg-surface',
                               )}>
                                 <button
                                   onClick={(e) => {
@@ -497,7 +497,7 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
 
       <form onSubmit={handleSend} className="border-t border-border-subtle p-3">
         <input ref={fileInputRef} type="file" onChange={handleFileSelect} className="hidden" />
-        <div className="flex items-center gap-1 rounded-lg border border-border-subtle bg-white px-1.5 py-1 transition-colors focus-within:border-primary">
+        <div className="flex items-center gap-1 rounded-lg border border-border-subtle bg-surface px-1.5 py-1 transition-colors focus-within:border-primary">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}

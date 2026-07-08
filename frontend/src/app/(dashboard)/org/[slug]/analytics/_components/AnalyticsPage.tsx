@@ -27,7 +27,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-border-subtle bg-white">
+    <div className="rounded-lg border border-border-subtle bg-surface">
       <div className="flex items-baseline justify-between border-b border-border-subtle px-5 py-3.5">
         <h2 className="text-sm font-semibold text-text-primary">{title}</h2>
         {subtitle && <span className="text-xs text-text-muted">{subtitle}</span>}
@@ -94,7 +94,7 @@ export default function AnalyticsPage({ params }: Props) {
         <p className="mt-1 text-sm text-text-muted">Org-wide activity across all projects</p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 rounded-lg border border-border-subtle bg-white overflow-hidden divide-x divide-y sm:divide-y-0 divide-border-subtle">
+      <div className="grid grid-cols-2 sm:grid-cols-4 rounded-lg border border-border-subtle bg-surface overflow-hidden divide-x divide-y sm:divide-y-0 divide-border-subtle">
         <StatTile icon={FolderOpen} color="var(--color-workspace-northpeak)" value={analytics.projectHealth.length} label="Projects" />
         <StatTile icon={ListChecks} color="var(--color-workspace-velocity)" value={openTaskCount} label="Open tasks" />
         <StatTile
@@ -127,7 +127,7 @@ export default function AnalyticsPage({ params }: Props) {
         </Card>
       </div>
 
-      <div className="rounded-lg border border-border-subtle bg-white">
+      <div className="rounded-lg border border-border-subtle bg-surface">
         <div className="border-b border-border-subtle px-5 py-3.5">
           <h2 className="text-sm font-semibold text-text-primary">Project health</h2>
         </div>

@@ -307,8 +307,8 @@ export default function KanbanPage({ params }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between px-8 pt-6 pb-3">
         <div className="flex items-center gap-2">
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight">{project.name}</h1>
-          <ChevronDown size={18} className="text-gray-400 cursor-pointer" />
+          <h1 className="text-xl font-bold text-text-primary tracking-tight">{project.name}</h1>
+          <ChevronDown size={18} className="text-text-muted cursor-pointer" />
         </div>
         <div className="flex items-center gap-3">
           {projectMembers && projectMembers.length > 0 && (
@@ -322,13 +322,13 @@ export default function KanbanPage({ params }: Props) {
                     src={avatarUrl}
                     alt={name}
                     title={name}
-                    className="h-7 w-7 rounded-full ring-2 ring-white object-cover"
+                    className="h-7 w-7 rounded-full ring-2 ring-surface object-cover"
                   />
                 ) : (
                   <div
                     key={m.id}
                     title={name}
-                    className="flex h-7 w-7 items-center justify-center rounded-full ring-2 ring-white text-[10px] font-bold text-white"
+                    className="flex h-7 w-7 items-center justify-center rounded-full ring-2 ring-surface text-[10px] font-bold text-white"
                     style={{ backgroundColor: getMemberColor(name) }}
                   >
                     {name.charAt(0).toUpperCase()}
@@ -336,7 +336,7 @@ export default function KanbanPage({ params }: Props) {
                 );
               })}
               {projectMembers.length > 4 && (
-                <div className="flex h-7 w-7 items-center justify-center rounded-full ring-2 ring-white bg-gray-200 text-[10px] font-bold text-gray-600">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full ring-2 ring-surface bg-surface-muted text-[10px] font-bold text-text-secondary">
                   +{projectMembers.length - 4}
                 </div>
               )}
@@ -354,7 +354,7 @@ export default function KanbanPage({ params }: Props) {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 px-8">
+      <div className="border-b border-border-subtle px-8">
         <div className="flex gap-5">
           {tabs.map(({ name, icon: Icon }) => {
             const active = activeTab === name;
@@ -403,7 +403,7 @@ export default function KanbanPage({ params }: Props) {
                     {addingColumn ? (
                       <form onSubmit={handleAddColumn} className="rounded-xl bg-surface-muted/50 p-3 space-y-2">
                         <Input autoFocus placeholder="Column name" value={newColumnName}
-                          onChange={(e) => setNewColumnName(e.target.value)} className="text-sm bg-white" />
+                          onChange={(e) => setNewColumnName(e.target.value)} className="text-sm bg-surface" />
                         <div className="flex gap-1.5">
                           <Button type="submit" size="sm" disabled={createColumn.isPending || !newColumnName.trim()}>Add</Button>
                           <Button type="button" size="sm" variant="outline" onClick={() => { setAddingColumn(false); setNewColumnName(''); }}>Cancel</Button>
@@ -411,7 +411,7 @@ export default function KanbanPage({ params }: Props) {
                       </form>
                     ) : (
                       <button onClick={() => setAddingColumn(true)}
-                        className="flex w-full items-center gap-2 rounded-xl border-2 border-dashed border-gray-300 px-3 py-3 text-sm text-gray-400 hover:border-gray-400 hover:text-gray-600 transition-colors">
+                        className="flex w-full items-center gap-2 rounded-xl border-2 border-dashed border-border-muted px-3 py-3 text-sm text-text-muted hover:border-border-muted hover:text-text-secondary transition-colors">
                         <Plus size={15} /> Add column
                       </button>
                     )}
@@ -447,24 +447,24 @@ export default function KanbanPage({ params }: Props) {
         </div>
       ) : activeTab === 'List' ? (
         <div className="flex-1 overflow-y-auto p-8">
-          <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-            <div className="grid grid-cols-12 gap-4 border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
+            <div className="grid grid-cols-12 gap-4 border-b border-border-subtle bg-surface-muted px-5 py-3 text-xs font-semibold text-text-secondary uppercase tracking-wide">
               <div className="col-span-4">Title</div>
               <div className="col-span-2">Column</div>
               <div className="col-span-2">Priority</div>
               <div className="col-span-2">Due Status</div>
               <div className="col-span-2 text-right">Due Date</div>
             </div>
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-border-subtle">
               {allTasks.map((task) => {
                 const colName = localColumns.find((c) => c.id === task.columnId)?.name;
                 const dueStatus = getDueStatus(task.dueDate, colName);
                 return (
                   <div key={task.id} onClick={() => setEditingTask(task)}
-                    className="grid grid-cols-12 gap-4 px-5 py-3.5 text-sm items-center hover:bg-gray-50 cursor-pointer transition-colors">
-                    <div className="col-span-4 font-medium text-gray-900 truncate">{task.title}</div>
+                    className="grid grid-cols-12 gap-4 px-5 py-3.5 text-sm items-center hover:bg-surface-muted cursor-pointer transition-colors">
+                    <div className="col-span-4 font-medium text-text-primary truncate">{task.title}</div>
                     <div className="col-span-2">
-                      <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs font-medium">
+                      <span className="bg-surface-muted text-text-secondary px-2 py-1 rounded-full text-xs font-medium">
                         {localColumns.find((c) => c.id === task.columnId)?.name || '—'}
                       </span>
                     </div>
@@ -479,17 +479,17 @@ export default function KanbanPage({ params }: Props) {
                           {DUE_STATUS[dueStatus].label}
                         </span>
                       ) : (
-                        <span className="text-gray-400 text-xs">—</span>
+                        <span className="text-text-muted text-xs">—</span>
                       )}
                     </div>
-                    <div className="col-span-2 text-right text-gray-400 text-xs">
+                    <div className="col-span-2 text-right text-text-muted text-xs">
                       {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '—'}
                     </div>
                   </div>
                 );
               })}
               {allTasks.length === 0 && (
-                <div className="py-12 text-center text-sm text-gray-400">No cards yet.</div>
+                <div className="py-12 text-center text-sm text-text-muted">No cards yet.</div>
               )}
             </div>
           </div>
@@ -609,21 +609,21 @@ function ProjectSettingsView({
       <div className="mx-auto max-w-xl space-y-6">
 
         {/* Project info */}
-        <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-card">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">Project Info</h2>
+        <div className="rounded-xl border border-border-subtle bg-surface p-6 shadow-card">
+          <h2 className="text-sm font-semibold text-text-primary mb-4">Project Info</h2>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">Name</span>
-              <span className="font-medium text-gray-800">{project.name}</span>
+              <span className="text-text-secondary">Name</span>
+              <span className="font-medium text-text-primary">{project.name}</span>
             </div>
             {project.description && (
               <div className="flex justify-between gap-4">
-                <span className="text-gray-500 shrink-0">Description</span>
-                <span className="text-gray-700 text-right">{project.description}</span>
+                <span className="text-text-secondary shrink-0">Description</span>
+                <span className="text-text-secondary text-right">{project.description}</span>
               </div>
             )}
             <div className="flex justify-between">
-              <span className="text-gray-500">Status</span>
+              <span className="text-text-secondary">Status</span>
               <span className={cn(
                 'rounded-full px-2 py-0.5 text-[11px] font-semibold',
                 project.status === 'ACTIVE' ? 'bg-success-soft text-success' : 'bg-surface-muted text-text-muted'
@@ -632,8 +632,8 @@ function ProjectSettingsView({
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Created</span>
-              <span className="font-medium text-gray-800">
+              <span className="text-text-secondary">Created</span>
+              <span className="font-medium text-text-primary">
                 {new Date(project.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
               </span>
             </div>
@@ -645,7 +645,7 @@ function ProjectSettingsView({
           <div className="rounded-xl border border-danger/20 bg-danger-soft/30 p-6 space-y-3">
             <div>
               <h2 className="text-sm font-semibold text-danger mb-1">Danger Zone</h2>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-text-secondary">
                 {project.status === 'ACTIVE'
                   ? 'Archiving hides the project from active view. All data is preserved and can be restored.'
                   : 'This project is archived. You can restore it to active, or delete it permanently.'}
@@ -656,7 +656,7 @@ function ProjectSettingsView({
                 <button
                   onClick={handleArchive}
                   disabled={archiveMutation.isPending}
-                  className="flex items-center gap-2 rounded-lg border border-danger/30 bg-white px-4 py-2 text-sm font-medium text-danger hover:bg-danger-soft transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-lg border border-danger/30 bg-surface px-4 py-2 text-sm font-medium text-danger hover:bg-danger-soft transition-colors disabled:opacity-50"
                 >
                   {archiveMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Archive size={14} />}
                   Archive project
@@ -666,7 +666,7 @@ function ProjectSettingsView({
                 <button
                   onClick={handleUnarchive}
                   disabled={unarchiveMutation.isPending}
-                  className="flex items-center gap-2 rounded-lg border border-success/30 bg-white px-4 py-2 text-sm font-medium text-success hover:bg-success-soft transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-lg border border-success/30 bg-surface px-4 py-2 text-sm font-medium text-success hover:bg-success-soft transition-colors disabled:opacity-50"
                 >
                   {unarchiveMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <ArchiveRestore size={14} />}
                   Restore project
@@ -676,7 +676,7 @@ function ProjectSettingsView({
                 <button
                   onClick={handleDelete}
                   disabled={deleteMutation.isPending}
-                  className="flex items-center gap-2 rounded-lg border border-danger/30 bg-white px-4 py-2 text-sm font-medium text-danger hover:bg-danger-soft transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-lg border border-danger/30 bg-surface px-4 py-2 text-sm font-medium text-danger hover:bg-danger-soft transition-colors disabled:opacity-50"
                 >
                   {deleteMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                   Delete permanently
@@ -687,7 +687,7 @@ function ProjectSettingsView({
         )}
 
         {!isAdmin && (
-          <p className="text-center text-sm text-gray-400">Only admins can modify project settings.</p>
+          <p className="text-center text-sm text-text-muted">Only admins can modify project settings.</p>
         )}
       </div>
 
@@ -745,7 +745,7 @@ function PdfViewer({ src, height }: { src: string; height: string }) {
   if (loading) {
     return (
       <div
-        className="flex items-center justify-center rounded-xl bg-gray-900"
+        className="flex items-center justify-center rounded-xl bg-primary"
         style={{ height }}
       >
         <Loader2 size={28} className="animate-spin text-white/30" />
@@ -755,7 +755,7 @@ function PdfViewer({ src, height }: { src: string; height: string }) {
   if (err || !blobUrl) {
     return (
       <div
-        className="flex flex-col items-center justify-center gap-3 rounded-xl bg-gray-900 text-gray-400"
+        className="flex flex-col items-center justify-center gap-3 rounded-xl bg-primary text-primary-text/70"
         style={{ height }}
       >
         <File size={40} className="opacity-25" />
@@ -775,7 +775,7 @@ function PdfViewer({ src, height }: { src: string; height: string }) {
     <iframe
       src={blobUrl}
       title="PDF preview"
-      className="w-full rounded-xl bg-white"
+      className="w-full rounded-xl bg-surface"
       style={{ height }}
     />
   );
@@ -836,7 +836,7 @@ function FilePreviewModal({ file, onClose }: { file: TaskAttachment; onClose: ()
             className="max-h-[82vh] w-full rounded-xl"
           />
         ) : (
-          <div className="flex flex-col items-center justify-center rounded-xl bg-gray-900 p-16 text-gray-400">
+          <div className="flex flex-col items-center justify-center rounded-xl bg-primary p-16 text-primary-text/70">
             <File size={48} className="mb-4 opacity-30" />
             <p className="text-sm">Preview not available for this file type</p>
             <a
@@ -858,7 +858,7 @@ function FilePreviewModal({ file, onClose }: { file: TaskAttachment; onClose: ()
 function fileIcon(type: string) {
   if (type.startsWith('image/')) return <ImageIcon size={15} className="text-blue-500" />;
   if (type === 'application/pdf') return <FileText size={15} className="text-red-500" />;
-  return <File size={15} className="text-gray-400" />;
+  return <File size={15} className="text-text-muted" />;
 }
 
 function formatBytes(bytes: number) {
@@ -885,16 +885,16 @@ function ProjectActivityView({ projectId, slug }: { projectId: string; slug: str
   }, [projectId, qc]);
 
   if (isLoading) {
-    return <div className="flex-1 p-8 text-sm text-gray-400">Loading activity...</div>;
+    return <div className="flex-1 p-8 text-sm text-text-muted">Loading activity...</div>;
   }
 
   return (
     <div className="flex-1 overflow-y-auto p-8">
-      <h2 className="mb-4 text-base font-semibold text-gray-900">Recent Activity</h2>
+      <h2 className="mb-4 text-base font-semibold text-text-primary">Recent Activity</h2>
       {activity.length === 0 ? (
-        <p className="py-12 text-center text-sm text-gray-400">No activity yet.</p>
+        <p className="py-12 text-center text-sm text-text-muted">No activity yet.</p>
       ) : (
-        <ul className="divide-y divide-gray-100 rounded-xl border border-gray-100 bg-white">
+        <ul className="divide-y divide-border-subtle rounded-xl border border-border-subtle bg-surface">
           {activity.map((item) => (
             <ActivityRow key={item.id} item={item} slug={slug} showProjectLink={false} />
           ))}
@@ -936,8 +936,8 @@ function ProjectFilesView({
       )}
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <h2 className="text-base font-semibold text-gray-900">Project Files</h2>
-          <p className="text-xs text-gray-500 mt-0.5">{files.length} file{files.length !== 1 ? 's' : ''} across all tasks</p>
+          <h2 className="text-base font-semibold text-text-primary">Project Files</h2>
+          <p className="text-xs text-text-secondary mt-0.5">{files.length} file{files.length !== 1 ? 's' : ''} across all tasks</p>
         </div>
         <Input
           placeholder="Search files..."
@@ -949,10 +949,10 @@ function ProjectFilesView({
 
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
-          <Loader2 size={22} className="animate-spin text-gray-300" />
+          <Loader2 size={22} className="animate-spin text-text-muted" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+        <div className="flex flex-col items-center justify-center py-20 text-text-muted">
           <Paperclip size={36} className="mb-3 opacity-25" />
           <p className="text-sm font-medium">No files found</p>
           <p className="text-xs mt-1">Upload files to tasks from the task drawer</p>
@@ -963,26 +963,26 @@ function ProjectFilesView({
             const first = taskFiles[0];
             return (
               <div key={first.taskId}>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400 px-1">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted px-1">
                   Task · {first.taskId.slice(0, 8)}…
                 </p>
-                <div className="rounded-xl border border-gray-100 bg-white overflow-hidden divide-y divide-gray-50">
+                <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden divide-y divide-border-subtle">
                   {taskFiles.map((f: TaskAttachment) => (
-                    <div key={f.id} className="group flex items-center gap-4 px-4 py-3.5 hover:bg-gray-50 transition-colors">
+                    <div key={f.id} className="group flex items-center gap-4 px-4 py-3.5 hover:bg-surface-muted transition-colors">
                       {f.fileType.startsWith('image/') ? (
                         <img
                           src={f.fileUrl}
                           alt={f.fileName}
-                          className="h-10 w-10 rounded-lg object-cover border border-gray-100 shrink-0"
+                          className="h-10 w-10 rounded-lg object-cover border border-border-subtle shrink-0"
                         />
                       ) : (
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-100 bg-gray-50">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-surface-muted">
                           {fileIcon(f.fileType)}
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-gray-800">{f.fileName}</p>
-                        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-400">
+                        <p className="truncate text-sm font-medium text-text-primary">{f.fileName}</p>
+                        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-text-muted">
                           <span>{formatBytes(f.fileSize)}</span>
                           {f.uploadedBy && <><span>·</span><span>{f.uploadedBy.name}</span></>}
                           <span>·</span>
@@ -992,7 +992,7 @@ function ProjectFilesView({
                       <div className="flex items-center gap-1 shrink-0">
                         <button
                           onClick={() => setPreviewFile(f)}
-                          className="rounded-md p-1.5 text-gray-400 hover:text-primary hover:bg-brand-soft transition-colors"
+                          className="rounded-md p-1.5 text-text-muted hover:text-primary hover:bg-brand-soft transition-colors"
                           title="Preview"
                         >
                           <Eye size={15} />
@@ -1000,7 +1000,7 @@ function ProjectFilesView({
                         <a
                           href={f.fileUrl}
                           download={f.fileName}
-                          className="rounded-md p-1.5 text-gray-400 hover:text-primary hover:bg-brand-soft transition-colors"
+                          className="rounded-md p-1.5 text-text-muted hover:text-primary hover:bg-brand-soft transition-colors"
                           title="Download"
                         >
                           <Download size={15} />

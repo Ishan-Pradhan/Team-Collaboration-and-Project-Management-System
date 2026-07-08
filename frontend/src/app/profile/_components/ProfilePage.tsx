@@ -5,9 +5,10 @@ import { useAuthStore } from '@/store/auth.store';
 import { useUpdateProfile, useUploadAvatar, useChangePassword, useCurrentUserProfile } from '@/hooks/useAuth';
 import { parseApiError } from '@/lib/axios';
 import { toast } from 'sonner';
-import { Camera, CheckCircle2, Loader2, Lock, Mail, Shield, User } from 'lucide-react';
+import { Camera, CheckCircle2, Loader2, Lock, Mail, Palette, Shield, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { cn } from '@/lib/utils';
 
 const AVATAR_COLORS = ['#22302a', '#d4a84f', '#6f8c78', '#a86c58', '#4b7f52', '#c38a2d'];
@@ -88,7 +89,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Avatar + name */}
-      <div className="rounded-xl border border-border-subtle bg-white p-6 shadow-card space-y-6">
+      <div className="rounded-xl border border-border-subtle bg-surface p-6 shadow-card space-y-6">
         {/* Avatar */}
         <div className="flex items-center gap-5">
           <div className="relative">
@@ -109,7 +110,7 @@ export default function ProfilePage() {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadAvatar.isPending}
-              className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-gray-800 text-white hover:bg-gray-700 transition-colors disabled:opacity-50"
+              className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full border-2 border-surface bg-primary text-primary-text hover:bg-primary-hover transition-colors disabled:opacity-50"
               title="Change avatar"
             >
               {uploadAvatar.isPending
@@ -178,7 +179,7 @@ export default function ProfilePage() {
               placeholder="A short bio about yourself"
               maxLength={300}
               rows={3}
-              className="w-full rounded-lg border border-border-subtle bg-white px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:border-primary focus:outline-none"
             />
           </div>
           <div className="space-y-1.5">
@@ -197,9 +198,19 @@ export default function ProfilePage() {
         </form>
       </div>
 
+      {/* Appearance */}
+      <div className="rounded-xl border border-border-subtle bg-surface p-6 shadow-card space-y-3">
+        <div className="flex items-center gap-2">
+          <Palette size={15} className="text-text-secondary" />
+          <h2 className="text-sm font-semibold text-text-primary">Appearance</h2>
+        </div>
+        <p className="text-xs text-text-secondary">Choose how the app looks. &ldquo;System&rdquo; matches your device setting.</p>
+        <ThemeToggle />
+      </div>
+
       {/* Change password — local accounts only */}
       {!isOAuth && (
-        <div className="rounded-xl border border-border-subtle bg-white p-6 shadow-card space-y-4">
+        <div className="rounded-xl border border-border-subtle bg-surface p-6 shadow-card space-y-4">
           <div className="flex items-center gap-2">
             <Lock size={15} className="text-text-secondary" />
             <h2 className="text-sm font-semibold text-text-primary">Change Password</h2>
@@ -250,7 +261,7 @@ export default function ProfilePage() {
       )}
 
       {/* Account info */}
-      <div className="rounded-xl border border-border-subtle bg-white p-6 shadow-card">
+      <div className="rounded-xl border border-border-subtle bg-surface p-6 shadow-card">
         <div className="flex items-center gap-2 mb-4">
           <Shield size={15} className="text-text-secondary" />
           <h2 className="text-sm font-semibold text-text-primary">Account Info</h2>

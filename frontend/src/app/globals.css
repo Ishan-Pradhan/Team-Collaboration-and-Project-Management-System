@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: toggled by next-themes via a `.dark` class on <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ==========================================================================
    shadcn/ui CSS Variables — mapped to Arbyte Flow design tokens
    ========================================================================== */
@@ -38,6 +41,92 @@
   --ring: #22302a;
 
   --radius: 0.5rem;
+}
+
+/* ==========================================================================
+   Dark theme — overrides the same custom properties for everything
+   under a `.dark` class on <html> (set by next-themes)
+   ========================================================================== */
+
+.dark {
+  /* shadcn core */
+  --background: #121314;
+  --foreground: #ededec;
+
+  --card: #1c1e20;
+  --card-foreground: #ededec;
+
+  --popover: #1c1e20;
+  --popover-foreground: #ededec;
+
+  --primary: #3a4d43;
+  --primary-foreground: #edeae4;
+
+  --secondary: #232527;
+  --secondary-foreground: #ededec;
+
+  --muted: #232527;
+  --muted-foreground: #9a9a9a;
+
+  --accent: #d4a84f;
+  --accent-foreground: #161616;
+
+  --destructive: #c17272;
+  --destructive-foreground: #161616;
+
+  --border: #2c2e31;
+  --input: #2c2e31;
+  --ring: #d4a84f;
+
+  /* Surfaces */
+  --color-background: #121314;
+  --color-surface: #1c1e20;
+  --color-surface-muted: #232527;
+  --color-surface-hover: #292b2e;
+
+  /* Text */
+  --color-text-primary: #ededec;
+  --color-text-secondary: #b0b0b0;
+  --color-text-muted: #7c7c81;
+
+  /* Primary */
+  --color-primary-hover: #46594e;
+  --color-primary: #3a4d43;
+  --color-primary-active: #4d6155;
+  --color-primary-text: #edeae4;
+
+  /* Brand */
+  --color-brand: #d4a84f;
+  --color-brand-hover: #e0b968;
+  --color-brand-soft: rgba(212, 168, 79, 0.16);
+
+  /* Status */
+  --color-success: #74b17c;
+  --color-success-soft: rgba(75, 127, 82, 0.18);
+
+  --color-warning: #d9a542;
+  --color-warning-soft: rgba(195, 138, 45, 0.18);
+
+  --color-danger: #d98080;
+  --color-danger-soft: rgba(168, 82, 82, 0.2);
+
+  --color-info: #9a9a9a;
+  --color-info-soft: rgba(109, 109, 109, 0.2);
+
+  /* Borders */
+  --color-border-subtle: #2c2e31;
+  --color-border-muted: #35373a;
+
+  /* Sidebar stays the same dark green + white-alpha overlays in both themes */
+
+  /* Shadows need more contrast against a dark background */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-dropdown:
+    0 4px 12px rgba(0, 0, 0, 0.45),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-modal:
+    0 12px 40px rgba(0, 0, 0, 0.55),
+    0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 @theme inline {
@@ -126,6 +215,11 @@ body {
 
   --color-border-subtle: #ebe7e1;
   --color-border-muted: #e2ddd5;
+
+  /* Sidebar (rail stays dark forest green in both themes) */
+
+  --color-sidebar-hover: rgba(255, 255, 255, 0.08);
+  --color-sidebar-active: rgba(255, 255, 255, 0.14);
 
   /* -----------------------------------------------------------------------
      shadcn/ui — Tailwind v4 variable aliases
@@ -400,23 +494,23 @@ body {
   /* Priority */
 
   .priority-low {
-    background: #eef4ec;
-    color: #4b7f52;
+    background: var(--color-success-soft);
+    color: var(--color-success);
   }
 
   .priority-medium {
-    background: #f5e8c6;
-    color: #b57912;
+    background: var(--color-warning-soft);
+    color: var(--color-warning);
   }
 
   .priority-high {
-    background: #f7d7d7;
-    color: #b54a4a;
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
   }
 
   .priority-critical {
-    background: #e8c0c0;
-    color: #8e2f2f;
+    background: color-mix(in srgb, var(--color-danger) 30%, var(--color-danger-soft));
+    color: var(--color-danger);
   }
 }
 
@@ -479,7 +573,7 @@ body {
 .rbc-calendar {
   font-family: inherit;
   font-size: 0.875rem;
-  color: #161616;
+  color: var(--color-text-primary);
 }
 
 .rbc-month-view {
@@ -492,28 +586,28 @@ body {
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #8b8b8b;
-  border-color: #ebe7e1;
+  color: var(--color-text-muted);
+  border-color: var(--color-border-subtle);
 }
 
 .rbc-header + .rbc-header {
-  border-left-color: #ebe7e1;
+  border-left-color: var(--color-border-subtle);
 }
 
 .rbc-month-row + .rbc-month-row {
-  border-top-color: #ebe7e1;
+  border-top-color: var(--color-border-subtle);
 }
 
 .rbc-day-bg + .rbc-day-bg {
-  border-left-color: #ebe7e1;
+  border-left-color: var(--color-border-subtle);
 }
 
 .rbc-off-range-bg {
-  background: #f4f2ee;
+  background: var(--color-surface-muted);
 }
 
 .rbc-day-bg.rbc-today {
-  background-color: #ffffff;
+  background-color: var(--color-surface);
 }
 
 .rbc-date-cell {
@@ -523,7 +617,7 @@ body {
 .rbc-date-cell a {
   font-size: 0.75rem;
   font-weight: 500;
-  color: #5d5d5d;
+  color: var(--color-text-secondary);
 }
 
 .rbc-date-cell.rbc-now a {
@@ -533,17 +627,17 @@ body {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #22302a;
-  color: #ffffff;
+  background: var(--color-primary);
+  color: var(--color-primary-text);
   font-weight: 700;
 }
 
 .rbc-date-cell.rbc-off-range a {
-  color: #8b8b8b;
+  color: var(--color-text-muted);
 }
 
 .rbc-show-more {
-  color: #8b8b8b;
+  color: var(--color-text-muted);
   font-size: 0.75rem;
   font-weight: 400;
   padding-left: 4px;
@@ -551,7 +645,7 @@ body {
 }
 
 .rbc-show-more:hover {
-  color: #161616;
+  color: var(--color-text-primary);
 }
 
 .rbc-event {
@@ -570,19 +664,20 @@ body {
 }
 
 .rbc-overlay {
-  border: 1px solid #ebe7e1;
+  border: 1px solid var(--color-border-subtle);
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-dropdown);
   padding: 0;
   overflow: hidden;
 }
 
 .rbc-overlay-header {
-  border-bottom: 1px solid #ebe7e1;
+  border-bottom: 1px solid var(--color-border-subtle);
   padding: 10px 12px;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #161616;
+  color: var(--color-text-primary);
 }
 
 /* ==========================================================================

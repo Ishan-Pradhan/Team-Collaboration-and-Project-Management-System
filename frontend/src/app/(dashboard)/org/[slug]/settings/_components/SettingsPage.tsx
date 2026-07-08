@@ -93,7 +93,7 @@ export default function SettingsPage({ params }: Props) {
   return (
     <div className="max-w-2xl space-y-6">
       {/* Identity header — same color as this workspace's avatar everywhere else in the app */}
-      <div className="flex items-center gap-4 rounded-xl border border-border-subtle bg-white p-6">
+      <div className="flex items-center gap-4 rounded-xl border border-border-subtle bg-surface p-6">
         <div
           className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-2xl font-bold text-white"
           style={{ backgroundColor: avatarColor(org.name) }}
@@ -122,7 +122,7 @@ export default function SettingsPage({ params }: Props) {
       </div>
 
       {/* General settings — admin + owner */}
-      <section className="rounded-xl border border-border-subtle bg-white p-6 shadow-card">
+      <section className="rounded-xl border border-border-subtle bg-surface p-6 shadow-card">
         <h2 className="mb-4 text-sm font-semibold text-text-primary">General</h2>
         <form onSubmit={handleSave} className="space-y-4">
           <div className="space-y-1.5">
@@ -176,7 +176,7 @@ export default function SettingsPage({ params }: Props) {
           <button
             onClick={() => setShowDeleteConfirm(true)}
             disabled={deleteMutation.isPending}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-danger/40 bg-white px-4 py-2 text-sm font-medium text-danger hover:bg-danger hover:text-white transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-danger/40 bg-surface px-4 py-2 text-sm font-medium text-danger hover:bg-danger hover:text-white transition-colors disabled:opacity-50"
           >
             {deleteMutation.isPending ? (
               <Loader2 size={14} className="animate-spin" />

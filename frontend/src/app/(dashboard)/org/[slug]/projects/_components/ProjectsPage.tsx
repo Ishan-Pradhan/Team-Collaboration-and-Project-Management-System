@@ -86,7 +86,7 @@ function ProjectCard({
 
   return (
     <div className={cn(
-      'group relative flex flex-col rounded-lg border border-border-subtle bg-white overflow-hidden transition-colors hover:border-border-muted',
+      'group relative flex flex-col rounded-lg border border-border-subtle bg-surface overflow-hidden transition-colors hover:border-border-muted',
       archived && 'opacity-60',
     )}>
       {/* Colored banner */}
@@ -130,7 +130,7 @@ function ProjectCard({
               </button>
 
               {menuOpen && (
-                <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-lg border border-border-subtle bg-white py-1 shadow-lg">
+                <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-lg border border-border-subtle bg-surface py-1 shadow-lg">
                   {!archived && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onManageMembers(); setMenuOpen(false); }}
@@ -268,7 +268,7 @@ function CreateModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-      <div className="relative w-full max-w-md rounded-xl border border-border bg-white p-6 shadow-modal">
+      <div className="relative w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-modal">
         <button
           onClick={onClose}
           className="absolute right-4 top-4 rounded-md p-1 text-text-secondary hover:bg-surface-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -309,7 +309,7 @@ function CreateModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               disabled={isPending}
-              className="w-full resize-none rounded-lg border border-border-subtle bg-white px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              className="w-full resize-none rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
             />
           </div>
 
@@ -398,7 +398,7 @@ export default function ProjectsPage({ params }: Props) {
       </div>
 
       {/* Stats strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 rounded-lg border border-border-subtle bg-white overflow-hidden divide-x divide-y sm:divide-y-0 divide-border-subtle">
+      <div className="grid grid-cols-2 sm:grid-cols-4 rounded-lg border border-border-subtle bg-surface overflow-hidden divide-x divide-y sm:divide-y-0 divide-border-subtle">
         <div className="flex flex-col gap-1 px-6 py-4">
           <span className="text-xs font-medium text-text-muted uppercase tracking-wide">Total Projects</span>
           <p className="text-3xl font-bold text-text-primary">{allProjects.length}</p>
@@ -431,7 +431,7 @@ export default function ProjectsPage({ params }: Props) {
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortOption)}
-          className="rounded-md border border-border-subtle bg-white px-3 py-2 text-sm text-text-primary focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <option value="name">Name (A–Z)</option>
           <option value="updated">Recently Updated</option>
@@ -441,7 +441,7 @@ export default function ProjectsPage({ params }: Props) {
 
       {/* Active projects grid */}
       {visibleActiveProjects.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border-muted bg-white py-20 text-center">
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border-muted bg-surface py-20 text-center">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted">
             <FolderOpen size={22} className="text-text-muted" />
           </div>

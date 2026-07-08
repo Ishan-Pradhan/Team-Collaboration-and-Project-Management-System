@@ -15,7 +15,7 @@ export function KanbanSkeleton() {
       </div>
 
       {/* Tab bar */}
-      <div className="border-b border-gray-200 px-8">
+      <div className="border-b border-border-subtle px-8">
         <div className="flex gap-5 pb-px">
           {[56, 40, 44, 72].map((w, i) => (
             <Skeleton key={i} className="h-7 mb-1 rounded" style={{ width: w }} />
@@ -27,7 +27,7 @@ export function KanbanSkeleton() {
       <div className="flex-1 overflow-x-auto overflow-y-hidden px-6 py-5">
         <div className="flex h-full items-start gap-3">
           {CARDS_PER_COLUMN.map((cardCount, colIdx) => (
-            <div key={colIdx} className="w-[280px] shrink-0 rounded-xl bg-[#f1f2f4] p-2.5 space-y-2">
+            <div key={colIdx} className="w-[280px] shrink-0 rounded-xl bg-surface-muted p-2.5 space-y-2">
               {/* Column header */}
               <div className="flex items-center gap-2 px-1 py-1">
                 <Skeleton className="h-3.5 w-3.5 rounded flex-shrink-0" />
@@ -40,7 +40,7 @@ export function KanbanSkeleton() {
               {Array.from({ length: cardCount }).map((_, cardIdx) => (
                 <div
                   key={cardIdx}
-                  className="relative rounded-lg border border-gray-200 bg-white px-3.5 pb-3 pt-3 space-y-2.5"
+                  className="relative rounded-lg border border-border-subtle bg-surface px-3.5 pb-3 pt-3 space-y-2.5"
                 >
                   {/* Priority bar */}
                   <span className="absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full bg-surface-muted" />

@@ -86,7 +86,7 @@ export default function ProjectCalendarView({ tasks, columns, onOpenTask }: Prop
 
   return (
     <div className="h-[80vh] flex flex-col overflow-hidden p-6">
-      <div className="flex h-full flex-col rounded-xl border border-border-subtle bg-white overflow-hidden">
+      <div className="flex h-full flex-col rounded-xl border border-border-subtle bg-surface overflow-hidden">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-border-subtle shrink-0">

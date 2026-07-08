@@ -58,7 +58,7 @@ function Section({
   className?: string;
 }) {
   return (
-    <div className={cn('flex flex-col rounded-lg bg-white border border-border-subtle overflow-hidden', className)}>
+    <div className={cn('flex flex-col rounded-lg bg-surface border border-border-subtle overflow-hidden', className)}>
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-border-subtle shrink-0">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-semibold text-text-primary">{title}</h2>
@@ -192,7 +192,7 @@ export default function OrgOverviewPage({ params }: Props) {
       </div>
 
       {/* Stats strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 rounded-lg border border-border-subtle bg-white overflow-hidden divide-x divide-y sm:divide-y-0 divide-border-subtle">
+      <div className="grid grid-cols-2 sm:grid-cols-4 rounded-lg border border-border-subtle bg-surface overflow-hidden divide-x divide-y sm:divide-y-0 divide-border-subtle">
         <StatTile
           icon={FolderOpen}
           color="var(--color-workspace-northpeak)"

@@ -60,7 +60,7 @@ export default function ManageChannelMembersModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-      <div className="relative w-full max-w-lg rounded-xl border border-border bg-white shadow-modal">
+      <div className="relative w-full max-w-lg rounded-xl border border-border bg-surface shadow-modal">
         <div className="flex items-center justify-between border-b border-border-subtle px-6 py-4">
           <div>
             <h2 className="text-base font-semibold text-text-primary">Manage Channel Members</h2>

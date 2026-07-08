@@ -35,7 +35,7 @@ export default function AdminAuditLogPage() {
     <div className="space-y-4">
       <h1 className="text-lg font-semibold text-text-primary">Audit Log</h1>
 
-      <div className="overflow-hidden rounded-xl border border-border-subtle bg-white">
+      <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface">
         {data.items.map((entry) => {
           const meta = ACTION_META[entry.action] ?? DEFAULT_META;
           const Icon = meta.icon;

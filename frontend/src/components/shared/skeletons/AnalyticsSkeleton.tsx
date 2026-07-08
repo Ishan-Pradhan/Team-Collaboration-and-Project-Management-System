@@ -8,7 +8,7 @@ export function AnalyticsSkeleton() {
         <Skeleton className="h-4 w-56" />
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 rounded-lg border border-border-subtle bg-white overflow-hidden divide-x divide-y sm:divide-y-0 divide-border-subtle">
+      <div className="grid grid-cols-2 sm:grid-cols-4 rounded-lg border border-border-subtle bg-surface overflow-hidden divide-x divide-y sm:divide-y-0 divide-border-subtle">
         {[0, 1, 2, 3].map((i) => (
           <div key={i} className="flex items-center gap-3 px-6 py-5">
             <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
@@ -20,7 +20,7 @@ export function AnalyticsSkeleton() {
         ))}
       </div>
 
-      <div className="rounded-lg border border-border-subtle bg-white">
+      <div className="rounded-lg border border-border-subtle bg-surface">
         <div className="border-b border-border-subtle px-5 py-3.5">
           <Skeleton className="h-4 w-40" />
         </div>
@@ -31,7 +31,7 @@ export function AnalyticsSkeleton() {
 
       <div className="grid gap-5 lg:grid-cols-2">
         {[0, 1].map((i) => (
-          <div key={i} className="rounded-lg border border-border-subtle bg-white">
+          <div key={i} className="rounded-lg border border-border-subtle bg-surface">
             <div className="border-b border-border-subtle px-5 py-3.5">
               <Skeleton className="h-4 w-32" />
             </div>
@@ -47,7 +47,7 @@ export function AnalyticsSkeleton() {
         ))}
       </div>
 
-      <div className="rounded-lg border border-border-subtle bg-white">
+      <div className="rounded-lg border border-border-subtle bg-surface">
         <div className="border-b border-border-subtle px-5 py-3.5">
           <Skeleton className="h-4 w-28" />
         </div>

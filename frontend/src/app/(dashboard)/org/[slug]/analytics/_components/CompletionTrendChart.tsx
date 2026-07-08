@@ -57,7 +57,7 @@ function CustomTooltip({
   const completed = payload.find((p) => p.dataKey === 'completed')?.value ?? 0;
 
   return (
-    <div className="min-w-[160px] rounded-md border border-border-subtle bg-white px-3 py-2 shadow-dropdown">
+    <div className="min-w-[160px] rounded-md border border-border-subtle bg-surface px-3 py-2 shadow-dropdown">
       <p className="text-xs font-semibold text-text-primary">{formatDate(label)}</p>
       <div className="mt-1.5 flex flex-col gap-1">
         <span className="flex items-center justify-between gap-3 text-xs text-text-secondary">

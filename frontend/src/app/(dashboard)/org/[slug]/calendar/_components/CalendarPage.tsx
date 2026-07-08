@@ -84,7 +84,7 @@ function AddEventModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-      <div className="relative w-full max-w-sm rounded-xl border border-border bg-white p-6 shadow-modal">
+      <div className="relative w-full max-w-sm rounded-xl border border-border bg-surface p-6 shadow-modal">
         <button
           onClick={onClose}
           className="absolute right-4 top-4 rounded-md p-1 text-text-secondary hover:bg-surface-muted transition-colors"
@@ -245,7 +245,7 @@ export default function CalendarPage({ params }: Props) {
 
   return (
     <>
-      <div className="flex h-[90vh] flex-col rounded-xl border border-border-subtle bg-white overflow-hidden">
+      <div className="flex h-[90vh] flex-col rounded-xl border border-border-subtle bg-surface overflow-hidden">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-border-subtle shrink-0">

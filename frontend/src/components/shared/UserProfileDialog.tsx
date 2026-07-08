@@ -19,7 +19,7 @@ export default function UserProfileDialog({ userId, organizationId, onMessage, o
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-      <div className="relative w-full max-w-sm rounded-xl border border-border bg-white shadow-modal">
+      <div className="relative w-full max-w-sm rounded-xl border border-border bg-surface shadow-modal">
         <button
           onClick={onClose}
           className="absolute right-4 top-4 rounded p-1 text-text-secondary hover:bg-surface-muted transition-colors"

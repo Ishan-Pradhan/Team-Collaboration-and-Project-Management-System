@@ -58,7 +58,7 @@ export function KanbanCard({
       onClick={overlay ? undefined : onEdit}
       style={overlay ? undefined : { transform: CSS.Translate.toString(transform), transition }}
       className={cn(
-        'flex flex-col gap-2.5 rounded-lg border border-border-subtle bg-white px-3.5 py-3 select-none touch-none outline-none transition-colors',
+        'flex flex-col gap-2.5 rounded-lg border border-border-subtle bg-surface px-3.5 py-3 select-none touch-none outline-none transition-colors',
         overlay
           ? 'shadow-lg rotate-[1deg] opacity-95 cursor-grabbing'
           : canDrag
@@ -144,17 +144,17 @@ export function KanbanCard({
               {task.assignees.slice(0, 3).map((a) =>
                 a.avatarUrl ? (
                   <img key={a.id} src={a.avatarUrl} alt={a.name} title={a.name}
-                    className="h-5 w-5 rounded-full object-cover ring-[1.5px] ring-white" />
+                    className="h-5 w-5 rounded-full object-cover ring-[1.5px] ring-surface" />
                 ) : (
                   <div key={a.id} title={a.name}
-                    className="flex h-5 w-5 items-center justify-center rounded-full text-[0.6rem] font-bold text-white uppercase ring-[1.5px] ring-white"
+                    className="flex h-5 w-5 items-center justify-center rounded-full text-[0.6rem] font-bold text-white uppercase ring-[1.5px] ring-surface"
                     style={{ backgroundColor: avatarColor(a.name) }}>
                     {a.name.charAt(0)}
                   </div>
                 )
               )}
               {task.assignees.length > 3 && (
-                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-surface-muted text-[0.6rem] font-semibold text-text-secondary ring-[1.5px] ring-white">
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-surface-muted text-[0.6rem] font-semibold text-text-secondary ring-[1.5px] ring-surface">
                   +{task.assignees.length - 3}
                 </div>
               )}
@@ -306,7 +306,7 @@ function KanbanColumnInner({
               if (e.key === 'Enter') commitRename();
               if (e.key === 'Escape') { setNameVal(column.name); setRenaming(false); }
             }}
-            className="flex-1 min-w-0 rounded border border-primary bg-white px-2 py-0.5 text-sm font-semibold text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex-1 min-w-0 rounded border border-primary bg-surface px-2 py-0.5 text-sm font-semibold text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         ) : (
           <h3 className="flex-1 min-w-0 truncate text-sm font-semibold text-text-primary select-none">
@@ -333,7 +333,7 @@ function KanbanColumnInner({
               <MoreHorizontal size={14} />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-lg border border-border-subtle bg-white py-1 shadow-lg">
+              <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-lg border border-border-subtle bg-surface py-1 shadow-lg">
                 <button
                   onClick={() => { setRenaming(true); setMenuOpen(false); }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">

@@ -37,7 +37,7 @@ function CreateChannelModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-      <div className="relative w-full max-w-md rounded-xl border border-border bg-white p-6 shadow-modal">
+      <div className="relative w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-modal">
         <button
           onClick={onClose}
           className="absolute right-4 top-4 rounded-md p-1 text-text-secondary hover:bg-surface-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -118,7 +118,7 @@ function NewDMModal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-      <div className="relative w-full max-w-md rounded-xl border border-border bg-white p-6 shadow-modal">
+      <div className="relative w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-modal">
         <button
           onClick={onClose}
           className="absolute right-4 top-4 rounded-md p-1 text-text-secondary hover:bg-surface-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -295,7 +295,7 @@ export default function ChatPage({ params }: Props) {
 
   return (
     <div className="flex h-full gap-4">
-      <aside className="flex h-[90vh] w-64 shrink-0 flex-col overflow-y-auto rounded-xl border border-border-subtle bg-white">
+      <aside className="flex h-[90vh] w-64 shrink-0 flex-col overflow-y-auto rounded-xl border border-border-subtle bg-surface">
         <div className="border-b border-border-subtle p-2">
           <div className="relative">
             <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
@@ -441,7 +441,7 @@ export default function ChatPage({ params }: Props) {
         )}
       </aside>
 
-      <div className="h-[90vh] flex-1 rounded-xl border border-border-subtle bg-white overflow-hidden">
+      <div className="h-[90vh] flex-1 rounded-xl border border-border-subtle bg-surface overflow-hidden">
         {selectedChannel ? (
           <ChannelView
             channel={selectedChannel}

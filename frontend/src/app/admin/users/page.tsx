@@ -74,7 +74,7 @@ export default function AdminUsersPage() {
         />
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border-subtle bg-white">
+      <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface">
         {data.items.map((u) => (
           <div key={u.id} className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3 last:border-b-0 hover:bg-surface-hover transition-colors">
             <div className="flex min-w-0 flex-1 items-center gap-3">

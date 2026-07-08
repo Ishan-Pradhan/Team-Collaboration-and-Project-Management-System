@@ -248,7 +248,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* Dropdown Menu */}
           {orgDropdownOpen && (
-            <div className="absolute left-3 right-3 z-50 mt-1 max-h-60 overflow-y-auto rounded-lg border border-border bg-white p-1 shadow-dropdown">
+            <div className="absolute left-3 right-3 z-50 mt-1 max-h-60 overflow-y-auto rounded-lg border border-border bg-surface p-1 shadow-dropdown">
               {orgsLoading ? (
                 <div className="p-2 text-center text-xs text-text-muted">Loading workspaces...</div>
               ) : (
@@ -317,7 +317,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   className={cn(
                     'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all ease-in duration-75',
                     active
-                      ? 'bg-white text-primary font-medium'
+                      ? 'bg-surface text-primary font-medium'
                       : 'text-white hover:bg-brand  hover:text-white '
                   )}
                 >
@@ -570,7 +570,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main Content wrapper */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Topbar */}
-        <header className="flex h-14 items-center justify-between border-b border-border-subtle bg-white px-4 lg:px-6 sm:hidden">
+        <header className="flex h-14 items-center justify-between border-b border-border-subtle bg-surface px-4 lg:px-6 sm:hidden">
           <div className="flex items-center gap-4">
             <button
               className="rounded p-1 text-primary hover:bg-surface-muted lg:hidden"

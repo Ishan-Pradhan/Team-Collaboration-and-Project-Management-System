@@ -13,7 +13,7 @@ export function MembersSkeleton() {
       </div>
 
       {/* Members table */}
-      <div className="overflow-hidden rounded-xl border border-border-subtle bg-white">
+      <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface">
         {/* Table header */}
         <div className="grid grid-cols-4 gap-4 border-b border-border-subtle bg-surface-muted/50 px-6 py-4">
           {[80, 120, 60, 0].map((w, i) => (

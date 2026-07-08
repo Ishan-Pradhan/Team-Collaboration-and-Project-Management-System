@@ -120,7 +120,7 @@ export default function NotificationsPage() {
         </Button>
       </div>
 
-      <div className="rounded-xl border border-border-subtle bg-white p-2">
+      <div className="rounded-xl border border-border-subtle bg-surface p-2">
         {visible.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-14 text-center">
             <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-surface-muted">

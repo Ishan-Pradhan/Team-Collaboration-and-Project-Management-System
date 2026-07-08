@@ -52,7 +52,7 @@ function attachmentDownloadUrl(a: TaskAttachment): string {
 function fileIcon(type: string) {
   if (type.startsWith('image/')) return <ImageIcon size={14} className="text-blue-500" />;
   if (type === 'application/pdf') return <FileText size={14} className="text-red-500" />;
-  return <File size={14} className="text-gray-400" />;
+  return <File size={14} className="text-text-muted" />;
 }
 
 function formatBytes(bytes: number) {
@@ -80,25 +80,25 @@ export function TaskDrawer({ task, projectId, isAdmin, columnName, onClose }: Pr
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="flex w-full max-w-[520px] flex-col border-l border-gray-200 bg-white shadow-2xl">
+      <div className="flex w-full max-w-[520px] flex-col border-l border-border-subtle bg-surface shadow-2xl">
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-gray-100 px-5 py-4">
+        <div className="flex items-start justify-between border-b border-border-subtle px-5 py-4">
           <div className="min-w-0 pr-4">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-text-muted">
               {isAdmin ? 'Edit Task' : 'Task Details'}
             </p>
-            <h2 className="mt-0.5 line-clamp-2 text-base font-semibold text-gray-900">{task.title}</h2>
+            <h2 className="mt-0.5 line-clamp-2 text-base font-semibold text-text-primary">{task.title}</h2>
           </div>
           <button
             onClick={onClose}
-            className="shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 transition-colors"
+            className="shrink-0 rounded-lg p-1.5 text-text-muted hover:bg-surface-muted transition-colors"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-100 bg-gray-50/60">
+        <div className="flex border-b border-border-subtle bg-surface-muted/60">
           {([
             { id: 'details', label: 'Details', icon: ChevronRight },
             { id: 'subtasks', label: 'Subtasks', icon: CheckSquare },
@@ -112,7 +112,7 @@ export function TaskDrawer({ task, projectId, isAdmin, columnName, onClose }: Pr
                 'flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[12px] font-medium transition-colors',
                 activeTab === id
                   ? 'border-b-2 border-primary text-primary'
-                  : 'text-gray-500 hover:text-gray-700',
+                  : 'text-text-secondary hover:text-text-secondary',
               )}
             >
               <Icon size={13} />
@@ -201,7 +201,7 @@ function DetailsTab({ task, projectId, isAdmin, columnName, onClose }: {
           {isAdmin ? (
             <Input value={title} onChange={(e) => setTitle(e.target.value)} className="text-sm" />
           ) : (
-            <p className="text-sm font-medium text-gray-900">{task.title}</p>
+            <p className="text-sm font-medium text-text-primary">{task.title}</p>
           )}
         </Field>
 
@@ -213,11 +213,11 @@ function DetailsTab({ task, projectId, isAdmin, columnName, onClose }: {
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
               placeholder="Add more detail..."
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-200 resize-none transition"
+              className="w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-200 resize-none transition"
             />
           ) : (
-            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-              {task.description || <span className="italic text-gray-400">No description</span>}
+            <p className="text-sm text-text-secondary whitespace-pre-wrap leading-relaxed">
+              {task.description || <span className="italic text-text-muted">No description</span>}
             </p>
           )}
         </Field>
@@ -235,7 +235,7 @@ function DetailsTab({ task, projectId, isAdmin, columnName, onClose }: {
                       'rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-all',
                       priority === px
                         ? PRIORITY[px].chip + ' ring-2 ring-offset-1 ring-current border-transparent'
-                        : 'border-gray-200 text-gray-400 hover:bg-gray-50',
+                        : 'border-border-subtle text-text-muted hover:bg-surface-muted',
                     )}
                   >
                     {PRIORITY[px].label}
@@ -259,11 +259,11 @@ function DetailsTab({ task, projectId, isAdmin, columnName, onClose }: {
               />
             ) : (
               <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-sm flex items-center gap-1.5 text-gray-700">
+                <p className="text-sm flex items-center gap-1.5 text-text-secondary">
                   <Calendar size={13} />
                   {task.dueDate
                     ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                    : <span className="text-gray-400 italic">None</span>}
+                    : <span className="text-text-muted italic">None</span>}
                 </p>
                 {dueStatus && (
                   <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-semibold', DUE_STATUS[dueStatus].chip)}>
@@ -282,10 +282,10 @@ function DetailsTab({ task, projectId, isAdmin, columnName, onClose }: {
               {/* Selected chips */}
               <div
                 onClick={() => setShowAssigneePicker((v) => !v)}
-                className="flex min-h-[38px] w-full flex-wrap items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 cursor-pointer hover:bg-gray-50 transition-colors"
+                className="flex min-h-[38px] w-full flex-wrap items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 py-1.5 cursor-pointer hover:bg-surface-muted transition-colors"
               >
                 {assigneeIds.length === 0 ? (
-                  <span className="text-sm text-gray-400 py-0.5">Unassigned — click to add</span>
+                  <span className="text-sm text-text-muted py-0.5">Unassigned — click to add</span>
                 ) : (
                   projectMembers
                     ?.filter((m) => assigneeIds.includes(m.userId) && m.user)
@@ -308,12 +308,12 @@ function DetailsTab({ task, projectId, isAdmin, columnName, onClose }: {
                       </span>
                     ))
                 )}
-                <ChevronDown size={13} className="ml-auto text-gray-400 shrink-0 self-center" />
+                <ChevronDown size={13} className="ml-auto text-text-muted shrink-0 self-center" />
               </div>
 
               {/* Dropdown */}
               {showAssigneePicker && (
-                <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-52 overflow-y-auto rounded-xl border border-gray-200 bg-white py-1 shadow-xl">
+                <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-52 overflow-y-auto rounded-xl border border-border-subtle bg-surface py-1 shadow-xl">
                   {projectMembers?.map((m) => {
                     if (!m.user) return null;
                     const selected = assigneeIds.includes(m.userId);
@@ -326,18 +326,18 @@ function DetailsTab({ task, projectId, isAdmin, columnName, onClose }: {
                           )
                         }
                         className={cn(
-                          'flex w-full items-center gap-2.5 px-3 py-2 text-sm hover:bg-gray-50 transition-colors',
+                          'flex w-full items-center gap-2.5 px-3 py-2 text-sm hover:bg-surface-muted transition-colors',
                           selected && 'bg-blue-50/60',
                         )}
                       >
                         <Avatar name={m.user.name} url={m.user.avatarUrl} size={6} />
                         <div className="min-w-0 text-left flex-1">
-                          <p className="truncate font-medium text-gray-800">{m.user.name}</p>
-                          <p className="truncate text-[11px] text-gray-400">{m.user.email}</p>
+                          <p className="truncate font-medium text-text-primary">{m.user.name}</p>
+                          <p className="truncate text-[11px] text-text-muted">{m.user.email}</p>
                         </div>
                         <div className={cn(
                           'flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 transition-colors',
-                          selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-200',
+                          selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-border-subtle',
                         )}>
                           {selected && <Check size={10} />}
                         </div>
@@ -351,37 +351,37 @@ function DetailsTab({ task, projectId, isAdmin, columnName, onClose }: {
             task.assignees && task.assignees.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {task.assignees.map((a) => (
-                  <div key={a.id} className="flex items-center gap-1.5 rounded-full bg-gray-50 border border-gray-100 pl-1 pr-2.5 py-0.5">
+                  <div key={a.id} className="flex items-center gap-1.5 rounded-full bg-surface-muted border border-border-subtle pl-1 pr-2.5 py-0.5">
                     <Avatar name={a.name} url={a.avatarUrl} size={5} />
-                    <span className="text-[12px] text-gray-700 font-medium">{a.name}</span>
+                    <span className="text-[12px] text-text-secondary font-medium">{a.name}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm italic text-gray-400">Unassigned</p>
+              <p className="text-sm italic text-text-muted">Unassigned</p>
             )
           )}
         </Field>
 
         {/* Meta */}
-        <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5 text-[11px] text-gray-500 space-y-1">
+        <div className="rounded-lg border border-border-subtle bg-surface-muted px-3 py-2.5 text-[11px] text-text-secondary space-y-1">
           <div className="flex justify-between">
             <span>Created</span>
-            <span className="font-medium text-gray-700">
+            <span className="font-medium text-text-secondary">
               {new Date(task.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </span>
           </div>
           {task.creator && (
             <div className="flex justify-between">
               <span>By</span>
-              <span className="font-medium text-gray-700">{task.creator.name}</span>
+              <span className="font-medium text-text-secondary">{task.creator.name}</span>
             </div>
           )}
         </div>
       </div>
 
       {/* Footer */}
-      <div className="border-t border-gray-100 px-5 py-3.5 flex items-center justify-between bg-white">
+      <div className="border-t border-border-subtle px-5 py-3.5 flex items-center justify-between bg-surface">
         {isAdmin ? (
           <>
             <Button
@@ -446,11 +446,11 @@ function SubtasksTab({ task, projectId, isAdmin, currentUserId }: {
       {/* Progress */}
       {subtasks.length > 0 && (
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[11px] text-gray-500">
+          <div className="flex items-center justify-between text-[11px] text-text-secondary">
             <span>{completed} / {subtasks.length} completed</span>
-            <span className="font-semibold text-gray-700">{pct}%</span>
+            <span className="font-semibold text-text-secondary">{pct}%</span>
           </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
             <div
               className="h-full rounded-full bg-green-500 transition-all duration-300"
               style={{ width: `${pct}%` }}
@@ -462,10 +462,10 @@ function SubtasksTab({ task, projectId, isAdmin, currentUserId }: {
       {/* List */}
       {isLoading ? (
         <div className="flex items-center justify-center py-8">
-          <Loader2 size={18} className="animate-spin text-gray-300" />
+          <Loader2 size={18} className="animate-spin text-text-muted" />
         </div>
       ) : subtasks.length === 0 ? (
-        <div className="flex flex-col items-center py-10 text-gray-400">
+        <div className="flex flex-col items-center py-10 text-text-muted">
           <CheckSquare size={28} className="mb-2 opacity-40" />
           <p className="text-sm">No subtasks yet</p>
         </div>
@@ -474,7 +474,7 @@ function SubtasksTab({ task, projectId, isAdmin, currentUserId }: {
           {subtasks.map((s: Subtask) => (
             <li
               key={s.id}
-              className="group flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 hover:border-gray-100 hover:bg-gray-50 transition-colors"
+              className="group flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 hover:border-border-subtle hover:bg-surface-muted transition-colors"
             >
               <button
                 onClick={() => toggleSubtask.mutate(s.id)}
@@ -482,19 +482,19 @@ function SubtasksTab({ task, projectId, isAdmin, currentUserId }: {
                   'flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded border-2 transition-colors',
                   s.isCompleted
                     ? 'border-green-500 bg-green-500 text-white'
-                    : 'border-gray-300 hover:border-green-400',
+                    : 'border-border-muted hover:border-green-400',
                 )}
                 style={{ height: 18, width: 18 }}
               >
                 {s.isCompleted && <Check size={11} />}
               </button>
-              <span className={cn('flex-1 text-sm text-gray-800 leading-snug', s.isCompleted && 'line-through text-gray-400')}>
+              <span className={cn('flex-1 text-sm text-text-primary leading-snug', s.isCompleted && 'line-through text-text-muted')}>
                 {s.title}
               </span>
               {(isAdmin || s.createdById === currentUserId) && (
                 <button
                   onClick={() => deleteSubtask.mutate(s.id)}
-                  className="shrink-0 rounded p-1 text-gray-400 opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-red-50 transition-all"
+                  className="shrink-0 rounded p-1 text-text-muted opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-red-50 transition-all"
                 >
                   <X size={13} />
                 </button>
@@ -518,7 +518,7 @@ function SubtasksTab({ task, projectId, isAdmin, currentUserId }: {
                 if (e.key === 'Escape') { setAdding(false); setNewTitle(''); }
               }}
               placeholder="Add subtask..."
-              className="flex-1 bg-transparent text-sm text-gray-800 outline-none placeholder-gray-400"
+              className="flex-1 bg-transparent text-sm text-text-primary outline-none placeholder-text-muted"
             />
             <button
               onClick={handleAdd}
@@ -527,14 +527,14 @@ function SubtasksTab({ task, projectId, isAdmin, currentUserId }: {
             >
               Add
             </button>
-            <button onClick={() => { setAdding(false); setNewTitle(''); }} className="text-gray-400 hover:text-gray-600">
+            <button onClick={() => { setAdding(false); setNewTitle(''); }} className="text-text-muted hover:text-text-secondary">
               <X size={14} />
             </button>
           </div>
         ) : (
           <button
             onClick={() => setAdding(true)}
-            className="flex items-center gap-2 rounded-lg border border-dashed border-gray-200 px-3 py-2.5 text-sm text-gray-400 hover:border-gray-300 hover:text-gray-600 hover:bg-gray-50 transition-colors w-full"
+            className="flex items-center gap-2 rounded-lg border border-dashed border-border-subtle px-3 py-2.5 text-sm text-text-muted hover:border-border-muted hover:text-text-secondary hover:bg-surface-muted transition-colors w-full"
           >
             <Plus size={14} />Add a subtask
           </button>
@@ -572,10 +572,10 @@ function CommentsTab({ task, projectId, currentUserId, isAdmin }: {
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 min-h-0" style={{ maxHeight: 'calc(100vh - 280px)' }}>
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 size={18} className="animate-spin text-gray-300" />
+            <Loader2 size={18} className="animate-spin text-text-muted" />
           </div>
         ) : comments.length === 0 ? (
-          <div className="flex flex-col items-center py-10 text-gray-400">
+          <div className="flex flex-col items-center py-10 text-text-muted">
             <MessageSquare size={28} className="mb-2 opacity-40" />
             <p className="text-sm">No comments yet. Start the conversation.</p>
           </div>
@@ -587,21 +587,21 @@ function CommentsTab({ task, projectId, currentUserId, isAdmin }: {
                 {c.author && <Avatar name={c.author.name} url={c.author.avatarUrl} size={7} />}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-[12px] font-semibold text-gray-800">
+                    <span className="text-[12px] font-semibold text-text-primary">
                       {c.author?.name ?? 'Unknown'}
                     </span>
-                    <span className="text-[11px] text-gray-400">
+                    <span className="text-[11px] text-text-muted">
                       {new Date(c.createdAt).toLocaleString('en-US', {
                         month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
                       })}
                     </span>
                   </div>
-                  <p className="mt-0.5 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{c.content}</p>
+                  <p className="mt-0.5 text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">{c.content}</p>
                 </div>
                 {(isOwn || isAdmin) && (
                   <button
                     onClick={() => deleteComment.mutate(c.id)}
-                    className="shrink-0 self-start rounded p-1 text-gray-300 opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-red-50 transition-all mt-0.5"
+                    className="shrink-0 self-start rounded p-1 text-text-muted opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-red-50 transition-all mt-0.5"
                   >
                     <Trash2 size={13} />
                   </button>
@@ -614,15 +614,15 @@ function CommentsTab({ task, projectId, currentUserId, isAdmin }: {
       </div>
 
       {/* Input */}
-      <div className="border-t border-gray-100 px-5 py-3.5 bg-white">
-        <div className="flex items-end gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 focus-within:border-blue-300 focus-within:ring-1 focus-within:ring-blue-100 transition">
+      <div className="border-t border-border-subtle px-5 py-3.5 bg-surface">
+        <div className="flex items-end gap-2 rounded-xl border border-border-subtle bg-surface-muted px-3 py-2.5 focus-within:border-blue-300 focus-within:ring-1 focus-within:ring-blue-100 transition">
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
             placeholder="Write a comment… (Enter to send, Shift+Enter for new line)"
             rows={2}
-            className="flex-1 bg-transparent text-sm text-gray-800 outline-none placeholder-gray-400 resize-none leading-relaxed"
+            className="flex-1 bg-transparent text-sm text-text-primary outline-none placeholder-text-muted resize-none leading-relaxed"
           />
           <button
             onClick={handleSend}
@@ -679,7 +679,7 @@ function FilePreviewModal({ file, onClose }: { file: TaskAttachment; onClose: ()
             className="max-h-[80vh] w-full rounded-xl"
           />
         ) : (
-          <div className="flex flex-col items-center justify-center rounded-xl bg-gray-900 p-16 text-gray-400">
+          <div className="flex flex-col items-center justify-center rounded-xl bg-primary p-16 text-primary-text/70">
             <File size={48} className="mb-4 opacity-30" />
             <p className="text-sm">No preview available</p>
             <a
@@ -732,19 +732,19 @@ function FilesTab({ task, projectId, currentUserId, isAdmin }: {
           'flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-8 transition-colors cursor-pointer',
           dragging
             ? 'border-blue-400 bg-blue-50/60'
-            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50',
+            : 'border-border-subtle hover:border-border-muted hover:bg-surface-muted',
         )}
         onClick={() => fileInputRef.current?.click()}
       >
         {upload.isPending ? (
           <Loader2 size={20} className="animate-spin text-blue-500 mb-2" />
         ) : (
-          <Paperclip size={20} className="text-gray-300 mb-2" />
+          <Paperclip size={20} className="text-text-muted mb-2" />
         )}
-        <p className="text-sm font-medium text-gray-500">
+        <p className="text-sm font-medium text-text-secondary">
           {upload.isPending ? 'Uploading...' : 'Drop files here or click to upload'}
         </p>
-        <p className="mt-0.5 text-[11px] text-gray-400">Images, PDFs, docs, videos up to 20 MB</p>
+        <p className="mt-0.5 text-[11px] text-text-muted">Images, PDFs, docs, videos up to 20 MB</p>
         <input
           ref={fileInputRef}
           type="file"
@@ -757,28 +757,28 @@ function FilesTab({ task, projectId, currentUserId, isAdmin }: {
       {/* Files list */}
       {isLoading ? (
         <div className="flex items-center justify-center py-6">
-          <Loader2 size={18} className="animate-spin text-gray-300" />
+          <Loader2 size={18} className="animate-spin text-text-muted" />
         </div>
       ) : attachments.length === 0 ? (
-        <div className="flex flex-col items-center py-8 text-gray-400">
+        <div className="flex flex-col items-center py-8 text-text-muted">
           <Paperclip size={24} className="mb-2 opacity-30" />
           <p className="text-sm">No files attached yet</p>
         </div>
       ) : (
         <ul className="space-y-2">
           {attachments.map((a: TaskAttachment) => (
-            <li key={a.id} className="group flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-3.5 py-3 hover:border-gray-200 hover:shadow-sm transition">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-50 border border-gray-100">
+            <li key={a.id} className="group flex items-center gap-3 rounded-xl border border-border-subtle bg-surface px-3.5 py-3 hover:border-border-subtle hover:shadow-sm transition">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-muted border border-border-subtle">
                 {fileIcon(a.fileType)}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-medium text-gray-800">{a.fileName}</p>
+                <p className="truncate text-[13px] font-medium text-text-primary">{a.fileName}</p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[11px] text-gray-400">{formatBytes(a.fileSize)}</span>
+                  <span className="text-[11px] text-text-muted">{formatBytes(a.fileSize)}</span>
                   {a.uploadedBy && (
-                    <span className="text-[11px] text-gray-400">· {a.uploadedBy.name}</span>
+                    <span className="text-[11px] text-text-muted">· {a.uploadedBy.name}</span>
                   )}
-                  <span className="text-[11px] text-gray-400">
+                  <span className="text-[11px] text-text-muted">
                     · {new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </span>
                 </div>
@@ -786,7 +786,7 @@ function FilesTab({ task, projectId, currentUserId, isAdmin }: {
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => setPreviewFile(a)}
-                  className="rounded-md p-1.5 text-gray-400 hover:text-primary hover:bg-brand-soft transition-colors"
+                  className="rounded-md p-1.5 text-text-muted hover:text-primary hover:bg-brand-soft transition-colors"
                   title="Preview"
                 >
                   <Eye size={14} />
@@ -795,7 +795,7 @@ function FilesTab({ task, projectId, currentUserId, isAdmin }: {
                   href={attachmentDownloadUrl(a)}
                   download={a.fileName}
                   onClick={(e) => e.stopPropagation()}
-                  className="rounded-md p-1.5 text-gray-400 hover:text-primary hover:bg-brand-soft transition-colors"
+                  className="rounded-md p-1.5 text-text-muted hover:text-primary hover:bg-brand-soft transition-colors"
                   title="Download"
                 >
                   <Download size={14} />
@@ -803,7 +803,7 @@ function FilesTab({ task, projectId, currentUserId, isAdmin }: {
                 {(isAdmin || a.uploadedById === currentUserId) && (
                   <button
                     onClick={() => deleteAttachment.mutate(a.id)}
-                    className="rounded-md p-1.5 text-gray-400 opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-red-50 transition-all"
+                    className="rounded-md p-1.5 text-text-muted opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-red-50 transition-all"
                     title="Delete"
                   >
                     <Trash2 size={14} />
@@ -822,7 +822,7 @@ function FilesTab({ task, projectId, currentUserId, isAdmin }: {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+      <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-muted">
         {label}
       </label>
       {children}

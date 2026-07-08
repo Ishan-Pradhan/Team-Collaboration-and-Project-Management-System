@@ -80,7 +80,7 @@ export function NotificationRow({ notification, onClick, onMarkRead, onDelete }:
               onMarkRead(notification);
             }}
             title="Mark as read"
-            className="flex h-7 w-7 items-center justify-center rounded-full text-text-muted hover:bg-white hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-text-muted hover:bg-surface hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Check size={14} />
           </button>
@@ -91,7 +91,7 @@ export function NotificationRow({ notification, onClick, onMarkRead, onDelete }:
             onDelete(notification);
           }}
           title="Delete"
-          className="flex h-7 w-7 items-center justify-center rounded-full text-text-muted hover:bg-white hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-text-muted hover:bg-surface hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Trash2 size={14} />
         </button>

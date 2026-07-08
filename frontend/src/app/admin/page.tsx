@@ -17,7 +17,7 @@ function StatTile({
   value: number;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-border-subtle bg-white p-4">
+    <div className="flex items-center gap-3 rounded-xl border border-border-subtle bg-surface p-4">
       <span
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white"
         style={{ backgroundColor: color }}
@@ -51,7 +51,7 @@ export default function AdminOverviewPage() {
         <StatTile icon={CheckSquare} color="var(--color-success)" label="Total tasks" value={stats.totalTasks} />
       </div>
 
-      <div className="rounded-xl border border-border-subtle bg-white p-5">
+      <div className="rounded-xl border border-border-subtle bg-surface p-5">
         <h2 className="text-sm font-semibold text-text-primary">New users &amp; organizations</h2>
         <p className="text-xs text-text-muted">Last 30 days</p>
         <div className="mt-4">

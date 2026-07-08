@@ -48,7 +48,7 @@ export default function AuthShowcase() {
             </p>
             <div className="space-y-1.5">
               {col.cards.map((card) => (
-                <div key={card.title} className="rounded-md bg-white p-1.5 shadow-card">
+                <div key={card.title} className="rounded-md bg-surface p-1.5 shadow-card">
                   <p className="text-[10px] font-medium leading-snug text-text-primary">{card.title}</p>
                   <div className="mt-1.5 flex items-center justify-between">
                     <span className={`h-1 w-3.5 rounded-full ${PRIORITY[card.priority].bar}`} />

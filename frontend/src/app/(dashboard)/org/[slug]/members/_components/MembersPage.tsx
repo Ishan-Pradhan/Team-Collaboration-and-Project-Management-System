@@ -221,7 +221,7 @@ export default function MembersPage({ params }: Props) {
 
       {/* Stats strip */}
       <div className={cn(
-        'grid rounded-lg border border-border-subtle bg-white overflow-hidden divide-x divide-border-subtle',
+        'grid rounded-lg border border-border-subtle bg-surface overflow-hidden divide-x divide-border-subtle',
         isAdmin ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2',
       )}>
         <div className="flex flex-col gap-1 px-6 py-4">
@@ -316,7 +316,7 @@ export default function MembersPage({ params }: Props) {
 
       {/* Members Tab */}
       {activeTab === 'members' && (
-        <div className="overflow-hidden rounded-xl border border-border-subtle bg-white">
+        <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left text-sm">
               <thead className="border-b border-border-subtle bg-surface-muted/50 text-xs font-semibold text-text-secondary">
@@ -379,7 +379,7 @@ export default function MembersPage({ params }: Props) {
                               <ChevronDown size={11} />
                             </button>
                             {openRoleDropdown === member.userId && (
-                              <div className="absolute left-0 top-full z-10 mt-1 w-36 rounded-lg border border-border-subtle bg-white py-1 shadow-modal">
+                              <div className="absolute left-0 top-full z-10 mt-1 w-36 rounded-lg border border-border-subtle bg-surface py-1 shadow-modal">
                                 {member.role !== 'ORG_ADMIN' && (
                                   <button
                                     onClick={() =>
@@ -473,7 +473,7 @@ export default function MembersPage({ params }: Props) {
 
       {/* Pending Invites Tab */}
       {activeTab === 'invites' && isAdmin && (
-        <div className="overflow-hidden rounded-xl border border-border-subtle bg-white">
+        <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface">
           {invitesLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-5 w-5 animate-spin text-text-secondary" />
@@ -543,7 +543,7 @@ export default function MembersPage({ params }: Props) {
 
       {/* Banned Users Tab */}
       {activeTab === 'bans' && isAdmin && (
-        <div className="overflow-hidden rounded-xl border border-border-subtle bg-white">
+        <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface">
           {bansLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-5 w-5 animate-spin text-text-secondary" />
@@ -610,7 +610,7 @@ export default function MembersPage({ params }: Props) {
       {/* Invite Modal */}
       {showInviteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="relative w-full max-w-md rounded-xl border border-border bg-white p-6 shadow-modal">
+          <div className="relative w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-modal">
             <button
               onClick={() => setShowInviteModal(false)}
               className="absolute right-4 top-4 rounded p-1 text-text-secondary hover:bg-surface-muted transition-colors"

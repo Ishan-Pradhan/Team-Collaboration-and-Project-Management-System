@@ -74,7 +74,7 @@ function WorkspaceRow({
         </button>
 
         {menuOpen && (
-          <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-lg border border-border-subtle bg-white py-1 shadow-lg">
+          <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-lg border border-border-subtle bg-surface py-1 shadow-lg">
             <button
               onClick={() => { onOpenSettings(); setMenuOpen(false); }}
               className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-muted transition-colors"

@@ -8,7 +8,7 @@ export function NotificationsSkeleton() {
         <Skeleton className="h-5 w-10" />
         <Skeleton className="h-5 w-16" />
       </div>
-      <div className="space-y-1 rounded-xl border border-border-subtle bg-white p-2">
+      <div className="space-y-1 rounded-xl border border-border-subtle bg-surface p-2">
         {[0, 1, 2, 3, 4].map((i) => (
           <div key={i} className="flex items-center gap-3 px-2 py-2.5">
             <Skeleton className="h-9 w-9 shrink-0 rounded-full" />

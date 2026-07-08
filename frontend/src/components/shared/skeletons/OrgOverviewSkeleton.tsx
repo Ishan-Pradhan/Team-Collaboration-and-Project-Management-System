@@ -17,7 +17,7 @@ export function OrgOverviewSkeleton() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 rounded-lg border border-border-subtle bg-white overflow-hidden divide-x divide-y sm:grid-cols-4 sm:divide-y-0 divide-border-subtle">
+      <div className="grid grid-cols-2 rounded-lg border border-border-subtle bg-surface overflow-hidden divide-x divide-y sm:grid-cols-4 sm:divide-y-0 divide-border-subtle">
         {[0, 1, 2, 3].map((i) => (
           <div key={i} className="flex items-center gap-3 px-6 py-5">
             <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
@@ -31,7 +31,7 @@ export function OrgOverviewSkeleton() {
 
       {[0, 1].map((row) => (
         <div key={row} className="grid gap-5 lg:grid-cols-5">
-          <div className="lg:col-span-3 rounded-lg border border-border-subtle bg-white">
+          <div className="lg:col-span-3 rounded-lg border border-border-subtle bg-surface">
             <div className="border-b border-border-subtle px-5 py-3.5">
               <Skeleton className="h-4 w-32" />
             </div>
@@ -41,7 +41,7 @@ export function OrgOverviewSkeleton() {
               ))}
             </div>
           </div>
-          <div className="lg:col-span-2 rounded-lg border border-border-subtle bg-white">
+          <div className="lg:col-span-2 rounded-lg border border-border-subtle bg-surface">
             <div className="border-b border-border-subtle px-5 py-3.5">
               <Skeleton className="h-4 w-24" />
             </div>

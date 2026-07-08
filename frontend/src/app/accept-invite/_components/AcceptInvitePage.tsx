@@ -58,7 +58,7 @@ function AcceptInviteContent() {
   if (!token) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-6 text-center">
-        <div className="max-w-md rounded-xl border border-border bg-white p-6 shadow-card">
+        <div className="max-w-md rounded-xl border border-border bg-surface p-6 shadow-card">
           <AlertCircle className="mx-auto text-danger" size={40} />
           <h1 className="mt-4 text-lg font-semibold text-text-primary">Invalid Invitation</h1>
           <p className="mt-2 text-sm text-text-secondary">{errorMsg}</p>
@@ -70,7 +70,7 @@ function AcceptInviteContent() {
   if (!isAuthenticated) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-6 text-center">
-        <div className="max-w-md rounded-xl border border-border bg-white p-6 shadow-card space-y-4">
+        <div className="max-w-md rounded-xl border border-border bg-surface p-6 shadow-card space-y-4">
           <MailCheck className="mx-auto text-brand" size={40} />
           <h1 className="text-lg font-semibold text-text-primary">You are invited!</h1>
           <p className="text-sm text-text-secondary">
@@ -93,7 +93,7 @@ function AcceptInviteContent() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-6 text-center bg-background">
-      <div className="max-w-md rounded-xl border border-border bg-white p-8 shadow-card space-y-4">
+      <div className="max-w-md rounded-xl border border-border bg-surface p-8 shadow-card space-y-4">
         {errorMsg ? (
           <>
             <AlertCircle className="mx-auto text-danger" size={40} />

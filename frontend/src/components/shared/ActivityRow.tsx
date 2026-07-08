@@ -40,7 +40,7 @@ const ACTIVITY_ICON: Record<string, { node: React.ReactNode; bg: string }> = {
   task_created: { node: <Plus size={10} />, bg: 'bg-emerald-100 text-emerald-600' },
   task_moved: { node: <ArrowRightLeft size={10} />, bg: 'bg-blue-100 text-blue-600' },
   task_deleted: { node: <AlertTriangle size={10} />, bg: 'bg-red-100 text-red-600' },
-  comment_added: { node: <MessageSquare size={10} />, bg: 'bg-gray-100 text-gray-500' },
+  comment_added: { node: <MessageSquare size={10} />, bg: 'bg-surface-muted text-text-secondary' },
   member_added: { node: <UserPlus size={10} />, bg: 'bg-purple-100 text-purple-600' },
   member_removed: { node: <UserMinus size={10} />, bg: 'bg-orange-100 text-orange-600' },
 };
@@ -48,7 +48,7 @@ const ACTIVITY_ICON: Record<string, { node: React.ReactNode; bg: string }> = {
 function buildActivityText(item: ActivityEntry): React.ReactNode {
   const { metadata } = item;
   const task = metadata.taskTitle ? (
-    <span className="font-medium text-gray-800">{metadata.taskTitle}</span>
+    <span className="font-medium text-text-primary">{metadata.taskTitle}</span>
   ) : null;
 
   switch (item.type) {
@@ -58,7 +58,7 @@ function buildActivityText(item: ActivityEntry): React.ReactNode {
         <>
           moved {task}
           {metadata.fromColumn && metadata.toColumn && (
-            <span className="text-gray-400"> · {metadata.fromColumn} → {metadata.toColumn}</span>
+            <span className="text-text-muted"> · {metadata.fromColumn} → {metadata.toColumn}</span>
           )}
         </>
       );
@@ -67,18 +67,18 @@ function buildActivityText(item: ActivityEntry): React.ReactNode {
         <>
           commented on {task}
           {metadata.content && (
-            <span className="text-gray-400 italic"> "{metadata.content}"</span>
+            <span className="text-text-muted italic"> "{metadata.content}"</span>
           )}
         </>
       );
     case 'task_deleted':
       return (
-        <>deleted <span className="line-through text-gray-400">{metadata.taskTitle}</span></>
+        <>deleted <span className="line-through text-text-muted">{metadata.taskTitle}</span></>
       );
     case 'member_added':
-      return <>added <span className="font-medium text-gray-800">{metadata.targetName ?? 'a member'}</span> to the project</>;
+      return <>added <span className="font-medium text-text-primary">{metadata.targetName ?? 'a member'}</span> to the project</>;
     case 'member_removed':
-      return <>removed <span className="font-medium text-gray-800">{metadata.targetName ?? 'a member'}</span> from the project</>;
+      return <>removed <span className="font-medium text-text-primary">{metadata.targetName ?? 'a member'}</span> from the project</>;
     default: return null;
   }
 }
@@ -101,8 +101,8 @@ export function ActivityRow({ item, slug, showProjectLink = true }: ActivityRowP
     >
       <Avatar name={item.actor.name} url={item.actor.avatarUrl} size={7} />
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-600 leading-snug">
-          <span className="font-semibold text-gray-900">{item.actor.name}</span>
+        <p className="text-sm text-text-secondary leading-snug">
+          <span className="font-semibold text-text-primary">{item.actor.name}</span>
           {' '}
           {buildActivityText(item)}
         </p>
@@ -114,14 +114,14 @@ export function ActivityRow({ item, slug, showProjectLink = true }: ActivityRowP
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); router.push(`/org/${slug}/projects/${item.projectId}`); }}
-                className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
+                className="text-xs text-text-muted hover:text-text-secondary transition-colors"
               >
                 {item.projectName}
               </button>
-              <span className="text-gray-200 text-xs">·</span>
+              <span className="text-text-muted text-xs">·</span>
             </>
           )}
-          <span className="text-xs text-gray-400">{formatRelativeTime(item.createdAt)}</span>
+          <span className="text-xs text-text-muted">{formatRelativeTime(item.createdAt)}</span>
         </div>
       </div>
     </li>

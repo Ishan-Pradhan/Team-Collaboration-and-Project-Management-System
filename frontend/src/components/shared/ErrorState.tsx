@@ -13,7 +13,7 @@ export function ErrorState({
   onRetry,
 }: ErrorStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-border-subtle bg-white py-16 px-6 text-center">
+    <div className="flex flex-col items-center justify-center rounded-xl border border-border-subtle bg-surface py-16 px-6 text-center">
       <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-danger-soft">
         <AlertTriangle className="text-danger" size={22} />
       </div>
