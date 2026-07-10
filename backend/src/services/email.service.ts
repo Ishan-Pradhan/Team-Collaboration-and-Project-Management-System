@@ -10,13 +10,31 @@ const getResendClient = () => {
   return new Resend(apiKey);
 };
 
-// Send email verification link
-export const sendVerificationEmail = async (to: string, token: string) => {
+// Pure link builders — shared by controllers (which return the link in the
+// API response immediately) and the email worker (which sends the email
+// asynchronously). Keeping these separate from the send functions is what
+// lets link generation stay synchronous once sending moves to a queue.
+export const buildVerifyLink = (token: string): string => {
   const backendUrl = env.PORT
     ? `http://localhost:${env.PORT}`
     : 'http://localhost:8080';
 
-  const verifyLink = `${backendUrl}/api/v1/auth/verify-email?token=${token}`;
+  return `${backendUrl}/api/v1/auth/verify-email?token=${token}`;
+};
+
+export const buildResetLink = (token: string): string => {
+  const frontendUrl = env.FRONTEND_URL || 'http://localhost:3000';
+  return `${frontendUrl.replace(/\/$/, '')}/reset-password?token=${token}`;
+};
+
+export const buildInviteLink = (token: string): string => {
+  const frontendUrl = env.FRONTEND_URL || 'http://localhost:3000';
+  return `${frontendUrl.replace(/\/$/, '')}/accept-invite?token=${token}`;
+};
+
+// Send email verification link
+export const sendVerificationEmail = async (to: string, token: string) => {
+  const verifyLink = buildVerifyLink(token);
   const from = env.EMAIL_FROM;
   const resend = getResendClient();
 
@@ -26,14 +44,11 @@ export const sendVerificationEmail = async (to: string, token: string) => {
     subject: 'Verify your email',
     html: verifyEmailTemplate(verifyLink),
   });
-
-  return { verifyLink };
 };
 
 // send password reset email
 export const sendPasswordResetEmail = async (to: string, token: string) => {
-  const frontendUrl = env.FRONTEND_URL || 'http://localhost:3000';
-  const resetLink = `${frontendUrl.replace(/\/$/, '')}/reset-password?token=${token}`;
+  const resetLink = buildResetLink(token);
   const from = env.EMAIL_FROM;
   const resend = getResendClient();
 
@@ -43,8 +58,6 @@ export const sendPasswordResetEmail = async (to: string, token: string) => {
     subject: 'Reset your password',
     html: resetPasswordTemplate(resetLink),
   });
-
-  return { resetLink };
 };
 
 // Send a generic notification email (channel/project/task events)
@@ -72,8 +85,7 @@ export const sendOrganizationInviteEmail = async (
   token: string,
   invitedByName: string
 ) => {
-  const frontendUrl = env.FRONTEND_URL || 'http://localhost:3000';
-  const inviteLink = `${frontendUrl.replace(/\/$/, '')}/accept-invite?token=${token}`;
+  const inviteLink = buildInviteLink(token);
   const from = env.EMAIL_FROM;
   const resend = getResendClient();
 
@@ -83,8 +95,6 @@ export const sendOrganizationInviteEmail = async (
     subject: `Invitation to join ${orgName} on Team Collaboration Platform`,
     html: orgInviteTemplate(orgName, inviteLink, invitedByName),
   });
-
-  return { inviteLink };
 };
 
 const verifyEmailTemplate = (verifyLink: string) => `

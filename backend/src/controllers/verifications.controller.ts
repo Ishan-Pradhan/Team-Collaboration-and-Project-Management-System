@@ -4,7 +4,8 @@ import { ApiError } from '../utils/ApiError.js';
 import { generateToken } from '../utils/security.utils.js';
 import { generateAccessAndRefereshTokens } from '../utils/token.utils.js';
 import type { Request, Response } from 'express';
-import { sendVerificationEmail } from '../services/email.service.js';
+import { buildVerifyLink } from '../services/email.service.js';
+import { queueService } from '../services/queue.service.js';
 import { asyncHandler } from '../utils/AsyncHandler.js';
 import { env } from '../config/env.js';
 import { sendAuthResponse } from '../utils/sendVerificationResponse.utils.js';
@@ -94,16 +95,15 @@ export const resendVerificationEmail = asyncHandler(
       expiresAt,
     );
 
-    let verifyLink: string | undefined;
+    const verifyLink = buildVerifyLink(verificationToken);
 
     try {
-      const result = await sendVerificationEmail(
-        user?.email,
-        verificationToken,
-      );
-      verifyLink = result.verifyLink;
+      await queueService.enqueueVerificationEmail({
+        to: user.email,
+        token: verificationToken,
+      });
     } catch (emailError) {
-      console.error('Failed to resend verification email:', emailError);
+      console.error('Failed to queue resend verification email:', emailError);
     }
 
     res.status(200).json({

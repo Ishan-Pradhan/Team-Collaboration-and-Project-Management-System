@@ -17,6 +17,8 @@ import crypto from 'crypto';
 import { cascadeRemoveUserFromOrgChannels, autoJoinUserToPublicChannels } from './channel.controller.js';
 import { notifyUser } from '../utils/notify.js';
 import { adminActionLogRepository } from '../repositories/adminActionLog.repository.js';
+import { buildInviteLink } from '../services/email.service.js';
+import { queueService } from '../services/queue.service.js';
 
 async function notifyAdminsOfMemberLeave(
   organizationId: string,
@@ -190,24 +192,20 @@ export const inviteUserToOrganization = asyncHandler(
       expiresAt,
     });
 
-    // Send email using Resend
+    // Queue the invite email via Resend (through BullMQ)
     let emailSent = false;
-    let inviteLink: string | undefined;
+    const inviteLink = buildInviteLink(token);
 
     try {
-      const { sendVerificationEmail: _, sendPasswordResetEmail: __, sendOrganizationInviteEmail } = await import(
-        '../services/email.service.js'
-      );
-      const result = await sendOrganizationInviteEmail(
-        invite.email,
-        org.name,
+      await queueService.enqueueInviteEmail({
+        to: invite.email,
+        orgName: org.name,
         token,
-        user.name
-      );
+        invitedByName: user.name,
+      });
       emailSent = true;
-      inviteLink = result.inviteLink;
     } catch (error) {
-      console.error('Failed to send invitation email:', error);
+      console.error('Failed to queue invitation email:', error);
     }
 
     return res.status(201).json({

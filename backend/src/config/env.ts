@@ -14,6 +14,9 @@ const envSchema = z.object({
   DB_USER: z.string().min(1),
   DB_PASSWORD: z.string().min(1),
 
+  // Redis
+  REDIS_URL: z.string().min(1),
+
   // JWT
   ACCESS_TOKEN_SECRET: z
     .string()

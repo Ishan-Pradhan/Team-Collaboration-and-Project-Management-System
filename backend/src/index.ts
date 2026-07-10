@@ -9,7 +9,9 @@ import { limiter } from './middlewares/rateLimiter.middleware.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import { swaggerSpec } from './config/swagger.config.js';
 import { initSocket } from './socket/index.js';
-import { startDueDateReminderJob } from './jobs/dueDateReminders.job.js';
+import { notificationQueue } from './services/queue.service.js';
+import { startEmailWorker } from './workers/email.worker.js';
+import { startNotificationWorker } from './workers/notification.worker.js';
 import './models/index.js';
 
 dotenv.config();
@@ -83,7 +85,18 @@ export const connectDB = async () => {
   try {
     await sequelize.authenticate();
     console.log("Database connected successfully");
-    startDueDateReminderJob();
+
+    startEmailWorker();
+    startNotificationWorker();
+
+    // Repeatable hourly due-date check, plus one immediate run so reminders
+    // don't lag by up to an hour after every deploy/restart.
+    await notificationQueue.upsertJobScheduler(
+      'due-date-check-scheduler',
+      { every: 60 * 60 * 1000 },
+      { name: 'due-date-check' },
+    );
+    await notificationQueue.add('due-date-check', {});
   } catch (error) {
     console.error("DB connection failed:", error);
     process.exit(1);

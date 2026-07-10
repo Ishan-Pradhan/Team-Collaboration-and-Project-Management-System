@@ -4,7 +4,6 @@ import { notificationRepository } from '../repositories/notification.repository.
 import { isDoneColumnName } from '../utils/doneColumn.utils.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const INTERVAL_MS = 60 * 60 * 1000; // hourly — dueDate is day-granularity, no need to run more often
 
 function startOfToday(): Date {
   const d = new Date();
@@ -17,7 +16,7 @@ function daysFromToday(dueDate: string | Date): number {
   return Math.round((due.getTime() - startOfToday().getTime()) / DAY_MS);
 }
 
-async function runTaskReminders(): Promise<void> {
+export async function runTaskReminders(): Promise<void> {
   const today = startOfToday();
   const in2Days = new Date(today);
   in2Days.setDate(today.getDate() + 2);
@@ -81,7 +80,7 @@ async function runTaskReminders(): Promise<void> {
   }
 }
 
-async function runPersonalEventReminders(): Promise<void> {
+export async function runPersonalEventReminders(): Promise<void> {
   const today = startOfToday();
   const in2Days = new Date(today);
   in2Days.setDate(today.getDate() + 2);
@@ -126,16 +125,3 @@ async function runPersonalEventReminders(): Promise<void> {
   }
 }
 
-export function startDueDateReminderJob(): void {
-  const run = async () => {
-    try {
-      await runTaskReminders();
-      await runPersonalEventReminders();
-    } catch (err) {
-      console.error('Due-date reminder job failed:', err);
-    }
-  };
-
-  run();
-  setInterval(run, INTERVAL_MS);
-}

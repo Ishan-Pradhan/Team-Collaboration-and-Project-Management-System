@@ -6,10 +6,8 @@ import { env } from '../config/env.js';
 import { ONE_HOUR_IN_MS, TWENTY_FOUR_HOURS_IN_MS } from '../constants/index.js';
 import { userRepository } from '../repositories/users.repository.js';
 import { verificationRepository } from '../repositories/verification.repository.js';
-import {
-  sendPasswordResetEmail,
-  sendVerificationEmail,
-} from '../services/email.service.js';
+import { buildVerifyLink } from '../services/email.service.js';
+import { queueService } from '../services/queue.service.js';
 import type {
   AuthRequest,
   LoginUserTypes,
@@ -62,17 +60,16 @@ export const registerUser = asyncHandler(
     );
 
     let verificationEmailSent = false;
-    let verifyLink: string | undefined;
+    const verifyLink = buildVerifyLink(verificationToken);
 
     try {
-      const result = await sendVerificationEmail(
-        newUser.email,
-        verificationToken,
-      );
+      await queueService.enqueueVerificationEmail({
+        to: newUser.email,
+        token: verificationToken,
+      });
       verificationEmailSent = true;
-      verifyLink = result.verifyLink;
     } catch (emailError) {
-      console.error('Failed to send verification email:', emailError);
+      console.error('Failed to queue verification email:', emailError);
     }
 
     const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(
@@ -357,9 +354,12 @@ export const forgotPassword = asyncHandler(
     );
 
     try {
-      await sendPasswordResetEmail(user.email, resetToken);
+      await queueService.enqueuePasswordResetEmail({
+        to: user.email,
+        token: resetToken,
+      });
     } catch (emailErr) {
-      console.error('Failed to send password reset email', emailErr);
+      console.error('Failed to queue password reset email', emailErr);
     }
 
     return ok(

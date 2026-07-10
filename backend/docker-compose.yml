@@ -16,11 +16,29 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_URL=redis://redis:6379
     env_file:
       - .env
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: backend_redis
+    restart: always
+    ports:
+      # Map container's 6379 to host's 6380 (or DOCKER_REDIS_PORT) to avoid local redis conflicts
+      - "${DOCKER_REDIS_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - backend_network
 
