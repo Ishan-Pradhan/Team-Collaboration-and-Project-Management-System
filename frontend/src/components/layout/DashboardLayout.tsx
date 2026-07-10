@@ -317,7 +317,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   className={cn(
                     'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all ease-in duration-75',
                     active
-                      ? 'bg-surface text-primary font-medium'
+                      ? 'bg-surface text-primary dark:bg-white font-medium'
                       : 'text-white hover:bg-brand  hover:text-white '
                   )}
                 >
