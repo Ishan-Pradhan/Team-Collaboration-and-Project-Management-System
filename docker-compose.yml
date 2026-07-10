@@ -1,0 +1,114 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:${PORT:-8080}/api/v1}
+    container_name: capms_frontend
+    restart: always
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - backend
+    networks:
+      - capms_network
+
+  backend:
+    build:
+      context: ./backend
+      target: production
+    container_name: capms_backend
+    restart: always
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
+    environment:
+      - PORT=${PORT:-8080}
+      # Plain-HTTP local stack — keep development mode so cookies aren't
+      # marked Secure (see backend/src/config/cookie.config.ts), or logins
+      # silently fail to persist.
+      - NODE_ENV=${NODE_ENV:-development}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_URL=redis://redis:6379
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:${FRONTEND_PORT:-3000}}
+    env_file:
+      - ./backend/.env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - capms_network
+
+  # One-off: applies pending Sequelize migrations, then exits. `backend`
+  # waits on this so the API never boots against a stale schema.
+  migrate:
+    build:
+      context: ./backend
+      target: build
+    container_name: capms_migrate
+    command: ["npx", "sequelize-cli", "db:migrate"]
+    environment:
+      # sequelize-cli picks its config block off NODE_ENV — only the
+      # "development" block (src/sequelize/config/config.js) reads DB_NAME;
+      # "production" there reads DB_NAME_PROD, which this stack never sets.
+      - NODE_ENV=development
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+    env_file:
+      - ./backend/.env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - capms_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: capms_redis
+    restart: always
+    ports:
+      - "${DOCKER_REDIS_PORT:-6381}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - capms_network
+
+  db:
+    image: postgres:15-alpine
+    container_name: capms_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DOCKER_DB_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - capms_network
+
+volumes:
+  postgres_data:
+
+networks:
+  capms_network:
+    driver: bridge

@@ -5,14 +5,15 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.3',
     info: {
-      title: '',
+      title: 'Team Collaboration & Project Management System API',
       version: '1.0.0',
       description:
-        'REST API for the  ' +
-        'Supports user authentication ' +
-        'admin operations.',
+        'REST API for a multi-tenant team collaboration and project management platform. ' +
+        'Covers authentication (local + OAuth), organizations and membership, projects and ' +
+        'Kanban boards, tasks with comments/subtasks/attachments, real-time chat channels and ' +
+        'direct messages, notifications, personal calendar events, and platform administration.',
       contact: {
-        name: '',
+        name: 'API support',
       },
     },
     servers: [
@@ -65,9 +66,9 @@ const options: swaggerJsdoc.Options = {
             name: { type: 'string', example: 'Jane Doe' },
             email: { type: 'string', format: 'email', example: 'jane@example.com' },
             avatarUrl: { type: 'string', nullable: true, example: 'https://gravatar.com/avatar/...' },
-            role: { type: 'string', enum: ['user', 'superadmin'], example: 'user' },
+            role: { type: 'string', enum: ['USER', 'SUPER_ADMIN'], example: 'USER' },
             isVerified: { type: 'boolean', example: true },
-            isBlocked: { type: 'boolean', example: false },
+            isActive: { type: 'boolean', example: true },
             authProvider: { type: 'string', enum: ['local', 'google', 'github'], example: 'local' },
             createdAt: { type: 'string', format: 'date-time' },
           },
@@ -83,9 +84,65 @@ const options: swaggerJsdoc.Options = {
             updatedAt: { type: 'string', format: 'date-time' },
           },
         },
-
-
-
+        // ── Chat ───────────────────────────────────────────────────────
+        Channel: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            organizationId: { type: 'string', format: 'uuid' },
+            name: { type: 'string', nullable: true, example: 'general' },
+            type: { type: 'string', enum: ['PUBLIC', 'PRIVATE', 'DM'], example: 'PUBLIC' },
+            createdBy: { type: 'string', format: 'uuid' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        Message: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            channelId: { type: 'string', format: 'uuid' },
+            senderId: { type: 'string', format: 'uuid', nullable: true },
+            type: { type: 'string', enum: ['TEXT', 'SYSTEM', 'FILE'], example: 'TEXT' },
+            content: { type: 'string', example: 'Hey team, standup in 5.' },
+            fileName: { type: 'string', nullable: true },
+            fileUrl: { type: 'string', nullable: true },
+            fileType: { type: 'string', nullable: true },
+            fileSize: { type: 'integer', nullable: true },
+            deletedAt: { type: 'string', format: 'date-time', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        // ── Notifications & calendar ─────────────────────────────────────
+        Notification: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            userId: { type: 'string', format: 'uuid' },
+            organizationId: { type: 'string', format: 'uuid' },
+            projectId: { type: 'string', format: 'uuid', nullable: true },
+            type: { type: 'string', example: 'task_assigned' },
+            title: { type: 'string', example: 'Jane Doe assigned you to "Fix login bug"' },
+            body: { type: 'string', nullable: true },
+            entityType: { type: 'string', nullable: true, example: 'task' },
+            entityId: { type: 'string', format: 'uuid', nullable: true },
+            isRead: { type: 'boolean', example: false },
+            createdAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        PersonalEvent: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            userId: { type: 'string', format: 'uuid' },
+            organizationId: { type: 'string', format: 'uuid' },
+            title: { type: 'string', example: 'Dentist appointment' },
+            dueDate: { type: 'string', format: 'date', example: '2026-08-01' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
       },
     },
     // Global security applied to all endpoints unless overridden
@@ -100,6 +157,9 @@ const options: swaggerJsdoc.Options = {
       { name: 'Organizations', description: 'Workspaces and organizational member management' },
       { name: 'Projects', description: 'Project tracking and management within organizations' },
       { name: 'Tasks', description: 'Task and Kanban board operations' },
+      { name: 'Channels', description: 'Chat channels, direct messages, and file sharing' },
+      { name: 'Notifications', description: "A user's in-app notification feed" },
+      { name: 'Personal Events', description: "A user's personal calendar events within an organization" },
     ],
   },
   // Enumerate each route file explicitly.
@@ -114,7 +174,7 @@ const options: swaggerJsdoc.Options = {
     const routesDir = fromDirname.replace(/\\/g, '/');
     const cwdDir = fromCwd.replace(/\\/g, '/');
 
-    const files = ['auth', 'admin', 'health', 'organization', 'project', 'task'];
+    const files = ['auth', 'admin', 'health', 'organization', 'project', 'task', 'channel', 'notification', 'personalEvent'];
     const exts = ['ts', 'js'];
 
     const paths: string[] = [];
