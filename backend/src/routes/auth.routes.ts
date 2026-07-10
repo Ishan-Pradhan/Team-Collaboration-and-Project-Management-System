@@ -14,6 +14,7 @@ import {
 } from '../validations/auth.validation.js';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
 import { uploadMiddleware } from '../middlewares/upload.middleware.js';
+import { authEmailLimiter, loginLimiter } from '../middlewares/rateLimiter.middleware.js';
 import {
   registerUser,
   loginUser,
@@ -95,7 +96,7 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.route('/register').post(validate(registerSchema), registerUser);
+router.route('/register').post(authEmailLimiter, validate(registerSchema), registerUser);
 
 /**
  * @swagger
@@ -145,7 +146,7 @@ router.route('/register').post(validate(registerSchema), registerUser);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.route('/login').post(validate(loginSchema), loginUser);
+router.route('/login').post(loginLimiter, validate(loginSchema), loginUser);
 
 /**
  * @swagger
@@ -276,7 +277,7 @@ router.route('/verify-email').get(validate(verifyEmailSchema), verifyEmail);
  */
 router
   .route('/resend-verification-email')
-  .post(validate(resendVerificationEmailSchema), resendVerificationEmail);
+  .post(authEmailLimiter, validate(resendVerificationEmailSchema), resendVerificationEmail);
 
 // ─────────────────────────────────────────────────────────────
 // PASSWORD
@@ -312,7 +313,7 @@ router
  */
 router
   .route('/forgot-password')
-  .post(validate(forgotPasswordSchema), forgotPassword);
+  .post(authEmailLimiter, validate(forgotPasswordSchema), forgotPassword);
 
 /**
  * @swagger

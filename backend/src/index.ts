@@ -12,6 +12,7 @@ import { initSocket } from './socket/index.js';
 import { notificationQueue } from './services/queue.service.js';
 import { startEmailWorker } from './workers/email.worker.js';
 import { startNotificationWorker } from './workers/notification.worker.js';
+import { env } from './config/env.js';
 import './models/index.js';
 
 dotenv.config();
@@ -25,7 +26,7 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true }));
+app.use(cors({ origin: env.FRONTEND_URL, credentials: true }));
 app.use(limiter);
 
 //routes

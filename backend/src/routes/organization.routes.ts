@@ -6,6 +6,7 @@ import {
   isOrganizationOwner,
 } from '../middlewares/auth.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
+import { inviteLimiter } from '../middlewares/rateLimiter.middleware.js';
 import {
   createOrganization,
   listMyOrganizations,
@@ -185,6 +186,7 @@ router
   .post(
     verifyJWT,
     isOrganizationAdmin,
+    inviteLimiter,
     validate(inviteUserSchema),
     inviteUserToOrganization
   )
