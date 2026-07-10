@@ -202,9 +202,9 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
     const trimmed = content.trim();
     if (!trimmed) return;
     sendMessage.mutate(
-      { content: trimmed, replyToId: replyTarget?.id ?? null },
+      { content: mention.serialize(trimmed), replyToId: replyTarget?.id ?? null },
       {
-        onSuccess: () => { setContent(''); setReplyTarget(null); },
+        onSuccess: () => { setContent(''); mention.resetMentions(); setReplyTarget(null); },
         onError: (err: unknown) => toast.error(parseApiError(err).message),
       }
     );
@@ -267,6 +267,7 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
   };
 
   const handleContentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    mention.reconcileMentions(content, e.target.value);
     setContent(e.target.value);
     mention.handleTextChange(e.target.value, e.target.selectionStart ?? e.target.value.length);
     const now = Date.now();

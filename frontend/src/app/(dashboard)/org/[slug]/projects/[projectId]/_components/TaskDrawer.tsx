@@ -582,15 +582,16 @@ function CommentsTab({ task, projectId, currentUserId, isAdmin }: {
   const handleSend = () => {
     if (!text.trim()) return;
     createComment.mutate(
-      { content: text.trim(), replyToId: replyTarget?.id ?? null },
+      { content: mention.serialize(text.trim()), replyToId: replyTarget?.id ?? null },
       {
-        onSuccess: () => { setText(''); setReplyTarget(null); },
+        onSuccess: () => { setText(''); mention.resetMentions(); setReplyTarget(null); },
         onError: (err: unknown) => toast.error(parseApiError(err).message),
       }
     );
   };
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    mention.reconcileMentions(text, e.target.value);
     setText(e.target.value);
     mention.handleTextChange(e.target.value, e.target.selectionStart ?? e.target.value.length);
   };
