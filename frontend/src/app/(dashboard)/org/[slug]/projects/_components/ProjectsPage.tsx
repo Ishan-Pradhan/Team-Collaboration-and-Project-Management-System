@@ -27,6 +27,16 @@ interface Props {
 
 type SortOption = 'name' | 'updated' | 'role';
 
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'name', label: 'Name' },
+  { value: 'updated', label: 'Updated' },
+  { value: 'role', label: 'My role' },
+];
+
+// Column widths shared by the list header and every row, so the two stay
+// pixel-aligned regardless of content.
+const ROW_GRID = 'sm:grid-cols-[minmax(0,1fr)_88px_84px_150px_92px]';
+
 function getInitials(name: string) {
   return name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase()).join('');
 }
@@ -49,8 +59,22 @@ function sortProjects(list: Project[], sortBy: SortOption): Project[] {
   return copy;
 }
 
-// ─── ProjectCard ──────────────────────────────────────────────
-function ProjectCard({
+function timeAgo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(months / 12)}y ago`;
+}
+
+// ─── ProjectRow ───────────────────────────────────────────────
+function ProjectRow({
   project,
   organizationId,
   isAdmin,
@@ -84,145 +108,143 @@ function ProjectCard({
     return () => document.removeEventListener('mousedown', outside);
   }, [menuOpen]);
 
-  return (
-    <div className={cn(
-      'group relative flex flex-col rounded-lg border border-border-subtle bg-surface overflow-hidden transition-colors hover:border-border-muted',
-      archived && 'opacity-60',
-    )}>
-      {/* Colored banner */}
-      <button
-        onClick={onNavigate}
-        className="flex h-[72px] w-full items-center justify-center shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        style={{ backgroundColor: color }}
-      >
-        <span className="text-[1.5rem] font-bold text-white/90 tracking-wide select-none">
-          {initials}
-        </span>
-      </button>
+  const progressPct = project.taskCount > 0
+    ? Math.round((project.completedTaskCount / project.taskCount) * 100)
+    : null;
 
-      {/* Content */}
-      <div className="flex flex-col flex-1 px-4 pt-3.5 pb-4 gap-1.5">
-        {/* Name row + menu */}
-        <div className="flex items-start justify-between gap-2">
-          <button
-            onClick={onNavigate}
-            className="min-w-0 flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+  return (
+    <div className={cn('group relative', archived && 'opacity-60')}>
+      <div
+        className={cn(
+          'grid grid-cols-1 items-start gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-hover sm:items-center',
+          ROW_GRID,
+          isAdmin && 'sm:pr-11',
+        )}
+      >
+        {/* Identity + name + description */}
+        <button
+          onClick={onNavigate}
+          className="flex min-w-0 items-center gap-3 rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-xs font-bold text-white/90 select-none"
+            style={{ backgroundColor: color }}
           >
-            <h3 className="truncate text-sm font-semibold text-text-primary leading-snug">
-              {project.name}
-            </h3>
+            {initials}
+          </span>
+          <span className="min-w-0">
+            <span className="flex items-center gap-2">
+              <span className="truncate text-sm font-semibold text-text-primary">{project.name}</span>
+              {archived && (
+                <span className="shrink-0 rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide bg-surface-muted text-text-muted">
+                  Archived
+                </span>
+              )}
+            </span>
+            <span className="block truncate text-xs text-text-muted">
+              {project.description || 'No description'}
+            </span>
+          </span>
+        </button>
+
+        {/* Meta cluster — wraps into a chip row on mobile, becomes discrete
+           grid cells on sm+ via `sm:contents` so it inherits ROW_GRID's columns. */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pl-12 text-xs sm:contents sm:pl-0">
+          <span className={cn(
+            'font-semibold sm:text-right sm:text-sm',
+            project.myRole === 'PROJECT_MANAGER' ? 'text-brand-hover' : 'text-text-muted',
+          )}>
+            {project.myRole === 'PROJECT_MANAGER' ? 'Manager' : '—'}
+          </span>
+
+          <span className="flex items-center gap-1 text-text-muted sm:justify-end">
+            <Users size={11} />
+            {project.memberCount}
+          </span>
+
+          <span className="flex items-center gap-2 sm:w-full">
+            {progressPct === null ? (
+              <span className="text-text-muted">No tasks</span>
+            ) : (
+              <>
+                <span className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-surface-muted sm:w-full">
+                  <span
+                    className="block h-full rounded-full bg-success"
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </span>
+                <span className="shrink-0 tabular-nums text-text-muted">
+                  {project.completedTaskCount}/{project.taskCount}
+                </span>
+              </>
+            )}
+          </span>
+
+          <span className="text-text-muted sm:text-right">
+            {timeAgo(project.updatedAt)}
+          </span>
+        </div>
+      </div>
+
+      {/* ⋯ menu — always reachable on mobile, hover-revealed on desktop */}
+      {isAdmin && (
+        <div ref={menuRef} className="absolute right-3 top-3.5 sm:right-4">
+          <button
+            onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
+            className={cn(
+              'rounded-md p-1 text-text-muted transition-colors',
+              'sm:opacity-0 sm:group-hover:opacity-100',
+              menuOpen && 'opacity-100 bg-surface-hover text-text-secondary',
+              'hover:bg-surface-hover hover:text-text-secondary',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100',
+            )}
+          >
+            <MoreHorizontal size={15} />
           </button>
 
-          {/* ⋯ menu — always visible on mobile, hover on desktop */}
-          {isAdmin && (
-            <div ref={menuRef} className="relative shrink-0">
-              <button
-                onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
-                className={cn(
-                  'rounded-md p-1 text-text-muted transition-colors',
-                  'opacity-0 group-hover:opacity-100',
-                  menuOpen && 'opacity-100 bg-surface-hover text-text-secondary',
-                  'hover:bg-surface-hover hover:text-text-secondary',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100',
-                )}
-              >
-                <MoreHorizontal size={15} />
-              </button>
-
-              {menuOpen && (
-                <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-lg border border-border-subtle bg-surface py-1 shadow-lg">
-                  {!archived && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onManageMembers(); setMenuOpen(false); }}
-                      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      <Users size={13} className="text-text-muted" /> Manage Members
-                    </button>
-                  )}
-                  {!archived && (
-                    <>
-                      <div className="mx-2 my-0.5 border-t border-border-subtle" />
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setShowArchiveConfirm(true); setMenuOpen(false); }}
-                        disabled={archiveMutation.isPending}
-                        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-text-secondary hover:bg-surface-muted transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <Archive size={13} className="text-text-muted" /> Archive
-                      </button>
-                    </>
-                  )}
-                  {archived && (
-                    <>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); unarchiveMutation.mutate(undefined, { onSuccess: () => toast.success('Restored'), onError: (err) => toast.error(parseApiError(err).message) }); setMenuOpen(false); }}
-                        disabled={unarchiveMutation.isPending}
-                        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-muted transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <ArchiveRestore size={13} className="text-text-muted" /> Restore
-                      </button>
-                      <div className="mx-2 my-0.5 border-t border-border-subtle" />
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); setMenuOpen(false); }}
-                        disabled={deleteMutation.isPending}
-                        className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-danger hover:bg-danger-soft transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <Trash2 size={13} /> Delete permanently
-                      </button>
-                    </>
-                  )}
-                </div>
+          {menuOpen && (
+            <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-lg border border-border-subtle bg-surface py-1 shadow-lg">
+              {!archived && (
+                <>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onManageMembers(); setMenuOpen(false); }}
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Users size={13} className="text-text-muted" /> Manage Members
+                  </button>
+                  <div className="mx-2 my-0.5 border-t border-border-subtle" />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowArchiveConfirm(true); setMenuOpen(false); }}
+                    disabled={archiveMutation.isPending}
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-text-secondary hover:bg-surface-muted transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Archive size={13} className="text-text-muted" /> Archive
+                  </button>
+                </>
+              )}
+              {archived && (
+                <>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); unarchiveMutation.mutate(undefined, { onSuccess: () => toast.success('Restored'), onError: (err) => toast.error(parseApiError(err).message) }); setMenuOpen(false); }}
+                    disabled={unarchiveMutation.isPending}
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-muted transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <ArchiveRestore size={13} className="text-text-muted" /> Restore
+                  </button>
+                  <div className="mx-2 my-0.5 border-t border-border-subtle" />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); setMenuOpen(false); }}
+                    disabled={deleteMutation.isPending}
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-danger hover:bg-danger-soft transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Trash2 size={13} /> Delete permanently
+                  </button>
+                </>
               )}
             </div>
           )}
         </div>
-
-        {/* Description */}
-        {project.description ? (
-          <p className="text-xs text-text-muted line-clamp-2 leading-relaxed">
-            {project.description}
-          </p>
-        ) : (
-          <p className="text-xs text-text-muted italic">No description</p>
-        )}
-
-        {/* Footer row 1 — date + role/archived badges */}
-        <div className="flex items-center justify-between mt-auto pt-2 border-t border-border-subtle">
-          <span className="text-xs text-text-muted">
-            {new Date(project.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-          </span>
-          {project.myRole === 'PROJECT_MANAGER' && (
-            <span className="rounded px-1.5 py-0.5 text-[0.7rem] font-semibold bg-primary/10 text-primary">
-              Manager
-            </span>
-          )}
-          {archived && (
-            <span className="rounded px-1.5 py-0.5 text-[0.7rem] font-semibold bg-surface-muted text-text-secondary">
-              Archived
-            </span>
-          )}
-        </div>
-
-        {/* Footer row 2 — member count + task progress */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="flex items-center gap-1 text-xs text-text-muted">
-            <Users size={11} />
-            {project.memberCount}
-          </span>
-          {project.taskCount > 0 && (
-            <div className="flex flex-1 items-center gap-2 pl-3">
-              <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface-muted">
-                <div
-                  className="h-full rounded-full bg-success"
-                  style={{ width: `${(project.completedTaskCount / project.taskCount) * 100}%` }}
-                />
-              </div>
-              <span className="shrink-0 text-xs tabular-nums text-text-muted">
-                {project.completedTaskCount}/{project.taskCount}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
+      )}
 
       <ConfirmationDialog
         isOpen={showArchiveConfirm}
@@ -327,6 +349,53 @@ function CreateModal({
   );
 }
 
+// ─── ProjectList ──────────────────────────────────────────────
+function ProjectList({
+  projects,
+  organizationId,
+  isAdmin,
+  slug,
+  router,
+  archived,
+  onManageMembers,
+  trailingAction,
+}: {
+  projects: Project[];
+  organizationId: string;
+  isAdmin: boolean;
+  slug: string;
+  router: ReturnType<typeof useRouter>;
+  archived?: boolean;
+  onManageMembers: (project: Project) => void;
+  trailingAction?: React.ReactNode;
+}) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface">
+      <div className={cn('hidden px-6 py-2.5 text-xs font-semibold text-text-secondary bg-surface-muted/50 border-b border-border-subtle sm:grid sm:items-center sm:gap-4', ROW_GRID, isAdmin && 'sm:pr-11')}>
+        <span>Project</span>
+        <span className="text-right">Role</span>
+        <span className="text-right">Members</span>
+        <span>Progress</span>
+        <span className="text-right">Updated</span>
+      </div>
+      <div className="divide-y divide-border-subtle">
+        {projects.map((project) => (
+          <ProjectRow
+            key={project.id}
+            project={project}
+            organizationId={organizationId}
+            isAdmin={isAdmin}
+            onNavigate={() => router.push(`/org/${slug}/projects/${project.id}`)}
+            onManageMembers={() => onManageMembers(project)}
+            archived={archived}
+          />
+        ))}
+        {trailingAction}
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────
 export default function ProjectsPage({ params }: Props) {
   const { slug } = use(params);
@@ -383,43 +452,23 @@ export default function ProjectsPage({ params }: Props) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-text-primary">Projects</h1>
           <p className="mt-0.5 text-sm text-text-secondary">
-            {activeProjects.length} active project{activeProjects.length !== 1 ? 's' : ''} in {org.name}
+            {activeProjects.length} active project{activeProjects.length !== 1 ? 's' : ''} · {managedCount} you manage · {archivedProjects.length} archived
           </p>
         </div>
         {isAdmin && (
-          <Button onClick={() => setShowModal(true)} className="gap-1.5">
+          <Button onClick={() => setShowModal(true)} className="gap-1.5 shrink-0">
             <Plus size={15} /> New Project
           </Button>
         )}
       </div>
 
-      {/* Stats strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 rounded-lg border border-border-subtle bg-surface overflow-hidden divide-x divide-y sm:divide-y-0 divide-border-subtle">
-        <div className="flex flex-col gap-1 px-6 py-4">
-          <span className="text-xs font-medium text-text-muted uppercase tracking-wide">Total Projects</span>
-          <p className="text-3xl font-bold text-text-primary">{allProjects.length}</p>
-        </div>
-        <div className="flex flex-col gap-1 px-6 py-4">
-          <span className="text-xs font-medium text-text-muted uppercase tracking-wide">Active</span>
-          <p className="text-3xl font-bold text-text-primary">{activeProjects.length}</p>
-        </div>
-        <div className="flex flex-col gap-1 px-6 py-4">
-          <span className="text-xs font-medium text-text-muted uppercase tracking-wide">Archived</span>
-          <p className="text-3xl font-bold text-text-primary">{archivedProjects.length}</p>
-        </div>
-        <div className="flex flex-col gap-1 px-6 py-4">
-          <span className="text-xs font-medium text-text-muted uppercase tracking-wide">I Manage</span>
-          <p className="text-3xl font-bold text-text-primary">{managedCount}</p>
-        </div>
-      </div>
-
       {/* Search + sort */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="relative w-full max-w-sm">
           <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           <Input
             placeholder="Search projects..."
@@ -428,60 +477,66 @@ export default function ProjectsPage({ params }: Props) {
             className="pl-9"
           />
         </div>
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as SortOption)}
-          className="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <option value="name">Name (A–Z)</option>
-          <option value="updated">Recently Updated</option>
-          <option value="role">My Role</option>
-        </select>
+        <div className="inline-flex items-center gap-0.5 rounded-md border border-border-subtle bg-surface p-0.5">
+          {SORT_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setSortBy(opt.value)}
+              className={cn(
+                'rounded px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                sortBy === opt.value
+                  ? 'bg-brand-soft text-brand-hover'
+                  : 'text-text-muted hover:text-text-secondary',
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Active projects grid */}
+      {/* Active projects list */}
       {visibleActiveProjects.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border-muted bg-surface py-20 text-center">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted">
-            <FolderOpen size={22} className="text-text-muted" />
+        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border-subtle bg-surface py-16 text-center">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-muted">
+            <FolderOpen size={20} className="text-text-muted" />
           </div>
-          <h2 className="text-sm font-semibold text-text-primary">
-            {search ? 'No projects match your search' : 'No projects yet'}
-          </h2>
-          <p className="mt-1 max-w-xs text-sm text-text-muted">
-            {search
-              ? 'Try a different search term.'
-              : "Create your first project to start organizing your team's work."}
-          </p>
+          <div>
+            <h2 className="text-sm font-medium text-text-secondary">
+              {search ? 'No projects match your search' : 'No projects yet'}
+            </h2>
+            <p className="mt-1 max-w-xs text-sm text-text-secondary/70">
+              {search
+                ? 'Try a different search term.'
+                : "Create your first project to start organizing your team's work."}
+            </p>
+          </div>
           {isAdmin && !search && (
-            <Button className="mt-5" onClick={() => setShowModal(true)}>
+            <Button className="mt-1" onClick={() => setShowModal(true)}>
               <Plus size={15} className="mr-1.5" /> Create Project
             </Button>
           )}
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {visibleActiveProjects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              organizationId={org.id}
-              isAdmin={isAdmin}
-              onNavigate={() => router.push(`/org/${slug}/projects/${project.id}`)}
-              onManageMembers={() => setManagingProject(project)}
-            />
-          ))}
-          {/* Inline "New Project" card for admins */}
-          {isAdmin && !search && (
+        <ProjectList
+          projects={visibleActiveProjects}
+          organizationId={org.id}
+          isAdmin={isAdmin}
+          slug={slug}
+          router={router}
+          onManageMembers={setManagingProject}
+          trailingAction={isAdmin && !search ? (
             <button
               onClick={() => setShowModal(true)}
-              className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border-muted bg-transparent h-[168px] text-text-muted hover:border-text-muted hover:text-text-secondary hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex w-full items-center gap-3 px-6 py-3.5 text-left text-sm font-medium text-text-muted transition-colors hover:bg-surface-hover hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Plus size={20} strokeWidth={1.5} />
-              <span className="mt-2 text-sm font-medium">New Project</span>
+              <span className="flex h-9 w-9 items-center justify-center rounded-md border border-dashed border-border-muted">
+                <Plus size={15} />
+              </span>
+              New project
             </button>
-          )}
-        </div>
+          ) : null}
+        />
       )}
 
       {/* Archived section */}
@@ -496,19 +551,15 @@ export default function ProjectsPage({ params }: Props) {
           </button>
 
           {archivedOpen && (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {visibleArchivedProjects.map((project) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  organizationId={org.id}
-                  isAdmin={isAdmin}
-                  onNavigate={() => router.push(`/org/${slug}/projects/${project.id}`)}
-                  onManageMembers={() => setManagingProject(project)}
-                  archived
-                />
-              ))}
-            </div>
+            <ProjectList
+              projects={visibleArchivedProjects}
+              organizationId={org.id}
+              isAdmin={isAdmin}
+              slug={slug}
+              router={router}
+              archived
+              onManageMembers={setManagingProject}
+            />
           )}
         </div>
       )}

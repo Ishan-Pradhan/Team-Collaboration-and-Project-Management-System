@@ -39,16 +39,17 @@ export const kanbanColumnRepository = {
 
   update: async (
     id: string,
+    projectId: string,
     data: Partial<KanbanColumnCreationAttributes>
   ): Promise<KanbanColumnInstance | null> => {
-    const col = await KanbanColumn.findByPk(id);
+    const col = await KanbanColumn.findOne({ where: { id, projectId } });
     if (!col) return null;
     return await col.update(data);
   },
 
-  delete: async (id: string): Promise<number> => {
+  delete: async (id: string, projectId: string): Promise<number> => {
     return await KanbanColumn.destroy({
-      where: { id },
+      where: { id, projectId },
     });
   },
 

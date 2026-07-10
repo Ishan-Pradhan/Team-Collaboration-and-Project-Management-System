@@ -1,6 +1,17 @@
 import { Resend } from 'resend';
 import { env } from '../config/env.js';
 
+// Escapes user-controlled strings (task titles, org names, etc.) before they're
+// interpolated into HTML email templates, preventing HTML/link injection in
+// transactional emails sent from the platform's own domain.
+const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 // Initialize Resend
 const getResendClient = () => {
   const apiKey = env.RESEND_API_KEY;
@@ -170,9 +181,9 @@ const resetPasswordTemplate = (resetLink: string) => `
 
 const notificationTemplate = (subject: string, bodyText: string, link: string) => `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-      <h2 style="color: #2aaad5;">${subject}</h2>
+      <h2 style="color: #2aaad5;">${escapeHtml(subject)}</h2>
 
-      <p>${bodyText}</p>
+      <p>${escapeHtml(bodyText)}</p>
 
       <a href="${link}"
          style="
@@ -198,7 +209,7 @@ const orgInviteTemplate = (orgName: string, inviteLink: string, invitedByName: s
       <h2 style="color: #4CAF50;">You've been invited!</h2>
       
       <p>Hi there,</p>
-      <p><strong>${invitedByName}</strong> has invited you to join the organization <strong>${orgName}</strong> on the Team Collaboration Platform.</p>
+      <p><strong>${escapeHtml(invitedByName)}</strong> has invited you to join the organization <strong>${escapeHtml(orgName)}</strong> on the Team Collaboration Platform.</p>
       
       <p>To accept this invitation and join the organization, click the button below:</p>
       

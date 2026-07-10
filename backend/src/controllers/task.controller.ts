@@ -32,6 +32,15 @@ const requireProjectMembership = async (projectId: string, userId: string) => {
   return project;
 };
 
+// Helper — verify the task belongs to the project the caller was authorized against.
+// Without this, a taskId from an unrelated project could be paired with a projectId
+// the caller legitimately belongs to, leaking or mutating data across tenants.
+const requireTaskInProject = async (projectId: string, taskId: string) => {
+  const task = await taskRepository.findById(taskId);
+  if (!task || task.projectId !== projectId) throw new ApiError(404, 'Task not found');
+  return task;
+};
+
 // Helper — resolve whether the user is a project manager, org admin, or org owner
 async function getTaskPermissionContext(
   project: { organizationId: string },
@@ -384,7 +393,7 @@ export const updateColumn = asyncHandler(
 
     await requireProjectMembership(projectId, user.id);
 
-    const updated = await kanbanColumnRepository.update(columnId, {
+    const updated = await kanbanColumnRepository.update(columnId, projectId, {
       ...(name !== undefined && { name: name.trim() }),
       ...(color !== undefined && { color }),
     });
@@ -403,7 +412,7 @@ export const deleteColumn = asyncHandler(
 
     await requireProjectMembership(projectId, user.id);
 
-    const count = await kanbanColumnRepository.delete(columnId);
+    const count = await kanbanColumnRepository.delete(columnId, projectId);
     if (count === 0) throw new ApiError(404, 'Column not found');
 
     return ok(res, null, 'Column deleted successfully');
@@ -452,6 +461,7 @@ export const listComments = asyncHandler(async (req: AuthRequest, res: Response)
   if (!user) throw new ApiError(401, 'Unauthorized');
 
   await requireProjectMembership(projectId, user.id);
+  await requireTaskInProject(projectId, taskId);
 
   const comments = await taskCommentRepository.findByTask(taskId);
   return ok(res, comments, 'Comments retrieved successfully');
@@ -518,6 +528,7 @@ export const deleteComment = asyncHandler(async (req: AuthRequest, res: Response
   if (!user) throw new ApiError(401, 'Unauthorized');
 
   await requireProjectMembership(projectId, user.id);
+  await requireTaskInProject(projectId, taskId);
 
   const comment = await taskCommentRepository.findById(commentId);
   if (!comment || comment.taskId !== taskId) throw new ApiError(404, 'Comment not found');
@@ -546,6 +557,7 @@ export const listSubtasks = asyncHandler(async (req: AuthRequest, res: Response)
   if (!user) throw new ApiError(401, 'Unauthorized');
 
   await requireProjectMembership(projectId, user.id);
+  await requireTaskInProject(projectId, taskId);
 
   const subtasks = await subtaskRepository.findByTask(taskId);
   return ok(res, subtasks, 'Subtasks retrieved');
@@ -577,6 +589,7 @@ export const toggleSubtask = asyncHandler(async (req: AuthRequest, res: Response
   if (!user) throw new ApiError(401, 'Unauthorized');
 
   await requireProjectMembership(projectId, user.id);
+  await requireTaskInProject(projectId, taskId);
 
   const subtask = await subtaskRepository.findById(subtaskId);
   if (!subtask || subtask.taskId !== taskId) throw new ApiError(404, 'Subtask not found');
@@ -594,6 +607,7 @@ export const deleteSubtask = asyncHandler(async (req: AuthRequest, res: Response
   if (!user) throw new ApiError(401, 'Unauthorized');
 
   await requireProjectMembership(projectId, user.id);
+  await requireTaskInProject(projectId, taskId);
 
   const subtask = await subtaskRepository.findById(subtaskId);
   if (!subtask || subtask.taskId !== taskId) throw new ApiError(404, 'Subtask not found');
@@ -617,6 +631,7 @@ export const listTaskAttachments = asyncHandler(async (req: AuthRequest, res: Re
   if (!user) throw new ApiError(401, 'Unauthorized');
 
   await requireProjectMembership(projectId, user.id);
+  await requireTaskInProject(projectId, taskId);
 
   const attachments = await taskAttachmentRepository.findByTask(taskId);
   return ok(res, attachments, 'Attachments retrieved');
@@ -676,6 +691,7 @@ export const deleteAttachment = asyncHandler(async (req: AuthRequest, res: Respo
   if (!user) throw new ApiError(401, 'Unauthorized');
 
   await requireProjectMembership(projectId, user.id);
+  await requireTaskInProject(projectId, taskId);
 
   const attachment = await taskAttachmentRepository.findById(attachmentId);
   if (!attachment || attachment.taskId !== taskId) throw new ApiError(404, 'Attachment not found');
@@ -700,6 +716,7 @@ export const downloadAttachment = asyncHandler(async (req: AuthRequest, res: Res
   if (!user) throw new ApiError(401, 'Unauthorized');
 
   await requireProjectMembership(projectId, user.id);
+  await requireTaskInProject(projectId, taskId);
 
   const attachment = await taskAttachmentRepository.findById(attachmentId);
   if (!attachment || attachment.taskId !== taskId) throw new ApiError(404, 'Attachment not found');
