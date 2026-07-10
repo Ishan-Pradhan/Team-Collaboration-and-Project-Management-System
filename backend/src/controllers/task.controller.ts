@@ -15,6 +15,8 @@ import { logActivity } from '../utils/activity.js';
 import { notifyUser } from '../utils/notify.js';
 import { env } from '../config/env.js';
 import { getIO } from '../socket/index.js';
+import { userRepository } from '../repositories/users.repository.js';
+import { extractMentionedUserIds } from '../utils/mentions.js';
 function cloudinaryResourceType(mimeType: string): 'image' | 'video' | 'raw' {
   if (mimeType.startsWith('image/') || mimeType === 'application/pdf') return 'image';
   if (mimeType.startsWith('video/')) return 'video';
@@ -489,7 +491,7 @@ export const listComments = asyncHandler(async (req: AuthRequest, res: Response)
 // POST /projects/:projectId/tasks/:taskId/comments
 export const createComment = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { projectId, taskId } = req.params as { projectId: string; taskId: string };
-  const { content } = req.body as { content: string };
+  const { content, replyToId } = req.body as { content: string; replyToId?: string | null };
   const user = req.user;
   if (!user) throw new ApiError(401, 'Unauthorized');
 
@@ -498,12 +500,26 @@ export const createComment = asyncHandler(async (req: AuthRequest, res: Response
   const task = await taskRepository.findById(taskId);
   if (!task || task.projectId !== projectId) throw new ApiError(404, 'Task not found');
 
-  const comment = await taskCommentRepository.create({ taskId, authorId: user.id, content: content.trim() });
+  if (replyToId) {
+    const replyTarget = await taskCommentRepository.findById(replyToId);
+    if (!replyTarget || replyTarget.taskId !== taskId) {
+      throw new ApiError(400, 'The comment being replied to was not found on this task');
+    }
+  }
+
+  const trimmedContent = content.trim();
+  const comment = await taskCommentRepository.create({
+    taskId,
+    authorId: user.id,
+    content: trimmedContent,
+    replyToId: replyToId || null,
+  });
+
+  const org = await organizationRepository.findById(project.organizationId);
+  const link = `${(env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '')}/org/${org?.slug}/projects/${project.id}?taskId=${taskId}`;
 
   const otherAssignees = (task.assignees ?? []).filter((assignee) => assignee.id !== user.id);
   if (otherAssignees.length > 0) {
-    const org = await organizationRepository.findById(project.organizationId);
-    const trimmedContent = content.trim();
     await Promise.all(
       otherAssignees.map((assignee) =>
         notifyUser({
@@ -519,10 +535,47 @@ export const createComment = asyncHandler(async (req: AuthRequest, res: Response
             to: assignee.email,
             subject: `${user.name} commented on "${task.title}"`,
             bodyText: trimmedContent.slice(0, 200),
-            link: `${(env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '')}/org/${org?.slug}/projects/${project.id}?taskId=${taskId}`,
+            link,
           },
         })
       )
+    );
+  }
+
+  // Mentions can reach anyone on the project, not just assignees — but skip
+  // anyone already notified above via task_comment_added, so a mentioned
+  // assignee doesn't get two notifications for the same comment.
+  const projectMembers = await projectRepository.findMembers(projectId);
+  const alreadyNotified = new Set(otherAssignees.map((a) => a.id));
+  const mentionedUserIds = extractMentionedUserIds(
+    trimmedContent,
+    projectMembers.map((m) => m.userId),
+  ).filter((id) => id !== user.id && !alreadyNotified.has(id));
+
+  if (mentionedUserIds.length > 0) {
+    const mentionTitle = `${user.name} mentioned you on "${task.title}"`;
+    await Promise.all(
+      mentionedUserIds.map(async (mentionedUserId) => {
+        const targetUser = await userRepository.findById(mentionedUserId);
+        await notifyUser({
+          userId: mentionedUserId,
+          organizationId: project.organizationId,
+          projectId: project.id,
+          type: 'mention',
+          title: mentionTitle,
+          body: trimmedContent.slice(0, 200),
+          entityType: 'task',
+          entityId: taskId,
+          email: targetUser
+            ? {
+                to: targetUser.email,
+                subject: mentionTitle,
+                bodyText: trimmedContent.slice(0, 200),
+                link,
+              }
+            : undefined,
+        });
+      })
     );
   }
 
@@ -532,7 +585,7 @@ export const createComment = asyncHandler(async (req: AuthRequest, res: Response
     type: 'comment_added',
     entityType: 'task',
     entityId: taskId,
-    metadata: { taskTitle: task.title, taskId, commentId: comment.id, content: content.trim() },
+    metadata: { taskTitle: task.title, taskId, commentId: comment.id, content: trimmedContent },
   });
 
   getIO().to(`project:${projectId}`).emit('task:comment:created', { taskId, projectId, comment });

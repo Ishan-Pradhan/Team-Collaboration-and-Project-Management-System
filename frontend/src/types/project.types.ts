@@ -84,6 +84,7 @@ export interface TaskComment {
   taskId: string;
   authorId: string;
   content: string;
+  replyToId: string | null;
   createdAt: string;
   updatedAt: string;
   author?: {
@@ -92,6 +93,11 @@ export interface TaskComment {
     email: string;
     avatarUrl: string | null;
   };
+  replyTo?: {
+    id: string;
+    content: string;
+    author: { id: string; name: string } | null;
+  } | null;
 }
 
 // ─── Subtask ───────────────────────────────────────────────────

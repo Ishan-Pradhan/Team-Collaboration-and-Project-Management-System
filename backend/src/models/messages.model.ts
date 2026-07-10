@@ -55,6 +55,10 @@ export const Message = sequelize.define<MessageInstance>(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    replyToId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+    },
   },
   {
     tableName: 'messages',

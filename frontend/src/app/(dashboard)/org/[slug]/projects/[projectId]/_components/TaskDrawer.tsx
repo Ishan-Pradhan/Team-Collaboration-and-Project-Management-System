@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import {
   Calendar, ChevronDown, Loader2, User, X, Plus, Trash2,
   Check, MessageSquare, CheckSquare, Paperclip, ChevronRight,
-  Eye, FileText, Image as ImageIcon, File, Download, Send,
+  Eye, FileText, Image as ImageIcon, File, Download, Send, Reply,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,10 @@ import {
 import { useAuthStore } from '@/store/auth.store';
 import { parseApiError } from '@/lib/axios';
 import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
+import MentionDropdown from '@/components/shared/MentionDropdown';
+import ReplyQuote from '@/components/shared/ReplyQuote';
+import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete';
+import { renderContent } from '@/lib/messageContent';
 
 // ─── helpers ──────────────────────────────────────────────────
 const COLORS = ['#22302a', '#d4a84f', '#6f8c78', '#a86c58', '#4b7f52', '#c38a2d'];
@@ -549,22 +553,71 @@ function CommentsTab({ task, projectId, currentUserId, isAdmin }: {
   task: Task; projectId: string; currentUserId: string; isAdmin: boolean;
 }) {
   const { data: comments = [], isLoading } = useTaskComments(projectId, task.id);
+  const { data: projectMembers } = useProjectMembers(projectId);
   const createComment = useCreateComment(projectId, task.id);
   const deleteComment = useDeleteComment(projectId, task.id);
 
   const [text, setText] = useState('');
+  const [replyTarget, setReplyTarget] = useState<TaskComment | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const mentionCandidates = (projectMembers ?? [])
+    .filter((m) => m.userId !== currentUserId && m.user)
+    .map((m) => ({ id: m.user!.id, name: m.user!.name, avatarUrl: m.user!.avatarUrl }));
+  const mention = useMentionAutocomplete(mentionCandidates);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [comments.length]);
 
+  const jumpToComment = (commentId: string) => {
+    const el = document.getElementById(`comment-${commentId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('bg-brand-soft');
+    setTimeout(() => el.classList.remove('bg-brand-soft'), 1200);
+  };
+
   const handleSend = () => {
     if (!text.trim()) return;
-    createComment.mutate(text.trim(), {
-      onSuccess: () => setText(''),
-      onError: (err: unknown) => toast.error(parseApiError(err).message),
+    createComment.mutate(
+      { content: text.trim(), replyToId: replyTarget?.id ?? null },
+      {
+        onSuccess: () => { setText(''); setReplyTarget(null); },
+        onError: (err: unknown) => toast.error(parseApiError(err).message),
+      }
+    );
+  };
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setText(e.target.value);
+    mention.handleTextChange(e.target.value, e.target.selectionStart ?? e.target.value.length);
+  };
+
+  const handleSelectMention = (candidate: { id: string; name: string; avatarUrl?: string | null }) => {
+    const applied = mention.applyMention(text, candidate);
+    if (!applied) return;
+    setText(applied.value);
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+      textareaRef.current?.setSelectionRange(applied.caretPos, applied.caretPos);
     });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mention.isOpen) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); mention.setActiveIndex((i) => (i + 1) % mention.filtered.length); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); mention.setActiveIndex((i) => (i - 1 + mention.filtered.length) % mention.filtered.length); return; }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        const candidate = mention.filtered[mention.activeIndex];
+        if (candidate) handleSelectMention(candidate);
+        return;
+      }
+      if (e.key === 'Escape') { mention.close(); return; }
+    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
   return (
@@ -583,7 +636,7 @@ function CommentsTab({ task, projectId, currentUserId, isAdmin }: {
           comments.map((c: TaskComment) => {
             const isOwn = c.authorId === currentUserId;
             return (
-              <div key={c.id} className="group flex gap-3">
+              <div key={c.id} id={`comment-${c.id}`} className="group flex gap-3 rounded-lg transition-colors duration-500">
                 {c.author && <Avatar name={c.author.name} url={c.author.avatarUrl} size={7} />}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2">
@@ -596,16 +649,34 @@ function CommentsTab({ task, projectId, currentUserId, isAdmin }: {
                       })}
                     </span>
                   </div>
-                  <p className="mt-0.5 text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">{c.content}</p>
+                  {c.replyTo && (
+                    <ReplyQuote
+                      authorName={c.replyTo.author?.name ?? 'Unknown'}
+                      content={c.replyTo.content}
+                      onClick={() => jumpToComment(c.replyTo!.id)}
+                    />
+                  )}
+                  <p className="mt-0.5 text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">
+                    {renderContent(c.content, { currentUserId })}
+                  </p>
                 </div>
-                {(isOwn || isAdmin) && (
+                <div className="flex shrink-0 items-start gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
                   <button
-                    onClick={() => deleteComment.mutate(c.id)}
-                    className="shrink-0 self-start rounded p-1 text-text-muted opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-red-50 transition-all mt-0.5"
+                    onClick={() => setReplyTarget(c)}
+                    className="self-start rounded p-1 text-text-muted hover:bg-surface-muted hover:text-text-primary transition-colors mt-0.5"
+                    title="Reply"
                   >
-                    <Trash2 size={13} />
+                    <Reply size={13} />
                   </button>
-                )}
+                  {(isOwn || isAdmin) && (
+                    <button
+                      onClick={() => deleteComment.mutate(c.id)}
+                      className="self-start rounded p-1 text-text-muted hover:text-red-500 hover:bg-red-50 transition-colors mt-0.5"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })
@@ -615,11 +686,30 @@ function CommentsTab({ task, projectId, currentUserId, isAdmin }: {
 
       {/* Input */}
       <div className="border-t border-border-subtle px-5 py-3.5 bg-surface">
-        <div className="flex items-end gap-2 rounded-xl border border-border-subtle bg-surface-muted px-3 py-2.5 focus-within:border-blue-300 focus-within:ring-1 focus-within:ring-blue-100 transition">
+        {replyTarget && (
+          <ReplyQuote
+            authorName={replyTarget.authorId === currentUserId ? 'yourself' : 'Unknown'}
+            content={replyTarget.content}
+            onDismiss={() => setReplyTarget(null)}
+          />
+        )}
+        <div className={cn(
+          'relative flex items-end gap-2 border border-border-subtle bg-surface-muted px-3 py-2.5 focus-within:border-blue-300 focus-within:ring-1 focus-within:ring-blue-100 transition',
+          replyTarget ? 'rounded-b-xl border-t-0' : 'rounded-xl',
+        )}>
+          {mention.isOpen && (
+            <MentionDropdown
+              candidates={mention.filtered}
+              activeIndex={mention.activeIndex}
+              onHover={mention.setActiveIndex}
+              onSelect={handleSelectMention}
+            />
+          )}
           <textarea
+            ref={textareaRef}
             value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+            onChange={handleTextChange}
+            onKeyDown={handleKeyDown}
             placeholder="Write a comment… (Enter to send, Shift+Enter for new line)"
             rows={2}
             className="flex-1 bg-transparent text-sm text-text-primary outline-none placeholder-text-muted resize-none leading-relaxed"

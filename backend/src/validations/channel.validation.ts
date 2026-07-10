@@ -53,6 +53,7 @@ export const sendMessageSchema = {
   }),
   body: z.object({
     content: z.string().min(1, 'Message content is required').max(4000, 'Message must be 4000 characters or less'),
+    replyToId: z.string().uuid('Invalid message ID').optional().nullable(),
   }),
 };
 

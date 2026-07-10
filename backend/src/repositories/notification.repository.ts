@@ -1,5 +1,15 @@
+import { Op } from 'sequelize';
 import { Notification } from '../models/index.js';
 import type { NotificationCreationAttributes, NotificationInstance } from '../types/notifications.types.js';
+
+// "New message" notifications are only ever created to drive the chat
+// sidebar's per-channel unread dots (see upsertMessageNotification /
+// findUnreadChannels below) — they were never meant to also populate the
+// notification bell, which is what caused the bell badge and the chat
+// unread dot to double up for the same message. The bell/feed queries
+// below exclude this type; mentions get their own 'mention' type and do
+// show up here same as any other real notification.
+const NOT_MESSAGE_RECEIVED = { [Op.ne]: 'message_received' } as const;
 
 export const notificationRepository = {
   create: async (data: NotificationCreationAttributes): Promise<NotificationInstance> => {
@@ -8,7 +18,7 @@ export const notificationRepository = {
 
   findByUser: async (userId: string, limit: number, offset: number): Promise<NotificationInstance[]> => {
     return await Notification.findAll({
-      where: { userId },
+      where: { userId, type: NOT_MESSAGE_RECEIVED },
       order: [['createdAt', 'DESC']],
       limit,
       offset,
@@ -16,11 +26,11 @@ export const notificationRepository = {
   },
 
   countByUser: async (userId: string): Promise<number> => {
-    return await Notification.count({ where: { userId } });
+    return await Notification.count({ where: { userId, type: NOT_MESSAGE_RECEIVED } });
   },
 
   countUnread: async (userId: string): Promise<number> => {
-    return await Notification.count({ where: { userId, isRead: false } });
+    return await Notification.count({ where: { userId, isRead: false, type: NOT_MESSAGE_RECEIVED } });
   },
 
   markRead: async (id: string, userId: string): Promise<number> => {

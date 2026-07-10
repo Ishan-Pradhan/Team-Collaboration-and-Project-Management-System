@@ -49,12 +49,19 @@ export interface Message {
   cloudinaryPublicId: string | null;
   fileType: string | null;
   fileSize: number | null;
+  replyToId: string | null;
   reactions: ReactionSummary[];
   sender?: {
     id: string;
     name: string;
     avatarUrl: string | null;
   };
+  replyTo?: {
+    id: string;
+    content: string;
+    deletedAt: string | null;
+    sender: { id: string; name: string } | null;
+  } | null;
 }
 
 export interface ChannelsResponse {

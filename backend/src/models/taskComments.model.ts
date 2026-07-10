@@ -22,6 +22,10 @@ export const TaskComment = sequelize.define<TaskCommentInstance>(
       type: DataTypes.TEXT,
       allowNull: false,
     },
+    replyToId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+    },
   },
   {
     tableName: 'task_comments',

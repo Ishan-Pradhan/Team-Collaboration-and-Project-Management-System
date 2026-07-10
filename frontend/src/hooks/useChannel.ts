@@ -96,7 +96,8 @@ export const useChannelMessages = (channelId: string) =>
 export const useSendMessage = (channelId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (content: string) => sendMessage(channelId, content),
+    mutationFn: ({ content, replyToId }: { content: string; replyToId?: string | null }) =>
+      sendMessage(channelId, content, replyToId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['channels', channelId, 'messages'] }),
   });
 };

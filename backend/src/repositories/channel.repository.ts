@@ -194,6 +194,12 @@ export const messageRepository = {
       include: [
         { model: User, as: 'sender', attributes: ['id', 'name', 'avatarUrl'] },
         { model: MessageReaction, as: 'reactions', attributes: ['emoji', 'userId'] },
+        {
+          model: Message,
+          as: 'replyTo',
+          attributes: ['id', 'content', 'deletedAt'],
+          include: [{ model: User, as: 'sender', attributes: ['id', 'name'] }],
+        },
       ],
     });
     if (!message) return null;
@@ -216,6 +222,12 @@ export const messageRepository = {
       include: [
         { model: User, as: 'sender', attributes: ['id', 'name', 'avatarUrl'] },
         { model: MessageReaction, as: 'reactions', attributes: ['emoji', 'userId'] },
+        {
+          model: Message,
+          as: 'replyTo',
+          attributes: ['id', 'content', 'deletedAt'],
+          include: [{ model: User, as: 'sender', attributes: ['id', 'name'] }],
+        },
       ],
       order: [['createdAt', 'DESC']],
       limit: options.limit,

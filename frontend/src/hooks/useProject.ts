@@ -274,7 +274,8 @@ export const useTaskComments = (projectId: string, taskId: string) =>
 export const useCreateComment = (projectId: string, taskId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (content: string) => createTaskComment(projectId, taskId, content),
+    mutationFn: ({ content, replyToId }: { content: string; replyToId?: string | null }) =>
+      createTaskComment(projectId, taskId, content, replyToId),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ['projects', projectId, 'tasks', taskId, 'comments'] }),
   });

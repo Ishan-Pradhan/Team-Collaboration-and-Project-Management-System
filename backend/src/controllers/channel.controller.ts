@@ -18,6 +18,7 @@ import { getIO } from '../socket/index.js';
 import { notifyUser, notifyNewMessage } from '../utils/notify.js';
 import { env } from '../config/env.js';
 import type { ChannelInstance } from '../types/channels.types.js';
+import { extractMentionedUserIds } from '../utils/mentions.js';
 
 export const createChannel = asyncHandler(async (req: AuthRequest, res: Response) => {
   const organizationId = req.params.organizationId as string;
@@ -286,12 +287,19 @@ export const removeChannelMember = asyncHandler(async (req: AuthRequest, res: Re
 
 export const sendMessage = asyncHandler(async (req: AuthRequest, res: Response) => {
   const channelId = req.params.channelId as string;
-  const { content } = req.body as { content: string };
+  const { content, replyToId } = req.body as { content: string; replyToId?: string | null };
   const user = req.user;
   if (!user) throw new ApiError(401, 'Unauthorized');
 
   const channel = await channelRepository.findById(channelId);
   if (!channel) throw new ApiError(404, 'Channel not found');
+
+  if (replyToId) {
+    const replyTarget = await messageRepository.findById(replyToId);
+    if (!replyTarget || replyTarget.channelId !== channelId) {
+      throw new ApiError(400, 'The message being replied to was not found in this channel');
+    }
+  }
 
   const trimmedContent = content.trim();
   const created = await messageRepository.create({
@@ -299,12 +307,16 @@ export const sendMessage = asyncHandler(async (req: AuthRequest, res: Response) 
     senderId: user.id,
     type: 'TEXT',
     content: trimmedContent,
+    replyToId: replyToId || null,
   });
   const message = await messageRepository.findById(created.id);
 
   getIO().to(`channel:${channelId}`).emit('message:new', message);
 
   const members = await channelMemberRepository.findMembers(channelId);
+
+  // Drives the chat sidebar's per-channel unread dots only — excluded from
+  // the notification bell (see notification.repository.ts).
   const title = channel.type === 'DM'
     ? `${user.name} sent you a message`
     : `${user.name} sent a message in #${channel.name}`;
@@ -321,6 +333,41 @@ export const sendMessage = asyncHandler(async (req: AuthRequest, res: Response) 
         })
       )
   );
+
+  const mentionedUserIds = extractMentionedUserIds(
+    trimmedContent,
+    members.map((m) => m.userId),
+  ).filter((id) => id !== user.id);
+
+  if (mentionedUserIds.length > 0) {
+    const org = await organizationRepository.findById(channel.organizationId);
+    const mentionTitle = channel.type === 'DM'
+      ? `${user.name} mentioned you`
+      : `${user.name} mentioned you in #${channel.name}`;
+    const link = `${(env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '')}/org/${org?.slug}/chat?channelId=${channelId}`;
+    await Promise.all(
+      mentionedUserIds.map(async (mentionedUserId) => {
+        const targetUser = await userRepository.findById(mentionedUserId);
+        await notifyUser({
+          userId: mentionedUserId,
+          organizationId: channel.organizationId,
+          type: 'mention',
+          title: mentionTitle,
+          body: trimmedContent.slice(0, 200),
+          entityType: 'channel',
+          entityId: channelId,
+          email: targetUser
+            ? {
+                to: targetUser.email,
+                subject: mentionTitle,
+                bodyText: trimmedContent.slice(0, 200),
+                link,
+              }
+            : undefined,
+        });
+      })
+    );
+  }
 
   return res.status(201).json({
     success: true,

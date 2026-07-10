@@ -64,6 +64,7 @@ Task.hasMany(Subtask, { foreignKey: 'taskId', onDelete: 'CASCADE', as: 'subtasks
 // Task Comments
 TaskComment.belongsTo(Task, { foreignKey: 'taskId', as: 'task' });
 TaskComment.belongsTo(User, { as: 'author', foreignKey: 'authorId' });
+TaskComment.belongsTo(TaskComment, { as: 'replyTo', foreignKey: 'replyToId' });
 
 // Task Attachments
 TaskAttachment.belongsTo(Task, { foreignKey: 'taskId', as: 'task' });
@@ -84,6 +85,7 @@ Channel.hasMany(Message, { foreignKey: 'channelId', onDelete: 'CASCADE', as: 'me
 Message.belongsTo(Channel, { foreignKey: 'channelId', as: 'channel' });
 Message.belongsTo(User, { as: 'sender', foreignKey: 'senderId' });
 Message.belongsTo(User, { as: 'deleter', foreignKey: 'deletedBy' });
+Message.belongsTo(Message, { as: 'replyTo', foreignKey: 'replyToId' });
 Message.hasMany(MessageReaction, { foreignKey: 'messageId', onDelete: 'CASCADE', as: 'reactions' });
 MessageReaction.belongsTo(Message, { foreignKey: 'messageId', as: 'message' });
 MessageReaction.belongsTo(User, { foreignKey: 'userId', as: 'user' });

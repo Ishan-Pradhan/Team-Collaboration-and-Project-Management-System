@@ -44,15 +44,17 @@ export interface TaskComments {
   taskId: string;
   authorId: string;
   content: string;
+  replyToId?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
   task?: TaskInstance;
   author?: UserInstance;
+  replyTo?: { id: string; content: string; author: { id: string; name: string } | null } | null;
 }
 
 export type TaskCommentCreationAttributes = Optional<
   TaskComments,
-  'id' | 'createdAt' | 'updatedAt'
+  'id' | 'createdAt' | 'updatedAt' | 'replyToId'
 >;
 
 export interface TaskCommentInstance

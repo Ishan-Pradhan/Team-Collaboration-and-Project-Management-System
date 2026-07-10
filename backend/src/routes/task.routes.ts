@@ -406,7 +406,10 @@ const commentDeleteSchema = {
 };
 const createCommentSchema = {
   params: z.object({ projectId: z.string().uuid(), taskId: z.string().uuid() }),
-  body: z.object({ content: z.string().min(1).max(5000) }),
+  body: z.object({
+    content: z.string().min(1).max(5000),
+    replyToId: z.string().uuid().optional().nullable(),
+  }),
 };
 
 router

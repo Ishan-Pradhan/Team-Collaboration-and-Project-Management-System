@@ -9,14 +9,30 @@ export const taskCommentRepository = {
 
   findById: async (id: string): Promise<TaskCommentInstance | null> => {
     return await TaskComment.findByPk(id, {
-      include: [{ model: User, as: 'author', attributes: ['id', 'name', 'email', 'avatarUrl'] }],
+      include: [
+        { model: User, as: 'author', attributes: ['id', 'name', 'email', 'avatarUrl'] },
+        {
+          model: TaskComment,
+          as: 'replyTo',
+          attributes: ['id', 'content'],
+          include: [{ model: User, as: 'author', attributes: ['id', 'name'] }],
+        },
+      ],
     });
   },
 
   findByTask: async (taskId: string): Promise<TaskCommentInstance[]> => {
     return await TaskComment.findAll({
       where: { taskId },
-      include: [{ model: User, as: 'author', attributes: ['id', 'name', 'email', 'avatarUrl'] }],
+      include: [
+        { model: User, as: 'author', attributes: ['id', 'name', 'email', 'avatarUrl'] },
+        {
+          model: TaskComment,
+          as: 'replyTo',
+          attributes: ['id', 'content'],
+          include: [{ model: User, as: 'author', attributes: ['id', 'name'] }],
+        },
+      ],
       order: [['createdAt', 'ASC']],
     });
   },

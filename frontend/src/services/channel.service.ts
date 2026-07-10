@@ -57,10 +57,10 @@ export async function getMessages(channelId: string, before?: string): Promise<M
   return res.data.data;
 }
 
-export async function sendMessage(channelId: string, content: string): Promise<Message> {
+export async function sendMessage(channelId: string, content: string, replyToId?: string | null): Promise<Message> {
   const res = await api.post<{ success: boolean; message: string; data: Message }>(
     `/channels/${channelId}/messages`,
-    { content },
+    { content, replyToId: replyToId || undefined },
   );
   return res.data.data;
 }

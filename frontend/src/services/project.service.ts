@@ -210,10 +210,11 @@ export async function createTaskComment(
   projectId: string,
   taskId: string,
   content: string,
+  replyToId?: string | null,
 ): Promise<TaskComment> {
   const res = await api.post<{ success: boolean; data: TaskComment }>(
     `/projects/${projectId}/tasks/${taskId}/comments`,
-    { content }
+    { content, replyToId: replyToId || undefined }
   );
   return res.data.data;
 }

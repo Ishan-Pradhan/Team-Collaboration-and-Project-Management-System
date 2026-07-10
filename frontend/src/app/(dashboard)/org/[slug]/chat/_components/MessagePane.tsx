@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, History, Loader2, MessageSquare, Paperclip, Send, Smile, Trash2 } from 'lucide-react';
+import { ChevronDown, History, Loader2, MessageSquare, Paperclip, Reply, Send, Smile, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react';
 import { parseApiError } from '@/lib/axios';
 import { cn } from '@/lib/utils';
 import {
   useChannelMessages,
+  useChannelMembers,
   useSendMessage,
   useAddReaction,
   useRemoveReaction,
@@ -23,6 +24,10 @@ import { getSocket } from '@/lib/socket';
 import { useRouter } from 'next/navigation';
 import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 import UserProfileDialog from '@/components/shared/UserProfileDialog';
+import MentionDropdown from '@/components/shared/MentionDropdown';
+import ReplyQuote from '@/components/shared/ReplyQuote';
+import { useMentionAutocomplete } from '@/hooks/useMentionAutocomplete';
+import { renderContent } from '@/lib/messageContent';
 import { FileAttachmentCard } from './fileDisplay';
 import type { Channel, Message } from '@/types/channel.types';
 
@@ -64,59 +69,6 @@ function formatDateSeparator(iso: string): string {
   });
 }
 
-type ContentToken =
-  | { type: 'text'; value: string }
-  | { type: 'code'; value: string }
-  | { type: 'link'; value: string }
-  | { type: 'mention'; value: string };
-
-const TOKEN_REGEX = /`([^`]+)`|(https?:\/\/[^\s]+)|(@\w+)/g;
-
-function tokenizeMessageContent(content: string): ContentToken[] {
-  const tokens: ContentToken[] = [];
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-  TOKEN_REGEX.lastIndex = 0;
-  while ((match = TOKEN_REGEX.exec(content)) !== null) {
-    if (match.index > lastIndex) {
-      tokens.push({ type: 'text', value: content.slice(lastIndex, match.index) });
-    }
-    if (match[1] !== undefined) tokens.push({ type: 'code', value: match[1] });
-    else if (match[2] !== undefined) tokens.push({ type: 'link', value: match[2] });
-    else tokens.push({ type: 'mention', value: match[3] });
-    lastIndex = TOKEN_REGEX.lastIndex;
-  }
-  if (lastIndex < content.length) tokens.push({ type: 'text', value: content.slice(lastIndex) });
-  return tokens;
-}
-
-function renderMessageContent(content: string) {
-  return tokenizeMessageContent(content).map((token, i) => {
-    if (token.type === 'code') {
-      return (
-        <code key={i} className="rounded bg-surface px-1 py-0.5 font-mono text-[0.8em]">
-          {token.value}
-        </code>
-      );
-    }
-    if (token.type === 'link') {
-      return (
-        <a key={i} href={token.value} target="_blank" rel="noreferrer" className="text-primary underline hover:no-underline">
-          {token.value}
-        </a>
-      );
-    }
-    if (token.type === 'mention') {
-      return (
-        <span key={i} className="rounded bg-primary/10 px-1 font-medium text-primary">
-          {token.value}
-        </span>
-      );
-    }
-    return token.value;
-  });
-}
-
 interface MessageGroupEntry {
   message: Message;
   showHeader: boolean;
@@ -154,6 +106,7 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const qc = useQueryClient();
   const { data: messages, isLoading } = useChannelMessages(channel.id);
+  const { data: channelMembers } = useChannelMembers(channel.id);
   const sendMessage = useSendMessage(channel.id);
   const addReaction = useAddReaction(channel.id);
   const removeReaction = useRemoveReaction(channel.id);
@@ -165,10 +118,25 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
   const [pickerAnchor, setPickerAnchor] = useState<{ top: number; left: number } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [typingUsers, setTypingUsers] = useState<Map<string, string>>(new Map());
+  const [replyTarget, setReplyTarget] = useState<Message | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const contentInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const lastTypingEmitRef = useRef(0);
+
+  const mentionCandidates = (channelMembers ?? [])
+    .filter((m) => m.userId !== user?.id && m.user)
+    .map((m) => ({ id: m.user!.id, name: m.user!.name, avatarUrl: m.user!.avatarUrl }));
+  const mention = useMentionAutocomplete(mentionCandidates);
+
+  const jumpToMessage = (messageId: string) => {
+    const el = document.getElementById(`message-${messageId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('bg-brand-soft');
+    setTimeout(() => el.classList.remove('bg-brand-soft'), 1200);
+  };
 
 
   const isNearBottomRef = useRef(true);
@@ -233,10 +201,13 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
     e.preventDefault();
     const trimmed = content.trim();
     if (!trimmed) return;
-    sendMessage.mutate(trimmed, {
-      onSuccess: () => setContent(''),
-      onError: (err: unknown) => toast.error(parseApiError(err).message),
-    });
+    sendMessage.mutate(
+      { content: trimmed, replyToId: replyTarget?.id ?? null },
+      {
+        onSuccess: () => { setContent(''); setReplyTarget(null); },
+        onError: (err: unknown) => toast.error(parseApiError(err).message),
+      }
+    );
   };
 
   const handleLoadMore = async () => {
@@ -297,10 +268,38 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
 
   const handleContentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setContent(e.target.value);
+    mention.handleTextChange(e.target.value, e.target.selectionStart ?? e.target.value.length);
     const now = Date.now();
     if (now - lastTypingEmitRef.current > 2000) {
       lastTypingEmitRef.current = now;
       getSocket().emit('typing:start', { channelId: channel.id });
+    }
+  };
+
+  const handleSelectMention = (candidate: { id: string; name: string; avatarUrl?: string | null }) => {
+    const applied = mention.applyMention(content, candidate);
+    if (!applied) return;
+    setContent(applied.value);
+    requestAnimationFrame(() => {
+      contentInputRef.current?.focus();
+      contentInputRef.current?.setSelectionRange(applied.caretPos, applied.caretPos);
+    });
+  };
+
+  const handleContentKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!mention.isOpen) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      mention.setActiveIndex((i) => (i + 1) % mention.filtered.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      mention.setActiveIndex((i) => (i - 1 + mention.filtered.length) % mention.filtered.length);
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      const candidate = mention.filtered[mention.activeIndex];
+      if (candidate) handleSelectMention(candidate);
+    } else if (e.key === 'Escape') {
+      mention.close();
     }
   };
 
@@ -345,10 +344,13 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                 {message.type === 'SYSTEM' ? (
                   <p className="text-center text-xs italic text-text-secondary">{message.content}</p>
                 ) : (
-                  <div className={cn(
-                    'group relative flex items-start gap-2.5 py-0.5',
-                    isOwn && 'flex-row-reverse',
-                  )}>
+                  <div
+                    id={`message-${message.id}`}
+                    className={cn(
+                      'group relative flex items-start gap-2.5 rounded-lg py-0.5 transition-colors duration-500',
+                      isOwn && 'flex-row-reverse',
+                    )}
+                  >
                     {showHeader ? (
                       <button
                         onClick={() => message.sender && setProfileUserId(message.sender.id)}
@@ -384,6 +386,14 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                       ) : (
                         <>
                           <div className="relative w-fit max-w-[75%]">
+                            {message.replyTo && (
+                              <ReplyQuote
+                                authorName={message.replyTo.sender?.name ?? 'Unknown'}
+                                content={message.replyTo.content}
+                                deleted={!!message.replyTo.deletedAt}
+                                onClick={() => jumpToMessage(message.replyTo!.id)}
+                              />
+                            )}
                             {message.type === 'FILE' ? (
                               <FileAttachmentCard message={message} channelId={channel.id} />
                             ) : (
@@ -391,7 +401,7 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                                 'break-words rounded-lg px-3 py-1.5 text-sm text-text-primary',
                                 isOwn ? 'bg-primary/10' : 'bg-surface-muted',
                               )}>
-                                {renderMessageContent(message.content)}
+                                {renderContent(message.content, { onMentionClick: setProfileUserId, currentUserId: user?.id })}
                               </p>
                             )}
 
@@ -400,6 +410,16 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                                 'flex items-center gap-0.5 rounded-lg border p-0.5 shadow-sm',
                                 isOwn ? 'border-primary/30 bg-surface' : 'border-border-subtle bg-surface',
                               )}>
+                                <button
+                                  onClick={() => setReplyTarget(message)}
+                                  className={cn(
+                                    'rounded p-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                    isOwn ? 'text-primary hover:bg-primary/15' : 'text-text-secondary hover:bg-surface-muted',
+                                  )}
+                                  title="Reply"
+                                >
+                                  <Reply size={14} />
+                                </button>
                                 <button
                                   onClick={(e) => {
                                     if (openPickerFor === message.id) {
@@ -497,7 +517,25 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
 
       <form onSubmit={handleSend} className="border-t border-border-subtle p-3">
         <input ref={fileInputRef} type="file" onChange={handleFileSelect} className="hidden" />
-        <div className="flex items-center gap-1 rounded-lg border border-border-subtle bg-surface px-1.5 py-1 transition-colors focus-within:border-primary">
+        {replyTarget && (
+          <ReplyQuote
+            authorName={replyTarget.sender?.id === user?.id ? 'yourself' : replyTarget.sender?.name ?? 'Unknown'}
+            content={replyTarget.content}
+            onDismiss={() => setReplyTarget(null)}
+          />
+        )}
+        <div className={cn(
+          'relative flex items-center gap-1 border border-border-subtle bg-surface px-1.5 py-1 transition-colors focus-within:border-primary',
+          replyTarget ? 'rounded-b-lg border-t-0' : 'rounded-lg',
+        )}>
+          {mention.isOpen && (
+            <MentionDropdown
+              candidates={mention.filtered}
+              activeIndex={mention.activeIndex}
+              onHover={mention.setActiveIndex}
+              onSelect={handleSelectMention}
+            />
+          )}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -508,8 +546,10 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
             <Paperclip size={16} />
           </button>
           <input
+            ref={contentInputRef}
             value={content}
             onChange={handleContentChange}
+            onKeyDown={handleContentKeyDown}
             placeholder={channel.type === 'DM' ? `Message ${channel.dmParticipant?.name ?? ''}` : `Message #${channel.name}`}
             disabled={sendMessage.isPending}
             className="min-w-0 flex-1 bg-transparent px-1.5 py-1.5 text-sm text-text-primary placeholder:text-text-secondary focus:outline-none disabled:opacity-50"

@@ -52,6 +52,7 @@ export interface Messages {
   cloudinaryPublicId?: string | null;
   fileType?: string | null;
   fileSize?: number | null;
+  replyToId?: string | null;
   sender?: UserInstance;
 }
 
@@ -68,6 +69,7 @@ export type MessageCreationAttributes = Optional<
   | 'cloudinaryPublicId'
   | 'fileType'
   | 'fileSize'
+  | 'replyToId'
 >;
 
 export interface MessageInstance
@@ -109,6 +111,8 @@ export interface MessageWithReactions {
   cloudinaryPublicId: string | null;
   fileType: string | null;
   fileSize: number | null;
+  replyToId: string | null;
   sender?: { id: string; name: string; avatarUrl: string | null } | null;
   reactions: ReactionSummary[];
+  replyTo?: { id: string; content: string; deletedAt: Date | null; sender: { id: string; name: string } | null } | null;
 }

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { connectSocket, disconnectSocket } from '@/lib/socket';
 import { markReadByEntity } from '@/services/notification.service';
 import { useChatStore } from '@/store/chat.store';
+import { playNotificationSound } from '@/lib/notificationSound';
 import type { Notification, UnreadChannel } from '@/types/notification.types';
 
 export function useNotificationSocket() {
@@ -26,10 +27,11 @@ export function useNotificationSocket() {
 
       if (isMessage) {
         const channelId = notification.entityId as string;
-        const wasAlreadyUnread = (qc.getQueryData<UnreadChannel[]>(['notifications', 'unread-channels']) ?? []).some(
-          (c) => c.channelId === channelId
-        );
 
+        // Drives the chat sidebar's unread dot only — deliberately doesn't
+        // touch unread-count or the notification feed. That's the bell's
+        // job now, reserved for mentions and other real notifications, so
+        // the two badges stop double-counting the same message.
         qc.setQueryData<UnreadChannel[]>(['notifications', 'unread-channels'], (old) => {
           const next = (old ?? []).filter((c) => c.channelId !== channelId);
           next.unshift({
@@ -40,18 +42,12 @@ export function useNotificationSocket() {
           });
           return next;
         });
-
-        // Only bump the badge once per newly-unread channel, not once per
-        // message — a burst of messages upserts the same underlying row.
-        if (!wasAlreadyUnread) {
-          qc.setQueryData<number>(['notifications', 'unread-count'], (old) => (old ?? 0) + 1);
-        }
-        qc.invalidateQueries({ queryKey: ['notifications'], exact: false });
         return;
       }
 
       qc.setQueryData<number>(['notifications', 'unread-count'], (old) => (old ?? 0) + 1);
       qc.invalidateQueries({ queryKey: ['notifications'], exact: false });
+      playNotificationSound();
       toast.info(notification.title);
     };
 
