@@ -11,6 +11,13 @@ export type ContentToken =
 // composer inserts this token (see useMentionAutocomplete), so rendering
 // never has to guess at a name match the way a bare @word would.
 const TOKEN_REGEX = /`([^`]+)`|(https?:\/\/[^\s]+)|@\[([^\]]+)\]\(user:([0-9a-fA-F-]{36})\)/g;
+const MENTION_ONLY_REGEX = /@\[([^\]]+)\]\(user:[0-9a-fA-F-]{36}\)/g;
+
+// For plain-text contexts that reuse raw content but can't render JSX chips
+// (reply-quote previews, etc.) — collapses the token down to plain @Name.
+export function stripMentionTokens(content: string): string {
+  return content.replace(MENTION_ONLY_REGEX, '@$1');
+}
 
 export function tokenizeContent(content: string): ContentToken[] {
   const tokens: ContentToken[] = [];

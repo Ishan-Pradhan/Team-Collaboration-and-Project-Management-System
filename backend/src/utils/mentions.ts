@@ -17,3 +17,10 @@ export function extractMentionedUserIds(content: string, allowedUserIds: string[
   }
   return [...found];
 }
+
+// For plain-text contexts that reuse raw message/comment content — notification
+// bodies, emails — where the full @[Name](user:id) token would otherwise leak
+// through verbatim instead of rendering as a mention chip.
+export function stripMentionTokens(content: string): string {
+  return content.replace(MENTION_REGEX, '@$1');
+}

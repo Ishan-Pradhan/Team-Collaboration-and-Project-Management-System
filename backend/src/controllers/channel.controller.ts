@@ -18,7 +18,7 @@ import { getIO } from '../socket/index.js';
 import { notifyUser, notifyNewMessage } from '../utils/notify.js';
 import { env } from '../config/env.js';
 import type { ChannelInstance } from '../types/channels.types.js';
-import { extractMentionedUserIds } from '../utils/mentions.js';
+import { extractMentionedUserIds, stripMentionTokens } from '../utils/mentions.js';
 
 export const createChannel = asyncHandler(async (req: AuthRequest, res: Response) => {
   const organizationId = req.params.organizationId as string;
@@ -314,6 +314,7 @@ export const sendMessage = asyncHandler(async (req: AuthRequest, res: Response) 
   getIO().to(`channel:${channelId}`).emit('message:new', message);
 
   const members = await channelMemberRepository.findMembers(channelId);
+  const previewText = stripMentionTokens(trimmedContent).slice(0, 200);
 
   // Drives the chat sidebar's per-channel unread dots only — excluded from
   // the notification bell (see notification.repository.ts).
@@ -329,7 +330,7 @@ export const sendMessage = asyncHandler(async (req: AuthRequest, res: Response) 
           organizationId: channel.organizationId,
           channelId,
           title,
-          body: `${user.name}: ${trimmedContent.slice(0, 200)}`,
+          body: `${user.name}: ${previewText}`,
         })
       )
   );
@@ -353,14 +354,14 @@ export const sendMessage = asyncHandler(async (req: AuthRequest, res: Response) 
           organizationId: channel.organizationId,
           type: 'mention',
           title: mentionTitle,
-          body: trimmedContent.slice(0, 200),
+          body: previewText,
           entityType: 'channel',
           entityId: channelId,
           email: targetUser
             ? {
                 to: targetUser.email,
                 subject: mentionTitle,
-                bodyText: trimmedContent.slice(0, 200),
+                bodyText: previewText,
                 link,
               }
             : undefined,

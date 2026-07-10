@@ -16,7 +16,7 @@ import { notifyUser } from '../utils/notify.js';
 import { env } from '../config/env.js';
 import { getIO } from '../socket/index.js';
 import { userRepository } from '../repositories/users.repository.js';
-import { extractMentionedUserIds } from '../utils/mentions.js';
+import { extractMentionedUserIds, stripMentionTokens } from '../utils/mentions.js';
 function cloudinaryResourceType(mimeType: string): 'image' | 'video' | 'raw' {
   if (mimeType.startsWith('image/') || mimeType === 'application/pdf') return 'image';
   if (mimeType.startsWith('video/')) return 'video';
@@ -517,6 +517,7 @@ export const createComment = asyncHandler(async (req: AuthRequest, res: Response
 
   const org = await organizationRepository.findById(project.organizationId);
   const link = `${(env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '')}/org/${org?.slug}/projects/${project.id}?taskId=${taskId}`;
+  const previewText = stripMentionTokens(trimmedContent).slice(0, 200);
 
   const otherAssignees = (task.assignees ?? []).filter((assignee) => assignee.id !== user.id);
   if (otherAssignees.length > 0) {
@@ -528,13 +529,13 @@ export const createComment = asyncHandler(async (req: AuthRequest, res: Response
           projectId: project.id,
           type: 'task_comment_added',
           title: `${user.name} commented on "${task.title}"`,
-          body: trimmedContent.slice(0, 200),
+          body: previewText,
           entityType: 'task',
           entityId: taskId,
           email: {
             to: assignee.email,
             subject: `${user.name} commented on "${task.title}"`,
-            bodyText: trimmedContent.slice(0, 200),
+            bodyText: previewText,
             link,
           },
         })
@@ -563,14 +564,14 @@ export const createComment = asyncHandler(async (req: AuthRequest, res: Response
           projectId: project.id,
           type: 'mention',
           title: mentionTitle,
-          body: trimmedContent.slice(0, 200),
+          body: previewText,
           entityType: 'task',
           entityId: taskId,
           email: targetUser
             ? {
                 to: targetUser.email,
                 subject: mentionTitle,
-                bodyText: trimmedContent.slice(0, 200),
+                bodyText: previewText,
                 link,
               }
             : undefined,
