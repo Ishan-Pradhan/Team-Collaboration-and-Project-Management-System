@@ -18,6 +18,7 @@ COPY . .
 # this has to be a build arg, not a runtime environment variable.
 ARG NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV DOCKER_BUILD=true
 
 RUN npm run build
 
