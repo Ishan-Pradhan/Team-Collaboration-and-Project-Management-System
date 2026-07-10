@@ -24,6 +24,10 @@ export async function forgotPassword(email: string): Promise<void> {
   await api.post('/auth/forgot-password', { email });
 }
 
+export async function resetPassword(data: { token: string; newPassword: string }): Promise<void> {
+  await api.post('/auth/reset-password', data);
+}
+
 export async function resendVerificationEmail(email: string): Promise<void> {
   await api.post('/auth/resend-verification-email', { email });
 }

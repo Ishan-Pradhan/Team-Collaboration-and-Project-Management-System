@@ -7,6 +7,7 @@ import {
   registerUser,
   logoutUser,
   forgotPassword,
+  resetPassword,
   resendVerificationEmail,
   updateProfile,
   uploadAvatar,
@@ -46,6 +47,9 @@ export const useRegister = () =>
 
 export const useForgotPassword = () =>
   useMutation({ mutationFn: forgotPassword });
+
+export const useResetPassword = () =>
+  useMutation({ mutationFn: resetPassword });
 
 export const useResendVerificationEmail = () =>
   useMutation({ mutationFn: resendVerificationEmail });

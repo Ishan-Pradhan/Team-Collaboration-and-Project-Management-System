@@ -150,7 +150,7 @@ export const githubAuthCallback = asyncHandler(async (req: Request, res: Respons
   }
 
   if (!user.isActive) {
-    const errorRedirectUrl = `${env.FRONTEND_URL || 'http://localhost:3000'}/login?error=${encodeURIComponent('Your account has been blocked')}`;
+    const errorRedirectUrl = `${env.FRONTEND_URL || 'http://localhost:3000'}/auth/login?error=${encodeURIComponent('Your account has been blocked')}`;
     return res.redirect(errorRedirectUrl);
   }
 
@@ -259,7 +259,7 @@ export const googleAuthCallback = asyncHandler(
     }
 
     if (!user.isActive) {
-      const errorRedirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=${encodeURIComponent('Your account has been blocked')}`;
+      const errorRedirectUrl = `${env.FRONTEND_URL || 'http://localhost:3000'}/auth/login?error=${encodeURIComponent('Your account has been blocked')}`;
       return res.redirect(errorRedirectUrl);
     }
 
