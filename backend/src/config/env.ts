@@ -52,6 +52,10 @@ const envSchema = z.object({
 
   // Optional
   FRONTEND_URL: z.url().optional(),
+  // Public URL of this API itself — needed because the email-verification
+  // link is a direct backend GET route (unlike password reset/invites,
+  // which link to frontend pages). Falls back to localhost for local dev.
+  BACKEND_URL: z.url().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

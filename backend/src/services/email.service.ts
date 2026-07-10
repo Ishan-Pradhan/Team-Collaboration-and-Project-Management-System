@@ -26,9 +26,7 @@ const getResendClient = () => {
 // asynchronously). Keeping these separate from the send functions is what
 // lets link generation stay synchronous once sending moves to a queue.
 export const buildVerifyLink = (token: string): string => {
-  const backendUrl = env.PORT
-    ? `http://localhost:${env.PORT}`
-    : 'http://localhost:8080';
+  const backendUrl = (env.BACKEND_URL || `http://localhost:${env.PORT}`).replace(/\/$/, '');
 
   return `${backendUrl}/api/v1/auth/verify-email?token=${token}`;
 };
