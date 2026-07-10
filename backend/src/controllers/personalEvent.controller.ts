@@ -5,6 +5,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { ok } from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/AsyncHandler.js';
 import type { AuthRequest } from '../types/auth.types.js';
+import { getIO } from '../socket/index.js';
 
 export const listMyPersonalEvents = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { organizationId } = req.params as { organizationId: string };
@@ -30,6 +31,9 @@ export const createPersonalEvent = asyncHandler(async (req: AuthRequest, res: Re
   if (!org.featureFlags.calendarEnabled) throw new ApiError(403, 'Calendar has been disabled for this organization');
 
   const event = await personalEventRepository.create({ userId, organizationId, title, dueDate });
+
+  getIO().to(`user:${userId}`).emit('personal-event:created', event);
+
   return ok(res, event, 'Personal event created successfully');
 });
 
@@ -42,5 +46,8 @@ export const deletePersonalEvent = asyncHandler(async (req: AuthRequest, res: Re
   if (!event) throw new ApiError(404, 'Personal event not found');
 
   await personalEventRepository.delete(eventId);
+
+  getIO().to(`user:${userId}`).emit('personal-event:deleted', { id: eventId, organizationId: event.organizationId });
+
   return ok(res, null, 'Personal event deleted successfully');
 });

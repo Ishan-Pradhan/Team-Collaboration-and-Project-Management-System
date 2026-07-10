@@ -14,6 +14,7 @@ import { notifyUser } from '../utils/notify.js';
 import { logActivity } from '../utils/activity.js';
 import { activityLogRepository } from '../repositories/activityLog.repository.js';
 import { env } from '../config/env.js';
+import { getIO } from '../socket/index.js';
 
 // ─── Helpers ──────────────────────────────────────────────────
 
@@ -55,6 +56,8 @@ export const createProject = asyncHandler(
     // Creator is automatically the Project Manager
     await projectRepository.addMember(project.id, user.id, 'PROJECT_MANAGER');
     await kanbanColumnRepository.createDefault(project.id);
+
+    getIO().to(`org:${organizationId}`).emit('project:created', project);
 
     return res.status(201).json({
       success: true,
@@ -180,6 +183,8 @@ export const updateProject = asyncHandler(
       status: status !== undefined ? status : project.status,
     });
 
+    getIO().to(`org:${project.organizationId}`).to(`project:${projectId}`).emit('project:updated', updated);
+
     return ok(res, updated, 'Project updated successfully');
   }
 );
@@ -204,6 +209,9 @@ export const archiveProject = asyncHandler(
     }
 
     const archived = await projectRepository.archive(projectId);
+
+    getIO().to(`org:${project.organizationId}`).to(`project:${projectId}`).emit('project:updated', archived);
+
     return ok(res, archived, 'Project archived successfully');
   }
 );
@@ -229,6 +237,9 @@ export const unarchiveProject = asyncHandler(
     }
 
     const restored = await projectRepository.unarchive(projectId);
+
+    getIO().to(`org:${project.organizationId}`).to(`project:${projectId}`).emit('project:updated', restored);
+
     return ok(res, restored, 'Project restored successfully');
   }
 );
@@ -252,6 +263,12 @@ export const deleteProject = asyncHandler(
     }
 
     await projectRepository.delete(projectId);
+
+    getIO()
+      .to(`org:${project.organizationId}`)
+      .to(`project:${projectId}`)
+      .emit('project:deleted', { id: projectId, organizationId: project.organizationId });
+
     return ok(res, null, 'Project deleted permanently');
   }
 );
@@ -318,6 +335,11 @@ export const addProjectMember = asyncHandler(
       metadata: { targetName: targetUser?.name ?? 'A member' },
     });
 
+    getIO()
+      .to(`org:${project.organizationId}`)
+      .to(`project:${projectId}`)
+      .emit('project:member:updated', { projectId, organizationId: project.organizationId });
+
     return res.status(201).json({
       success: true,
       message: 'Member added to project successfully',
@@ -358,6 +380,11 @@ export const removeProjectMember = asyncHandler(
 
     const removedCount = await projectRepository.removeMember(projectId, userId);
     if (removedCount === 0) throw new ApiError(404, 'Member not found in this project');
+
+    getIO()
+      .to(`org:${project.organizationId}`)
+      .to(`project:${projectId}`)
+      .emit('project:member:updated', { projectId, organizationId: project.organizationId });
 
     // Only notify when someone else removed this user — self-removal needs no self-notification.
     if (!isSelf) {
@@ -447,6 +474,11 @@ export const updateProjectMemberRole = asyncHandler(
 
     const updated = await projectRepository.updateMemberRole(projectId, userId, role);
     if (updated === 0) throw new ApiError(404, 'Member not found');
+
+    getIO()
+      .to(`org:${project.organizationId}`)
+      .to(`project:${projectId}`)
+      .emit('project:member:updated', { projectId, organizationId: project.organizationId });
 
     return ok(res, null, `Member role updated to ${role === 'PROJECT_MANAGER' ? 'Project Manager' : 'Member'} successfully`);
   }

@@ -19,6 +19,7 @@ import { notifyUser } from '../utils/notify.js';
 import { adminActionLogRepository } from '../repositories/adminActionLog.repository.js';
 import { buildInviteLink } from '../services/email.service.js';
 import { queueService } from '../services/queue.service.js';
+import { getIO } from '../socket/index.js';
 
 async function notifyAdminsOfMemberLeave(
   organizationId: string,
@@ -307,6 +308,8 @@ async function removeMemberFromOrg(org: OrganizationInstance, userId: string): P
     org.id, org.ownerId, org.name,
     userId, memberUser?.name ?? 'A member', true,
   ).catch(() => {});
+
+  getIO().to(`org:${org.id}`).emit('org:member:removed', { organizationId: org.id, userId });
 }
 
 // Remove Member from Organization
@@ -360,6 +363,8 @@ export const leaveOrganization = asyncHandler(
       user.id, user.name, false,
     ).catch(() => {});
 
+    getIO().to(`org:${organizationId}`).emit('org:member:removed', { organizationId, userId: user.id });
+
     return ok(res, null, 'You have left the organization');
   }
 );
@@ -379,6 +384,9 @@ export const deleteOrganization = asyncHandler(
     }
 
     await organizationRepository.delete(organizationId);
+
+    getIO().to(`org:${organizationId}`).emit('org:deleted', { id: organizationId });
+
     return ok(res, null, 'Organization deleted successfully');
   }
 );
@@ -503,6 +511,8 @@ export const changeMemberRole = asyncHandler(
     const updated = await organizationMemberRepository.updateRole(organizationId, userId, role);
     if (!updated) throw new ApiError(404, 'Member not found');
 
+    getIO().to(`org:${organizationId}`).emit('org:member:role-updated', { organizationId, userId, role });
+
     return ok(res, updated, 'Member role updated');
   }
 );
@@ -544,6 +554,8 @@ export const updateOrganization = asyncHandler(
       logoUrl: logoUrl !== undefined ? logoUrl : org.logoUrl,
       slug,
     });
+
+    getIO().to(`org:${organizationId}`).emit('org:updated', updatedOrg);
 
     return ok(res, updatedOrg, 'Organization updated successfully');
   }
@@ -601,6 +613,8 @@ export const banOrganizationMember = asyncHandler(
     await removeMemberFromOrg(org, userId);
     await organizationBanRepository.create(organizationId, userId, user.id);
 
+    getIO().to(`org:${organizationId}`).emit('org:member:banned', { organizationId, userId });
+
     return ok(res, null, 'Member banned successfully');
   }
 );
@@ -613,6 +627,8 @@ export const unbanOrganizationMember = asyncHandler(
 
     const deleted = await organizationBanRepository.delete(organizationId, userId);
     if (deleted === 0) throw new ApiError(404, 'No active ban found for this user');
+
+    getIO().to(`org:${organizationId}`).emit('org:member:unbanned', { organizationId, userId });
 
     return ok(res, null, 'Member unbanned successfully');
   }

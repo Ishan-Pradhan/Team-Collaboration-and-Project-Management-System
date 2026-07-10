@@ -29,6 +29,12 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
+# Docker sets HOSTNAME to the container's own ID by default. Next's
+# standalone server.js binds to $HOSTNAME literally and Node's net.Server
+# does a real DNS lookup on it — the container ID isn't a resolvable
+# hostname, so the server crash-loops on "getaddrinfo EAI_AGAIN <id>"
+# unless this is pinned to a real bind address.
+ENV HOSTNAME=0.0.0.0
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 

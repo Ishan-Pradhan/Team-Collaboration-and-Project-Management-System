@@ -27,6 +27,11 @@ export function useChatSocket(organizationId: string | undefined) {
       qc.removeQueries({ queryKey: ['channels', id] });
     };
 
+    const onChannelUpdated = (channel: Channel) => {
+      if (channel.organizationId !== organizationId) return;
+      qc.invalidateQueries({ queryKey: ['organizations', organizationId, 'channels'] });
+    };
+
     const onMemberJoined = ({ channelId }: { channelId: string }) => {
       qc.invalidateQueries({ queryKey: ['channels', channelId, 'members'] });
     };
@@ -106,6 +111,7 @@ export function useChatSocket(organizationId: string | undefined) {
     socket.on('disconnect', onDisconnect);
     socket.on('channel:created', onChannelCreated);
     socket.on('channel:deleted', onChannelDeleted);
+    socket.on('channel:updated', onChannelUpdated);
     socket.on('member:joined', onMemberJoined);
     socket.on('member:left', onMemberLeft);
     socket.on('message:new', onMessageNew);
@@ -120,6 +126,7 @@ export function useChatSocket(organizationId: string | undefined) {
       socket.off('disconnect', onDisconnect);
       socket.off('channel:created', onChannelCreated);
       socket.off('channel:deleted', onChannelDeleted);
+      socket.off('channel:updated', onChannelUpdated);
       socket.off('member:joined', onMemberJoined);
       socket.off('member:left', onMemberLeft);
       socket.off('message:new', onMessageNew);

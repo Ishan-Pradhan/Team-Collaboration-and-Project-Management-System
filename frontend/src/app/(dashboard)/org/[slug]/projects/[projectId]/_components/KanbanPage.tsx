@@ -27,6 +27,7 @@ import {
   useDeleteProject,
 } from '@/hooks/useProject';
 import { useOrganizationBySlug, useOrganizationMembers } from '@/hooks/useOrganization';
+import { useProjectSocket } from '@/hooks/useProjectSocket';
 import { useAuthStore } from '@/store/auth.store';
 import ConfirmationDialog from '@/components/shared/ConfirmationDialog';
 import { ActivityRow } from '@/components/shared/ActivityRow';
@@ -84,6 +85,8 @@ export default function KanbanPage({ params }: Props) {
   const { data: projectMembers } = useProjectMembers(projectId);
   const { data: org } = useOrganizationBySlug(slug);
   const { data: orgMembers } = useOrganizationMembers(org?.id ?? '');
+
+  useProjectSocket(projectId);
 
   const currentMembership = orgMembers?.find((m) => m.userId === currentUser?.id);
   const myProjectMembership = projectMembers?.find((m) => m.userId === currentUser?.id);

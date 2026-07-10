@@ -31,6 +31,7 @@ import { useLogout } from '@/hooks/useAuth';
 import { useOrgProjects } from '@/hooks/useProject';
 import { useChatSocket } from '@/hooks/useChatSocket';
 import { useNotificationSocket } from '@/hooks/useNotificationSocket';
+import { useOrgSocket } from '@/hooks/useOrgSocket';
 import { useUnreadCount, useUnreadChannels } from '@/hooks/useNotification';
 import { useChannels, useDMs, useMutedChannels } from '@/hooks/useChannel';
 import { useChatStore } from '@/store/chat.store';
@@ -110,6 +111,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { data: projects, isLoading: projectsLoading } = useOrgProjects(activeOrg?.id || '');
   const { connected: chatConnected } = useChatSocket(activeOrg?.id);
   useNotificationSocket();
+  useOrgSocket(activeOrg?.id);
   const { data: unreadNotificationCount } = useUnreadCount();
   const { data: unreadChannels } = useUnreadChannels();
 

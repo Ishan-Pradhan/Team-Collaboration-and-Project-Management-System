@@ -55,10 +55,18 @@ export function useNotificationSocket() {
       toast.info(notification.title);
     };
 
+    const onPersonalEventChanged = (event: { organizationId: string }) => {
+      qc.invalidateQueries({ queryKey: ['organizations', event.organizationId, 'personal-events'] });
+    };
+
     socket.on('notification:new', onNotificationNew);
+    socket.on('personal-event:created', onPersonalEventChanged);
+    socket.on('personal-event:deleted', onPersonalEventChanged);
 
     return () => {
       socket.off('notification:new', onNotificationNew);
+      socket.off('personal-event:created', onPersonalEventChanged);
+      socket.off('personal-event:deleted', onPersonalEventChanged);
     };
   }, [qc]);
 

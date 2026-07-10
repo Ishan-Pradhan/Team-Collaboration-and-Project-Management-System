@@ -14,6 +14,7 @@ import { organizationMemberRepository, organizationRepository } from '../reposit
 import { logActivity } from '../utils/activity.js';
 import { notifyUser } from '../utils/notify.js';
 import { env } from '../config/env.js';
+import { getIO } from '../socket/index.js';
 function cloudinaryResourceType(mimeType: string): 'image' | 'video' | 'raw' {
   if (mimeType.startsWith('image/') || mimeType === 'application/pdf') return 'image';
   if (mimeType.startsWith('video/')) return 'video';
@@ -163,6 +164,8 @@ export const createTask = asyncHandler(
       metadata: { taskTitle: task.title, taskId: task.id },
     });
 
+    getIO().to(`project:${projectId}`).emit('task:created', created);
+
     return res.status(201).json({ success: true, message: 'Task created successfully', data: created });
   }
 );
@@ -253,6 +256,8 @@ export const updateTask = asyncHandler(
       }
     }
 
+    getIO().to(`project:${projectId}`).emit('task:updated', updated);
+
     return ok(res, updated, 'Task updated successfully');
   }
 );
@@ -298,6 +303,8 @@ export const moveTask = asyncHandler(
       });
     }
 
+    getIO().to(`project:${projectId}`).emit('task:moved', updated);
+
     return ok(res, updated, 'Task moved successfully');
   }
 );
@@ -331,6 +338,8 @@ export const deleteTask = asyncHandler(
       entityId: taskId,
       metadata: { taskTitle, taskId },
     });
+
+    getIO().to(`project:${projectId}`).emit('task:deleted', { id: taskId, projectId });
 
     return ok(res, null, 'Task deleted successfully');
   }
@@ -375,6 +384,8 @@ export const createColumn = asyncHandler(
       color: color || null,
     });
 
+    getIO().to(`project:${projectId}`).emit('column:created', column);
+
     return res.status(201).json({
       success: true,
       message: 'Column created successfully',
@@ -399,6 +410,9 @@ export const updateColumn = asyncHandler(
     });
 
     if (!updated) throw new ApiError(404, 'Column not found');
+
+    getIO().to(`project:${projectId}`).emit('column:updated', updated);
+
     return ok(res, updated, 'Column updated successfully');
   }
 );
@@ -414,6 +428,8 @@ export const deleteColumn = asyncHandler(
 
     const count = await kanbanColumnRepository.delete(columnId, projectId);
     if (count === 0) throw new ApiError(404, 'Column not found');
+
+    getIO().to(`project:${projectId}`).emit('column:deleted', { id: columnId, projectId });
 
     return ok(res, null, 'Column deleted successfully');
   }
@@ -432,6 +448,9 @@ export const reorderColumns = asyncHandler(
     await kanbanColumnRepository.reorder(projectId, orderedIds);
 
     const columns = await kanbanColumnRepository.findByProject(projectId);
+
+    getIO().to(`project:${projectId}`).emit('column:reordered', { projectId, columns });
+
     return ok(res, columns, 'Columns reordered successfully');
   }
 );
@@ -516,6 +535,8 @@ export const createComment = asyncHandler(async (req: AuthRequest, res: Response
     metadata: { taskTitle: task.title, taskId, commentId: comment.id, content: content.trim() },
   });
 
+  getIO().to(`project:${projectId}`).emit('task:comment:created', { taskId, projectId, comment });
+
   return res.status(201).json({ success: true, message: 'Comment added', data: comment });
 });
 
@@ -542,6 +563,8 @@ export const deleteComment = asyncHandler(async (req: AuthRequest, res: Response
   } else {
     await taskCommentRepository.delete(commentId, user.id);
   }
+
+  getIO().to(`project:${projectId}`).emit('task:comment:deleted', { taskId, projectId, commentId });
 
   return ok(res, null, 'Comment deleted');
 });
@@ -577,6 +600,9 @@ export const createSubtask = asyncHandler(async (req: AuthRequest, res: Response
 
   const position = await subtaskRepository.countByTask(taskId);
   const subtask = await subtaskRepository.create({ taskId, title: title.trim(), createdById: user.id, position });
+
+  getIO().to(`project:${projectId}`).emit('task:subtask:created', { taskId, projectId, subtask });
+
   return res.status(201).json({ success: true, message: 'Subtask created', data: subtask });
 });
 
@@ -595,6 +621,9 @@ export const toggleSubtask = asyncHandler(async (req: AuthRequest, res: Response
   if (!subtask || subtask.taskId !== taskId) throw new ApiError(404, 'Subtask not found');
 
   const updated = await subtaskRepository.toggle(subtaskId, !subtask.isCompleted);
+
+  getIO().to(`project:${projectId}`).emit('task:subtask:updated', { taskId, projectId, subtask: updated });
+
   return ok(res, updated, 'Subtask toggled');
 });
 
@@ -617,6 +646,9 @@ export const deleteSubtask = asyncHandler(async (req: AuthRequest, res: Response
     throw new ApiError(403, 'You can only delete your own subtasks');
 
   await subtaskRepository.delete(subtaskId);
+
+  getIO().to(`project:${projectId}`).emit('task:subtask:deleted', { taskId, projectId, subtaskId });
+
   return ok(res, null, 'Subtask deleted');
 });
 
@@ -679,6 +711,8 @@ export const uploadAttachment = asyncHandler(async (req: AuthRequest, res: Respo
     fileSize: file.size,
   });
 
+  getIO().to(`project:${projectId}`).emit('task:attachment:created', { taskId, projectId, attachment });
+
   return res.status(201).json({ success: true, message: 'File uploaded', data: attachment });
 });
 
@@ -702,6 +736,9 @@ export const deleteAttachment = asyncHandler(async (req: AuthRequest, res: Respo
 
   await deleteFromCloudinary(attachment.cloudinaryPublicId, cloudinaryResourceType(attachment.fileType));
   await taskAttachmentRepository.delete(attachmentId);
+
+  getIO().to(`project:${projectId}`).emit('task:attachment:deleted', { taskId, projectId, attachmentId });
+
   return ok(res, null, 'Attachment deleted');
 });
 
