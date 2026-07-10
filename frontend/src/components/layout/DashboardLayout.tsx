@@ -572,7 +572,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main Content wrapper */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Topbar */}
-        <header className="flex h-14 items-center justify-between border-b border-border-subtle bg-surface px-4 lg:px-6 sm:hidden">
+        <header className="flex h-14 items-center justify-between border-b border-border-subtle bg-surface px-4 lg:hidden">
           <div className="flex items-center gap-4">
             <button
               className="rounded p-1 text-primary hover:bg-surface-muted lg:hidden"

@@ -248,20 +248,20 @@ export default function CalendarPage({ params }: Props) {
       <div className="flex h-[90vh] flex-col rounded-xl border border-border-subtle bg-surface overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border-subtle shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3.5 border-b border-border-subtle shrink-0 sm:px-5">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
-              className="flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle text-text-secondary hover:bg-surface-muted transition-colors"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle text-text-secondary hover:bg-surface-muted transition-colors"
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="text-base font-semibold text-text-primary min-w-[148px] text-center">
+            <span className="text-sm font-semibold text-text-primary sm:min-w-[148px] sm:text-base text-center">
               {MONTH_NAMES[currentDate.getMonth()]} {currentDate.getFullYear()}
             </span>
             <button
               onClick={() => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
-              className="flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle text-text-secondary hover:bg-surface-muted transition-colors"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle text-text-secondary hover:bg-surface-muted transition-colors"
             >
               <ChevronRight size={16} />
             </button>
@@ -269,15 +269,15 @@ export default function CalendarPage({ params }: Props) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => { setAddEventDate(''); setShowAddEvent(true); }}
-              className="flex items-center gap-1.5 rounded-md border border-border-subtle px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-surface-muted transition-colors"
+              className="flex items-center gap-1.5 rounded-md border border-border-subtle px-2.5 py-1.5 text-sm font-medium text-text-secondary hover:bg-surface-muted transition-colors sm:px-3"
             >
-              <Plus size={14} /> Add Event
+              <Plus size={14} /> <span className="hidden sm:inline">Add Event</span>
             </button>
             <button
               onClick={() => setCurrentDate(new Date(today.getFullYear(), today.getMonth(), 1))}
               disabled={isCurrentMonth}
               className={cn(
-                'px-3 py-1.5 text-sm rounded-md border font-medium transition-colors',
+                'px-2.5 py-1.5 text-sm rounded-md border font-medium transition-colors sm:px-3',
                 isCurrentMonth
                   ? 'border-border-subtle text-text-muted cursor-default'
                   : 'border-border-subtle text-text-secondary hover:bg-surface-muted',

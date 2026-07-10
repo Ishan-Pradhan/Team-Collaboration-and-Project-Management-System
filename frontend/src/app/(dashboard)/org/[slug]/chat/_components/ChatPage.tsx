@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BellOff, ChevronDown, ChevronRight, Hash, Lock, Loader2, MessageSquare, Plus, Search, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useOrganizationBySlug, useOrganizationMembers } from '@/hooks/useOrganization';
 import { useChannels, useCreateChannel, useDMs, useStartDM, useMutedChannels } from '@/hooks/useChannel';
@@ -294,8 +295,13 @@ export default function ChatPage({ params }: Props) {
   };
 
   return (
-    <div className="flex h-full gap-4">
-      <aside className="flex h-[90vh] w-64 shrink-0 flex-col overflow-y-auto rounded-xl border border-border-subtle bg-surface">
+    <div className="flex h-[calc(100vh-5.5rem)] gap-4 lg:h-[90vh]">
+      <aside
+        className={cn(
+          'h-full w-full shrink-0 flex-col overflow-y-auto rounded-xl border border-border-subtle bg-surface lg:flex lg:w-64',
+          selectedChannel ? 'hidden lg:flex' : 'flex',
+        )}
+      >
         <div className="border-b border-border-subtle p-2">
           <div className="relative">
             <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
@@ -441,13 +447,19 @@ export default function ChatPage({ params }: Props) {
         )}
       </aside>
 
-      <div className="h-[90vh] flex-1 rounded-xl border border-border-subtle bg-surface overflow-hidden">
+      <div
+        className={cn(
+          'h-full flex-1 rounded-xl border border-border-subtle bg-surface overflow-hidden lg:block',
+          selectedChannel ? 'block' : 'hidden',
+        )}
+      >
         {selectedChannel ? (
           <ChannelView
             channel={selectedChannel}
             organizationId={org.id}
             isAdmin={isAdmin}
             onLeftOrDeleted={() => setSelectedChannel(null)}
+            onBack={() => setSelectedChannel(null)}
           />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-text-secondary">

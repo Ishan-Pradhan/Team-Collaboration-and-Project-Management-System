@@ -85,24 +85,24 @@ export default function ProjectCalendarView({ tasks, columns, onOpenTask }: Prop
     currentDate.getMonth() === today.getMonth();
 
   return (
-    <div className="h-[80vh] flex flex-col overflow-hidden p-6">
+    <div className="h-[80vh] flex flex-col overflow-hidden p-3 sm:p-6">
       <div className="flex h-full flex-col rounded-xl border border-border-subtle bg-surface overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border-subtle shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3.5 border-b border-border-subtle shrink-0 sm:px-5">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
-              className="flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle text-text-secondary hover:bg-surface-muted transition-colors"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle text-text-secondary hover:bg-surface-muted transition-colors"
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="text-base font-semibold text-text-primary min-w-[148px] text-center">
+            <span className="text-sm font-semibold text-text-primary sm:min-w-[148px] sm:text-base text-center">
               {MONTH_NAMES[currentDate.getMonth()]} {currentDate.getFullYear()}
             </span>
             <button
               onClick={() => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
-              className="flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle text-text-secondary hover:bg-surface-muted transition-colors"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle text-text-secondary hover:bg-surface-muted transition-colors"
             >
               <ChevronRight size={16} />
             </button>

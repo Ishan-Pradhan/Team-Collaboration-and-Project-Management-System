@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, Building2, Users, ScrollText, LogOut, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, ScrollText, LogOut, ArrowLeft, Menu, X } from 'lucide-react';
 import Logo from '@/components/shared/Logo';
 import { useAuthStore } from '@/store/auth.store';
 import { useLogout } from '@/hooks/useAuth';
@@ -20,6 +21,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const { user } = useAuthStore();
   const logout = useLogout();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => {
     logout.mutate(undefined, { onSettled: () => router.push('/auth/login') });
@@ -27,10 +29,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <aside className="flex w-64 shrink-0 flex-col border-r border-border-subtle bg-primary">
-        <div className="flex h-14 items-center gap-2 border-b border-border-subtle px-4">
-          <Logo />
-          <span className="text-xs font-semibold uppercase tracking-wider text-white/70">Super Admin</span>
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-border-subtle bg-primary transition-transform duration-200 ease-in-out lg:static lg:translate-x-0',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+        )}
+      >
+        <div className="flex h-14 items-center justify-between gap-2 border-b border-border-subtle px-4">
+          <div className="flex items-center gap-2">
+            <Logo />
+            <span className="text-xs font-semibold uppercase tracking-wider text-white/70">Super Admin</span>
+          </div>
+          <button
+            className="rounded p-1 text-white hover:bg-surface-muted lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <X size={18} />
+          </button>
         </div>
 
         <nav className="flex-1 space-y-1 p-3">
@@ -41,6 +63,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Link
                 key={item.name}
                 href={item.href}
+                onClick={() => setSidebarOpen(false)}
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all',
                   active
@@ -73,7 +96,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto p-6">{children}</main>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <header className="flex h-14 items-center gap-3 border-b border-border-subtle bg-surface px-4 lg:hidden">
+          <button
+            className="rounded p-1 text-primary hover:bg-surface-muted"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu size={20} />
+          </button>
+          <span className="text-sm font-medium text-text-primary">Super Admin</span>
+        </header>
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
+      </div>
     </div>
   );
 }

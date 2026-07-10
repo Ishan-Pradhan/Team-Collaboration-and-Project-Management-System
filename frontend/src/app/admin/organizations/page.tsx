@@ -54,7 +54,7 @@ export default function AdminOrganizationsPage() {
         {organizations?.map((org) => (
           <div
             key={org.id}
-            className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3 last:border-b-0 hover:bg-surface-hover transition-colors"
+            className="flex flex-col gap-3 border-b border-border-subtle px-4 py-3 last:border-b-0 hover:bg-surface-hover transition-colors sm:flex-row sm:items-center sm:justify-between"
           >
             <button onClick={() => setSelectedOrgId(org.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
               <span
@@ -68,7 +68,7 @@ export default function AdminOrganizationsPage() {
                 <p className="truncate text-xs text-text-muted">{org.owner?.email ?? 'Unknown owner'}</p>
               </div>
             </button>
-            <div className="flex shrink-0 items-center gap-3">
+            <div className="flex shrink-0 items-center gap-3 pl-12 sm:pl-0">
               {org.isSuspended ? (
                 <span className="badge-danger">Suspended</span>
               ) : (

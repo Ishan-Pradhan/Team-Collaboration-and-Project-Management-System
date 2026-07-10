@@ -61,7 +61,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-lg font-semibold text-text-primary">Users</h1>
         <Input
           placeholder="Search by name or email"
@@ -70,13 +70,13 @@ export default function AdminUsersPage() {
             setSearch(e.target.value);
             setPage(1);
           }}
-          className="max-w-xs"
+          className="w-full sm:max-w-xs"
         />
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface">
         {data.items.map((u) => (
-          <div key={u.id} className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3 last:border-b-0 hover:bg-surface-hover transition-colors">
+          <div key={u.id} className="flex flex-col gap-3 border-b border-border-subtle px-4 py-3 last:border-b-0 hover:bg-surface-hover transition-colors sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <UserAvatar name={u.name} url={u.avatarUrl} />
               <div className="min-w-0">
@@ -84,7 +84,7 @@ export default function AdminUsersPage() {
                 <p className="truncate text-xs text-text-muted">{u.email}</p>
               </div>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex flex-wrap shrink-0 items-center gap-2 pl-12 sm:pl-0">
               {u.role === 'SUPER_ADMIN' && <Badge>Super Admin</Badge>}
               {!u.isActive && <span className="badge-danger">Blocked</span>}
               {u.id !== currentUser?.id && (

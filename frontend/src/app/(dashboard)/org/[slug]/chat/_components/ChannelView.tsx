@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Bell, BellOff, Edit2, Hash, Lock, Loader2, LogOut, MoreVertical, Paperclip, Trash2, Users, X } from 'lucide-react';
+import { ArrowLeft, Bell, BellOff, Edit2, Hash, Lock, Loader2, LogOut, MoreVertical, Paperclip, Trash2, Users, X } from 'lucide-react';
 import { parseApiError } from '@/lib/axios';
 import { useChannelMembers, useLeaveChannel, useDeleteChannel, useMutedChannels, useMuteChannel, useRenameChannel } from '@/hooks/useChannel';
 import { useAuthStore } from '@/store/auth.store';
@@ -19,9 +19,10 @@ interface Props {
   organizationId: string;
   isAdmin: boolean;
   onLeftOrDeleted: () => void;
+  onBack: () => void;
 }
 
-export default function ChannelView({ channel, organizationId, isAdmin, onLeftOrDeleted }: Props) {
+export default function ChannelView({ channel, organizationId, isAdmin, onLeftOrDeleted, onBack }: Props) {
   const user = useAuthStore((s) => s.user);
   const { data: members } = useChannelMembers(channel.id);
   const leaveChannel = useLeaveChannel(organizationId, channel.id);
@@ -43,8 +44,15 @@ export default function ChannelView({ channel, organizationId, isAdmin, onLeftOr
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
-        <div className="flex items-center gap-2.5">
+      <div className="flex items-center justify-between gap-2 border-b border-border-subtle px-3 py-3 sm:px-4">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <button
+            onClick={onBack}
+            className="-ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-secondary hover:bg-surface-muted transition-colors lg:hidden"
+            title="Back to list"
+          >
+            <ArrowLeft size={18} />
+          </button>
           {channel.type === 'DM' ? (
             <>
               <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-semibold text-primary">
@@ -58,22 +66,22 @@ export default function ChannelView({ channel, organizationId, isAdmin, onLeftOr
                   (channel.dmParticipant?.name ?? '?').charAt(0).toUpperCase()
                 )}
               </div>
-              <h2 className="text-base font-semibold text-text-primary">{channel.dmParticipant?.name ?? 'Unknown'}</h2>
+              <h2 className="truncate text-base font-semibold text-text-primary">{channel.dmParticipant?.name ?? 'Unknown'}</h2>
             </>
           ) : (
             <>
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-muted">
                 {channel.type === 'PUBLIC' ? <Hash size={15} className="text-text-secondary" /> : <Lock size={15} className="text-text-secondary" />}
               </div>
-              <h2 className="text-base font-semibold text-text-primary">{channel.name}</h2>
-              <span className="inline-flex items-center gap-1 rounded-full bg-surface-muted px-2 py-0.5 text-xs font-medium text-text-secondary">
+              <h2 className="truncate text-base font-semibold text-text-primary">{channel.name}</h2>
+              <span className="hidden shrink-0 items-center gap-1 rounded-full bg-surface-muted px-2 py-0.5 text-xs font-medium text-text-secondary sm:inline-flex">
                 <Users size={11} />
                 {members?.length ?? 0}
               </span>
             </>
           )}
         </div>
-        <div className="relative">
+        <div className="relative shrink-0">
           <button
             onClick={() => setShowMenu((v) => !v)}
             className="flex items-center justify-center rounded-lg p-1.5 text-text-secondary hover:bg-surface-muted transition-colors"

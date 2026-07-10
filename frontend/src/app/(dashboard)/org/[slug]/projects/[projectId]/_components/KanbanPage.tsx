@@ -308,10 +308,10 @@ export default function KanbanPage({ params }: Props) {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-8 pt-6 pb-3">
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-bold text-text-primary tracking-tight">{project.name}</h1>
-          <ChevronDown size={18} className="text-text-muted cursor-pointer" />
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-6 pb-3 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-2 min-w-0">
+          <h1 className="truncate text-xl font-bold text-text-primary tracking-tight">{project.name}</h1>
+          <ChevronDown size={18} className="shrink-0 text-text-muted cursor-pointer" />
         </div>
         <div className="flex items-center gap-3">
           {projectMembers && projectMembers.length > 0 && (
@@ -357,13 +357,13 @@ export default function KanbanPage({ params }: Props) {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-border-subtle px-8">
-        <div className="flex gap-5">
+      <div className="border-b border-border-subtle px-4 sm:px-6 lg:px-8 overflow-x-auto">
+        <div className="flex gap-5 w-max min-w-full">
           {tabs.map(({ name, icon: Icon }) => {
             const active = activeTab === name;
             return (
               <button key={name} onClick={() => setActiveTab(name)}
-                className={cn('flex items-center gap-1.5 pb-3 text-[13px] font-medium transition-colors border-b-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                className={cn('flex shrink-0 items-center gap-1.5 pb-3 text-[13px] font-medium transition-colors border-b-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   active ? 'border-primary text-primary' : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border-muted'
                 )}>
                 <Icon size={14} />{name}
@@ -375,7 +375,7 @@ export default function KanbanPage({ params }: Props) {
 
       {/* Board view */}
       {activeTab === 'Board' ? (
-        <div className="flex-1 overflow-x-auto overflow-y-hidden px-6 py-5">
+        <div className="flex-1 overflow-x-auto overflow-y-hidden px-4 py-5 sm:px-6">
           <DndContext
             sensors={sensors}
             collisionDetection={closestCorners}
@@ -449,9 +449,9 @@ export default function KanbanPage({ params }: Props) {
           </DndContext>
         </div>
       ) : activeTab === 'List' ? (
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <div className="rounded-xl border border-border-subtle bg-surface overflow-hidden">
-            <div className="grid grid-cols-12 gap-4 border-b border-border-subtle bg-surface-muted px-5 py-3 text-xs font-semibold text-text-secondary uppercase tracking-wide">
+            <div className="hidden gap-4 border-b border-border-subtle bg-surface-muted px-5 py-3 text-xs font-semibold text-text-secondary uppercase tracking-wide sm:grid sm:grid-cols-12">
               <div className="col-span-4">Title</div>
               <div className="col-span-2">Column</div>
               <div className="col-span-2">Priority</div>
@@ -464,29 +464,25 @@ export default function KanbanPage({ params }: Props) {
                 const dueStatus = getDueStatus(task.dueDate, colName);
                 return (
                   <div key={task.id} onClick={() => setEditingTask(task)}
-                    className="grid grid-cols-12 gap-4 px-5 py-3.5 text-sm items-center hover:bg-surface-muted cursor-pointer transition-colors">
-                    <div className="col-span-4 font-medium text-text-primary truncate">{task.title}</div>
-                    <div className="col-span-2">
-                      <span className="bg-surface-muted text-text-secondary px-2 py-1 rounded-full text-xs font-medium">
-                        {localColumns.find((c) => c.id === task.columnId)?.name || '—'}
+                    className="flex flex-col gap-2 px-5 py-3.5 text-sm hover:bg-surface-muted cursor-pointer transition-colors sm:grid sm:grid-cols-12 sm:items-center sm:gap-4">
+                    <div className="font-medium text-text-primary truncate sm:col-span-4">{task.title}</div>
+                    <div className="flex flex-wrap items-center gap-2 sm:contents">
+                      <span className="bg-surface-muted text-text-secondary px-2 py-1 rounded-full text-xs font-medium sm:col-span-2">
+                        {colName || '—'}
                       </span>
-                    </div>
-                    <div className="col-span-2">
-                      <span className={cn('px-2 py-0.5 rounded-full text-xs font-semibold', PRIORITY[task.priority].chip)}>
+                      <span className={cn('px-2 py-0.5 rounded-full text-xs font-semibold sm:col-span-2', PRIORITY[task.priority].chip)}>
                         {PRIORITY[task.priority].label}
                       </span>
-                    </div>
-                    <div className="col-span-2">
                       {dueStatus ? (
-                        <span className={cn('px-2 py-0.5 rounded-full text-xs font-semibold', DUE_STATUS[dueStatus].chip)}>
+                        <span className={cn('px-2 py-0.5 rounded-full text-xs font-semibold sm:col-span-2', DUE_STATUS[dueStatus].chip)}>
                           {DUE_STATUS[dueStatus].label}
                         </span>
                       ) : (
-                        <span className="text-text-muted text-xs">—</span>
+                        <span className="text-text-muted text-xs sm:col-span-2">—</span>
                       )}
-                    </div>
-                    <div className="col-span-2 text-right text-text-muted text-xs">
-                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '—'}
+                      <span className="text-text-muted text-xs sm:col-span-2 sm:text-right">
+                        {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '—'}
+                      </span>
                     </div>
                   </div>
                 );
@@ -608,7 +604,7 @@ function ProjectSettingsView({
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-8">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-xl space-y-6">
 
         {/* Project info */}
@@ -892,7 +888,7 @@ function ProjectActivityView({ projectId, slug }: { projectId: string; slug: str
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-8">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
       <h2 className="mb-4 text-base font-semibold text-text-primary">Recent Activity</h2>
       {activity.length === 0 ? (
         <p className="py-12 text-center text-sm text-text-muted">No activity yet.</p>
@@ -933,11 +929,11 @@ function ProjectFilesView({
   });
 
   return (
-    <div className="flex-1 overflow-y-auto p-8">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
       {previewFile && (
         <FilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
       )}
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-base font-semibold text-text-primary">Project Files</h2>
           <p className="text-xs text-text-secondary mt-0.5">{files.length} file{files.length !== 1 ? 's' : ''} across all tasks</p>
@@ -946,7 +942,7 @@ function ProjectFilesView({
           placeholder="Search files..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-56 text-sm"
+          className="w-full text-sm sm:w-56"
         />
       </div>
 
