@@ -199,15 +199,21 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
+    if (sendMessage.isPending) return;
     const trimmed = content.trim();
     if (!trimmed) return;
     sendMessage.mutate(
       { content: mention.serialize(trimmed), replyToId: replyTarget?.id ?? null },
       {
-        onSuccess: () => { setContent(''); mention.resetMentions(); setReplyTarget(null); },
-        onError: (err: unknown) => toast.error(parseApiError(err).message),
+        onSuccess: () => { mention.resetMentions(); setReplyTarget(null); },
+        onError: (err: unknown) => {
+          setContent(trimmed);
+          toast.error(parseApiError(err).message);
+        },
       }
     );
+    setContent('');
+    contentInputRef.current?.focus();
   };
 
   const handleLoadMore = async () => {
@@ -413,7 +419,7 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                                 isOwn ? 'border-primary/30 bg-surface' : 'border-border-subtle bg-surface',
                               )}>
                                 <button
-                                  onClick={() => setReplyTarget(message)}
+                                  onClick={() => { setReplyTarget(message); contentInputRef.current?.focus(); }}
                                   className={cn(
                                     'rounded p-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                     isOwn ? 'text-primary hover:bg-primary/15' : 'text-text-secondary hover:bg-surface-muted',
@@ -553,8 +559,7 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
             onChange={handleContentChange}
             onKeyDown={handleContentKeyDown}
             placeholder={channel.type === 'DM' ? `Message ${channel.dmParticipant?.name ?? ''}` : `Message #${channel.name}`}
-            disabled={sendMessage.isPending}
-            className="min-w-0 flex-1 bg-transparent px-1.5 py-1.5 text-sm text-text-primary placeholder:text-text-secondary focus:outline-none disabled:opacity-50"
+            className="min-w-0 flex-1 bg-transparent px-1.5 py-1.5 text-sm text-text-primary placeholder:text-text-secondary focus:outline-none"
           />
           <button
             type="submit"
