@@ -342,7 +342,7 @@ export default function ChatPage({ params }: Props) {
                     key={channel.id}
                     onClick={() => setSelectedChannel(channel)}
                     className={`relative flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors ${selectedChannel?.id === channel.id
-                      ? 'bg-primary/10 text-primary font-medium before:absolute before:bottom-1 before:left-0 before:top-1 before:w-0.5 before:rounded-full before:bg-primary'
+                      ? 'bg-primary/10 dark:bg-brand/20 text-primary dark:text-white font-medium before:absolute before:bottom-1 before:left-0 before:top-1 before:w-0.5 before:rounded-full before:bg-primary'
                       : 'text-text-secondary hover:bg-surface-muted'
                       }`}
                   >
@@ -404,7 +404,7 @@ export default function ChatPage({ params }: Props) {
                     key={dm.id}
                     onClick={() => setSelectedChannel(dm)}
                     className={`relative flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors ${selectedChannel?.id === dm.id
-                      ? 'bg-primary/10 text-primary font-medium before:absolute before:bottom-1 before:left-0 before:top-1 before:w-0.5 before:rounded-full before:bg-primary'
+                      ? 'bg-primary/10 dark:bg-brand/20 text-primary dark:text-white font-medium before:absolute before:bottom-1 before:left-0 before:top-1 before:w-0.5 before:rounded-full before:bg-primary'
                       : 'text-text-secondary hover:bg-surface-muted'
                       }`}
                   >

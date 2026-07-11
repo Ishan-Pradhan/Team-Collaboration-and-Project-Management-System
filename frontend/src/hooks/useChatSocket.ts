@@ -41,9 +41,11 @@ export function useChatSocket(organizationId: string | undefined) {
     };
 
     const onMessageNew = (message: Message) => {
-      qc.setQueryData<Message[]>(['channels', message.channelId, 'messages'], (old) =>
-        old ? [...old, message] : [message]
-      );
+      qc.setQueryData<Message[]>(['channels', message.channelId, 'messages'], (old) => {
+        if (!old) return [message];
+        if (old.some((m) => m.id === message.id)) return old;
+        return [...old, message];
+      });
     };
 
     const onReactionAdded = ({

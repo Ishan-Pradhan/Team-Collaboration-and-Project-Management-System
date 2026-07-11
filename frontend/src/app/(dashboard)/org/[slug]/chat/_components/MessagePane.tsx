@@ -386,7 +386,7 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                         <p className="text-sm italic text-text-secondary">This message was deleted</p>
                       ) : (
                         <>
-                          <div className="relative w-fit max-w-[75%]">
+                          <div className={cn('relative flex max-w-[75%] flex-col', isOwn ? 'items-end' : 'items-start')}>
                             {message.replyTo && (
                               <ReplyQuote
                                 authorName={message.replyTo.sender?.name ?? 'Unknown'}
@@ -395,11 +395,12 @@ export default function MessagePane({ channel, isAdmin, organizationId }: Props)
                                 onClick={() => jumpToMessage(message.replyTo!.id)}
                               />
                             )}
+                            {/* for message */}
                             {message.type === 'FILE' ? (
                               <FileAttachmentCard message={message} channelId={channel.id} />
                             ) : (
                               <p className={cn(
-                                'break-words rounded-lg px-3 py-1.5 text-sm text-text-primary',
+                                'break-words rounded-lg px-3 py-1.5 text-sm text-text-primary ',
                                 isOwn ? 'bg-primary/10' : 'bg-surface-muted',
                               )}>
                                 {renderContent(message.content, { onMentionClick: setProfileUserId, currentUserId: user?.id })}
