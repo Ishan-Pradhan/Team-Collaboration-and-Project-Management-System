@@ -38,7 +38,7 @@ export const googleAuthRedirect = async (_req: Request, res: Response) => {
   res.cookie('google_oauth_state', state, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 5 * 60 * 1000,
   });
 
@@ -64,7 +64,7 @@ export const githubAuthRedirect = async (
   res.cookie("github_oauth_state", state, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 5 * 60 * 1000,
   });
 
@@ -95,7 +95,7 @@ export const githubAuthCallback = asyncHandler(async (req: Request, res: Respons
   res.clearCookie('github_oauth_state', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   });
 
   // Exchange code for access token using GitHub's REST API
@@ -196,7 +196,7 @@ export const googleAuthCallback = asyncHandler(
     res.clearCookie('google_oauth_state', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     });
 
     const oauthClient = getGoogleOAuthClient();
