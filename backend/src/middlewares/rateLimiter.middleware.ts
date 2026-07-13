@@ -17,7 +17,10 @@ export const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 
-  skip: (req) => req.path === '/health',
+  // `limiter` is mounted app-wide, so `req.path` here is the full request path
+  // (`/api/v1/health`) — not the path relative to the router health.routes is
+  // mounted on. Matching bare '/health' silently never fires.
+  skip: (req) => req.path === '/api/v1/health',
 
   handler: rateLimitHandler,
 });
