@@ -52,6 +52,10 @@ const envSchema = z.object({
 
   // Optional
   FRONTEND_URL: z.url().optional(),
+  // Set to `lax` when the API and frontend share a registrable domain, e.g.
+  // api.example.com + app.example.com. Defaults to `none`, which cross-site
+  // deployments require but which weakens CSRF protection (see cookie.config.ts).
+  COOKIE_SAMESITE: z.enum(['lax', 'none', 'strict']).optional(),
   // Public URL of this API itself — needed because the email-verification
   // link is a direct backend GET route (unlike password reset/invites,
   // which link to frontend pages). Falls back to localhost for local dev.

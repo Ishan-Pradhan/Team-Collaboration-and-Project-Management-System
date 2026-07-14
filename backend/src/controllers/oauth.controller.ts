@@ -8,7 +8,9 @@ import { generateAccessAndRefereshTokens } from '../utils/token.utils.js';
 import type { Request, Response } from 'express';
 import crypto from 'crypto';
 import {
+  baseCookieOptions,
   getAccessTokenCookieOptions,
+  getOAuthStateCookieOptions,
   getRefreshTokenCookieOptions,
 } from '../config/cookie.config.js';
 import { asyncHandler } from '../utils/AsyncHandler.js';
@@ -35,12 +37,7 @@ export const googleAuthRedirect = async (_req: Request, res: Response) => {
 
   const state = crypto.randomBytes(16).toString('hex');
 
-  res.cookie('google_oauth_state', state, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 5 * 60 * 1000,
-  });
+  res.cookie('google_oauth_state', state, getOAuthStateCookieOptions());
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -61,12 +58,7 @@ export const githubAuthRedirect = async (
 ) => {
   const state = crypto.randomBytes(16).toString("hex");
 
-  res.cookie("github_oauth_state", state, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 5 * 60 * 1000,
-  });
+  res.cookie('github_oauth_state', state, getOAuthStateCookieOptions());
 
   const params = new URLSearchParams({
     client_id: env.GITHUB_CLIENT_ID,
@@ -92,11 +84,7 @@ export const githubAuthCallback = asyncHandler(async (req: Request, res: Respons
     throw new ApiError(400, 'Invalid OAuth state');
   }
 
-  res.clearCookie('github_oauth_state', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  });
+  res.clearCookie('github_oauth_state', baseCookieOptions());
 
   // Exchange code for access token using GitHub's REST API
   const { access_token } = await exchangeGithubCode(code);
@@ -193,11 +181,7 @@ export const googleAuthCallback = asyncHandler(
       throw new ApiError(400, 'Invalid OAuth state');
     }
 
-    res.clearCookie('google_oauth_state', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    });
+    res.clearCookie('google_oauth_state', baseCookieOptions());
 
     const oauthClient = getGoogleOAuthClient();
     const { tokens } = await oauthClient.getToken(code);
