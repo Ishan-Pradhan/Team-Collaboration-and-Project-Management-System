@@ -48,16 +48,27 @@ const logoutAndRedirect = () => {
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error?.config as
+      | (InternalAxiosRequestConfig & { _retry?: boolean })
+      | undefined;
 
     if (error.response?.status !== 401 || !originalRequest) {
       return Promise.reject(error);
     }
 
-    // If the refresh endpoint itself returned 401, we must logout — don't retry
-    if (originalRequest.url?.includes('/auth/refresh-access-token')) {
-      processQueue(error);
-      logoutAndRedirect();
+    const requestUrl = originalRequest.url || '';
+    const isAuthEndpoint =
+      requestUrl.includes('/auth/login') ||
+      requestUrl.includes('/auth/register') ||
+      requestUrl.includes('/auth/forgot-password') ||
+      requestUrl.includes('/auth/reset-password') ||
+      requestUrl.includes('/auth/refresh-access-token');
+
+    if (isAuthEndpoint) {
+      if (requestUrl.includes('/auth/refresh-access-token')) {
+        processQueue(error);
+        logoutAndRedirect();
+      }
       return Promise.reject(error);
     }
 
@@ -90,7 +101,7 @@ api.interceptors.response.use(
 // ─── Error Parser ─────────────────────────────────────────────────────────────
 export const parseApiError = (error: unknown): ApiError => {
   if (error instanceof AxiosError) {
-    const data = error.response?.data;
+    const data = error.response?.data as { message?: string; errors?: string[] } | undefined;
     return {
       message: data?.message || error.message || 'An unexpected error occurred',
       errors: data?.errors || [],

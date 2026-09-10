@@ -7,6 +7,7 @@ import { generateToken, hashPassword } from '../utils/security.utils.js';
 import { generateAccessAndRefereshTokens } from '../utils/token.utils.js';
 import type { Request, Response } from 'express';
 import crypto from 'crypto';
+import { Buffer } from 'node:buffer';
 import {
   baseCookieOptions,
   getAccessTokenCookieOptions,
@@ -27,6 +28,65 @@ type GoogleProfile = {
   email_verified?: boolean;
 };
 
+// Generates a cryptographically signed, timestamped state to prevent CSRF
+// without depending exclusively on third-party cookies across redirects.
+const generateOAuthState = (): string => {
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const timestamp = Date.now().toString();
+  const signature = crypto
+    .createHmac('sha256', env.ACCESS_TOKEN_SECRET)
+    .update(`${nonce}:${timestamp}`)
+    .digest('hex');
+  return `${nonce}.${timestamp}.${signature}`;
+};
+
+// Verifies either a cryptographically signed state or a matching cookie state
+const verifyOAuthState = (
+  state: unknown,
+  cookieState?: string,
+): boolean => {
+  if (!state || typeof state !== 'string') return false;
+
+  // 1. Verify signed state
+  const parts = state.split('.');
+  if (parts.length === 3) {
+    const nonce = parts[0];
+    const timestampStr = parts[1];
+    const signature = parts[2];
+
+    if (!nonce || !timestampStr || !signature) {
+      return false;
+    }
+
+    const timestamp = parseInt(timestampStr, 10);
+
+    // Expire state after 15 minutes
+    if (!isNaN(timestamp) && Date.now() - timestamp <= 15 * 60 * 1000) {
+      const expectedSignature = crypto
+        .createHmac('sha256', env.ACCESS_TOKEN_SECRET)
+        .update(`${nonce}:${timestampStr}`)
+        .digest('hex');
+
+      try {
+        const sigBuf = Buffer.from(signature, 'hex');
+        const expBuf = Buffer.from(expectedSignature, 'hex');
+        if (sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf)) {
+          return true;
+        }
+      } catch {
+        // Fall through
+      }
+    }
+  }
+
+  // 2. Fallback to cookie comparison
+  if (cookieState && state === cookieState) {
+    return true;
+  }
+
+  return false;
+};
+
 export const googleAuthRedirect = async (_req: Request, res: Response) => {
   const clientId = env.GOOGLE_CLIENT_ID;
   const redirectUri = env.GOOGLE_CALLBACK_URL;
@@ -35,7 +95,7 @@ export const googleAuthRedirect = async (_req: Request, res: Response) => {
     throw new ApiError(500, 'Missing google oauth config');
   }
 
-  const state = crypto.randomBytes(16).toString('hex');
+  const state = generateOAuthState();
 
   res.cookie('google_oauth_state', state, getOAuthStateCookieOptions());
 
@@ -56,7 +116,7 @@ export const githubAuthRedirect = async (
   _req: Request,
   res: Response,
 ) => {
-  const state = crypto.randomBytes(16).toString("hex");
+  const state = generateOAuthState();
 
   res.cookie('github_oauth_state', state, getOAuthStateCookieOptions());
 
@@ -87,8 +147,8 @@ export const githubAuthCallback = asyncHandler(async (req: Request, res: Respons
     return res.redirect(`${frontendUrl}/auth/login?error=${encodeURIComponent('Missing OAuth code')}`);
   }
 
-  if (!state || state !== cookieState) {
-    return res.redirect(`${frontendUrl}/auth/login?error=${encodeURIComponent('Invalid OAuth state')}`);
+  if (!verifyOAuthState(state, cookieState)) {
+    return res.redirect(`${frontendUrl}/auth/login?error=${encodeURIComponent('Invalid OAuth state. Please try again.')}`);
   }
 
   res.clearCookie('github_oauth_state', baseCookieOptions());
@@ -111,6 +171,14 @@ export const githubAuthCallback = asyncHandler(async (req: Request, res: Respons
   }
 
   let user = await userRepository.findByEmail(email);
+
+  if (user && user.authProvider !== 'github') {
+    const msg =
+      user.authProvider === 'local'
+        ? 'You previously registered with email and password. Please log in using your password.'
+        : 'You previously registered with Google. Please log in using Google.';
+    return res.redirect(`${frontendUrl}/auth/login?error=${encodeURIComponent(msg)}`);
+  }
 
   if (!user) {
     const userCount = await userRepository.count();
@@ -189,8 +257,8 @@ export const googleAuthCallback = asyncHandler(
       return res.redirect(`${frontendUrl}/auth/login?error=${encodeURIComponent('Missing OAuth code')}`);
     }
 
-    if (!state || state !== cookieState) {
-      return res.redirect(`${frontendUrl}/auth/login?error=${encodeURIComponent('Invalid OAuth state')}`);
+    if (!verifyOAuthState(state, cookieState)) {
+      return res.redirect(`${frontendUrl}/auth/login?error=${encodeURIComponent('Invalid OAuth state. Please try again.')}`);
     }
 
     res.clearCookie('google_oauth_state', baseCookieOptions());
@@ -218,6 +286,14 @@ export const googleAuthCallback = asyncHandler(
     }
 
     let user = await userRepository.findByEmail(email);
+
+    if (user && user.authProvider !== 'google') {
+      const msg =
+        user.authProvider === 'local'
+          ? 'You previously registered with email and password. Please log in using your password.'
+          : 'You previously registered with GitHub. Please log in using GitHub.';
+      return res.redirect(`${frontendUrl}/auth/login?error=${encodeURIComponent(msg)}`);
+    }
 
     if (!user) {
       const userCount = await userRepository.count();

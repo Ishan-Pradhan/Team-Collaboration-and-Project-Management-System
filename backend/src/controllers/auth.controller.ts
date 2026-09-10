@@ -132,6 +132,13 @@ export const loginUser = asyncHandler(
       );
     }
 
+    if (user.authProvider === 'github') {
+      throw new ApiError(
+        400,
+        'You previously signed in with GitHub. Please use GitHub login.',
+      );
+    }
+
     const isPasswordValid = await comparePassword(password, user.passwordHash);
 
     if (!isPasswordValid) {
