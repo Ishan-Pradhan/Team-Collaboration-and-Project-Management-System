@@ -67,7 +67,14 @@ async function processNotificationJob(job: Job): Promise<void> {
 }
 
 export function startNotificationWorker(): Worker {
-  const worker = new Worker('notification-queue', processNotificationJob, { connection: redisConnection });
+  const worker = new Worker('notification-queue', processNotificationJob, {
+    connection: redisConnection,
+    drainDelay: 30000,
+    stalledInterval: 60000,
+  });
+  worker.on('error', (err) => {
+    console.error('[notification-worker] Queue error:', err.message);
+  });
   worker.on('failed', (job, err) => {
     console.error(`[notification-worker] job ${job?.name} (${job?.id}) failed:`, err);
   });

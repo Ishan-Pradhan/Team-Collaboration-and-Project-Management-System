@@ -86,7 +86,12 @@ export const connectDB = async () => {
   try {
     await sequelize.authenticate();
     console.log("Database connected successfully");
+  } catch (error) {
+    console.error("Database connection failed:", error);
+    process.exit(1);
+  }
 
+  try {
     startEmailWorker();
     startNotificationWorker();
 
@@ -98,9 +103,9 @@ export const connectDB = async () => {
       { name: 'due-date-check' },
     );
     await notificationQueue.add('due-date-check', {});
-  } catch (error) {
-    console.error("DB connection failed:", error);
-    process.exit(1);
+    console.log("Queue workers and scheduler initialized successfully");
+  } catch (queueError) {
+    console.warn("[Queue/Redis] Worker or scheduler initialization failed (background jobs will be degraded):", queueError);
   }
 };
 connectDB();

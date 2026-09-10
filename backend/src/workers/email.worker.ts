@@ -35,10 +35,15 @@ export function startEmailWorker(): Worker {
     // notify* email all funnel through this one worker). Protects against
     // 429s from Resend's per-second rate limit — check the current limit
     // for your plan on the Resend dashboard before changing this.
+    drainDelay: 30000,
+    stalledInterval: 60000,
     limiter: {
       max: Number(process.env.EMAIL_RATE_LIMIT_MAX) || 2,
       duration: Number(process.env.EMAIL_RATE_LIMIT_DURATION_MS) || 1000,
     },
+  });
+  worker.on('error', (err) => {
+    console.error('[email-worker] Queue error:', err.message);
   });
   worker.on('failed', (job, err) => {
     console.error(`[email-worker] job ${job?.name} (${job?.id}) failed:`, err);
