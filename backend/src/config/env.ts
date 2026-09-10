@@ -56,6 +56,9 @@ const envSchema = z.object({
   // api.example.com + app.example.com. Defaults to `none`, which cross-site
   // deployments require but which weakens CSRF protection (see cookie.config.ts).
   COOKIE_SAMESITE: z.enum(['lax', 'none', 'strict']).optional(),
+  // Domain on which cookies are set (e.g. `.ishanpradhan.com.np` to share across subdomains).
+  // Leave empty for host-only cookies.
+  COOKIE_DOMAIN: z.string().optional(),
   // Public URL of this API itself — needed because the email-verification
   // link is a direct backend GET route (unlike password reset/invites,
   // which link to frontend pages). Falls back to localhost for local dev.

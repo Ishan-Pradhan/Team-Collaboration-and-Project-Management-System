@@ -21,6 +21,7 @@ export const baseCookieOptions = (): CookieOptions => ({
   httpOnly: true,
   secure: isProduction,
   sameSite: env.COOKIE_SAMESITE ?? defaultSameSite,
+  domain: env.COOKIE_DOMAIN || undefined,
 });
 
 export const getRefreshTokenCookieOptions = (): CookieOptions => ({

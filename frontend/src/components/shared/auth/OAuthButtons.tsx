@@ -3,7 +3,7 @@
 import { FaGithub, FaGoogle } from 'react-icons/fa';
 import { Button } from '@/components/ui/button';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api/v1';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1').replace(/\/$/, '');
 
 interface OAuthButtonsProps {
   label?: string;
@@ -11,7 +11,7 @@ interface OAuthButtonsProps {
 
 export default function OAuthButtons({ label = 'Continue with' }: OAuthButtonsProps) {
   const handleOAuth = (provider: 'google' | 'github') => {
-    window.location.href = `${API_URL}/auth/${provider}`;
+    window.location.href = `${API_URL}/auth/oauth/${provider}`;
   };
 
   return (

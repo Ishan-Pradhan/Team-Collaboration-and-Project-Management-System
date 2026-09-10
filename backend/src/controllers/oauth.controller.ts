@@ -73,15 +73,22 @@ export const githubAuthRedirect = async (
 };
 
 export const githubAuthCallback = asyncHandler(async (req: Request, res: Response) => {
-  const { code, state } = req.query;
+  const frontendUrl = (env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
+  const { code, state, error, error_description } = req.query;
+
+  if (error) {
+    const errorMsg = (error_description as string) || (error as string) || 'GitHub authentication failed';
+    return res.redirect(`${frontendUrl}/auth/login?error=${encodeURIComponent(errorMsg)}`);
+  }
+
   const cookieState = req.cookies?.github_oauth_state;
 
   if (!code || typeof code !== 'string') {
-    throw new ApiError(400, 'Missing OAuth code');
+    return res.redirect(`${frontendUrl}/auth/login?error=${encodeURIComponent('Missing OAuth code')}`);
   }
 
   if (!state || state !== cookieState) {
-    throw new ApiError(400, 'Invalid OAuth state');
+    return res.redirect(`${frontendUrl}/auth/login?error=${encodeURIComponent('Invalid OAuth state')}`);
   }
 
   res.clearCookie('github_oauth_state', baseCookieOptions());
@@ -169,16 +176,21 @@ export const githubAuthCallback = asyncHandler(async (req: Request, res: Respons
 
 export const googleAuthCallback = asyncHandler(
   async (req: Request, res: Response) => {
-    const code = req.query.code;
-    const state = req.query.state;
+    const frontendUrl = (env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
+    const { code, state, error } = req.query;
+
+    if (error) {
+      return res.redirect(`${frontendUrl}/auth/login?error=${encodeURIComponent(error as string)}`);
+    }
+
     const cookieState = req.cookies?.google_oauth_state;
 
     if (!code || typeof code !== 'string') {
-      throw new ApiError(400, 'Missing OAuth code');
+      return res.redirect(`${frontendUrl}/auth/login?error=${encodeURIComponent('Missing OAuth code')}`);
     }
 
     if (!state || state !== cookieState) {
-      throw new ApiError(400, 'Invalid OAuth state');
+      return res.redirect(`${frontendUrl}/auth/login?error=${encodeURIComponent('Invalid OAuth state')}`);
     }
 
     res.clearCookie('google_oauth_state', baseCookieOptions());
@@ -187,12 +199,12 @@ export const googleAuthCallback = asyncHandler(
     const { tokens } = await oauthClient.getToken(code);
 
     if (!tokens.id_token) {
-      throw new ApiError(400, 'github did not return an id_token');
+      throw new ApiError(400, 'Google did not return an id_token');
     }
 
     const ticket = await oauthClient.verifyIdToken({
       idToken: tokens.id_token as string,
-      audience: process.env.GOOGLE_CLIENT_ID as string,
+      audience: env.GOOGLE_CLIENT_ID,
     });
 
     const payload = ticket.getPayload() as GoogleProfile | undefined;
