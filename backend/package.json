@@ -1,9 +1,9 @@
 {
-  "name": "backend-boilerplate",
+  "name": "capms-backend",
   "version": "1.0.0",
-  "description": "",
-  "license": "ISC",
-  "author": "",
+  "description": "Team Collaboration and Project Management System Backend API",
+  "license": "MIT",
+  "author": "Ishan Pradhan",
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts"
