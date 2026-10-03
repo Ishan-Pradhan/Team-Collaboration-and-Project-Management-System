@@ -9,6 +9,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Redis-7+-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
 <p align="center">
   A production-ready, multi-tenant SaaS workspace combining Kanban boards, team chat, calendars, notifications, and organization analytics into a unified developer-friendly platform.
@@ -260,5 +261,6 @@ npx sequelize-cli migration:generate --name your-migration-name
 ---
 
 ## 📄 License
-
-This project is licensed under the [ISC License](LICENSE).
+ 
+This project is open source and available under the [MIT License](LICENSE).
+Copyright © 2026 Ishan Pradhan.
