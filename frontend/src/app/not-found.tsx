@@ -11,9 +11,14 @@ export default function NotFound() {
           The page you&apos;re looking for doesn&apos;t exist or has been moved.
         </p>
       </div>
-      <Button asChild>
-        <Link href="/">Go home</Link>
-      </Button>
+      <div className="flex items-center gap-3">
+        <Button asChild>
+          <Link href="/dashboard">Back to dashboard</Link>
+        </Button>
+        <Button variant="outline" asChild>
+          <Link href="/">Home</Link>
+        </Button>
+      </div>
     </div>
   );
 }

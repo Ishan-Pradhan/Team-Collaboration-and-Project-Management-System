@@ -32,7 +32,7 @@ export default function RootError({
           Try again
         </Button>
         <Button asChild>
-          <Link href="/">Go home</Link>
+          <Link href="/dashboard">Back to dashboard</Link>
         </Button>
       </div>
     </div>

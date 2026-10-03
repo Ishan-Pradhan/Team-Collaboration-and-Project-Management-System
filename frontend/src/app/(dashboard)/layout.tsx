@@ -15,9 +15,12 @@ export default function ProtectedDashboardLayout({
 }) {
   const router = useRouter();
   const { isAuthenticated, setAuth, clearAuth } = useAuthStore();
-  const [loading, setLoading] = useState(!isAuthenticated);
+  const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setMounted(true);
+
     if (isAuthenticated) {
       setLoading(false);
       return;
@@ -46,7 +49,7 @@ export default function ProtectedDashboardLayout({
       });
   }, [isAuthenticated, setAuth, clearAuth, router]);
 
-  if (loading || !isAuthenticated) {
+  if (!mounted || loading || !isAuthenticated) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="animate-spin text-text-secondary" size={24} />

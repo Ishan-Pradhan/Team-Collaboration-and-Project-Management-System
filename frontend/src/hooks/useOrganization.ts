@@ -29,6 +29,10 @@ export const useOrganizationBySlug = (slug: string) =>
     queryKey: ['organizations', 'slug', slug],
     queryFn: () => getOrganizationBySlug(slug),
     enabled: !!slug,
+    retry: (failureCount, error: any) => {
+      if (error?.response?.status === 404) return false;
+      return failureCount < 2;
+    },
   });
 
 export const useCreateOrganization = () => {
