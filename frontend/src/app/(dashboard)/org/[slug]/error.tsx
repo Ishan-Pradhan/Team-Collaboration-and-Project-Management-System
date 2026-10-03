@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -26,9 +27,14 @@ export default function OrgError({
           {error.message || 'Could not load workspace data. Check your connection and try again.'}
         </p>
       </div>
-      <Button variant="outline" onClick={reset}>
-        Try again
-      </Button>
+      <div className="flex items-center gap-3">
+        <Button variant="outline" onClick={reset}>
+          Try again
+        </Button>
+        <Button asChild>
+          <Link href="/auth/workspace">Choose workspace</Link>
+        </Button>
+      </div>
     </div>
   );
 }

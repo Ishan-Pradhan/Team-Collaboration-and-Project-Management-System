@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -12,6 +12,7 @@ import Logo from '@/components/shared/Logo';
 import OAuthButtons from '@/components/shared/auth/OAuthButtons';
 import { registerSchema, RegisterInput } from '@/schemas/auth.schema';
 import { useRegister } from '@/hooks/useAuth';
+import { useAuthStore } from '@/store/auth.store';
 import { parseApiError } from '@/lib/axios';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,13 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace('/dashboard');
+    }
+  }, [isAuthenticated, router]);
 
   const { mutate: registerUser, isPending } = useRegister();
 

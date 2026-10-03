@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -12,6 +12,7 @@ import Logo from '@/components/shared/Logo';
 import OAuthButtons from '@/components/shared/auth/OAuthButtons';
 import { loginSchema, LoginInput } from '@/schemas/auth.schema';
 import { useLogin } from '@/hooks/useAuth';
+import { useAuthStore } from '@/store/auth.store';
 import { parseApiError } from '@/lib/axios';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,13 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
   const [apiError, setApiError] = useState<string | null>(searchParams.get('error'));
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace('/dashboard');
+    }
+  }, [isAuthenticated, router]);
 
   const { mutate: login, isPending } = useLogin();
 

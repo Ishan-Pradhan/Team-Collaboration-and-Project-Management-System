@@ -57,7 +57,8 @@ export default function WorkspacePage() {
   const handleSelect = (org: Organization) => {
     setSelecting(org.id);
     setCurrentOrg(org);
-    setTimeout(() => router.push('/'), 350);
+    const targetUrl = org.slug ? `/org/${org.slug}` : '/dashboard';
+    setTimeout(() => router.push(targetUrl), 350);
   };
 
   const handleCreate = () => {
@@ -68,7 +69,8 @@ export default function WorkspacePage() {
         setCurrentOrg(org);
         setShowCreate(false);
         setNewOrgName('');
-        router.push('/');
+        const targetUrl = org.slug ? `/org/${org.slug}` : '/dashboard';
+        router.push(targetUrl);
       },
       onError: (err) => setApiError(parseApiError(err).message),
     });

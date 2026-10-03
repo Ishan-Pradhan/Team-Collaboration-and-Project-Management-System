@@ -15,6 +15,7 @@ import {
 import { ErrorState } from '@/components/shared/ErrorState';
 import { ActivityRow } from '@/components/shared/ActivityRow';
 import { OrgOverviewSkeleton } from '@/components/shared/skeletons/OrgOverviewSkeleton';
+import { Button } from '@/components/ui/button';
 import { getSocket } from '@/lib/socket';
 import { avatarColor } from '@/lib/avatarColor';
 
@@ -131,8 +132,8 @@ export default function OrgOverviewPage({ params }: Props) {
   const router = useRouter();
   const { user } = useAuthStore();
 
-  const { data: org } = useOrganizationBySlug(slug);
-  const { data: dashboard, isLoading, error, refetch } = useOrgDashboard(org?.id ?? '');
+  const { data: org, isLoading: orgLoading, error: orgError } = useOrganizationBySlug(slug);
+  const { data: dashboard, isLoading: dashLoading, error: dashError, refetch } = useOrgDashboard(org?.id ?? '');
   const qc = useQueryClient();
 
   useEffect(() => {
@@ -152,8 +153,32 @@ export default function OrgOverviewPage({ params }: Props) {
     };
   }, [org, dashboard, qc]);
 
-  if (isLoading || !org) return <OrgOverviewSkeleton />;
-  if (error || !dashboard) {
+  if (orgError) {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center p-6">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-danger-soft">
+          <AlertTriangle className="text-danger" size={26} />
+        </div>
+        <div>
+          <h2 className="text-xl font-semibold text-text-primary">Workspace not found</h2>
+          <p className="mt-2 max-w-sm text-sm text-text-secondary">
+            The workspace <span className="font-mono font-medium text-text-primary">&quot;{slug}&quot;</span> doesn&apos;t exist or you don&apos;t have access to it.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 mt-2">
+          <Button onClick={() => router.push('/auth/workspace')}>
+            Choose workspace
+          </Button>
+          <Button variant="outline" onClick={() => router.push('/dashboard')}>
+            Back to dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (orgLoading || !org || dashLoading) return <OrgOverviewSkeleton />;
+  if (dashError || !dashboard) {
     return (
       <ErrorState
         title="Failed to load dashboard"
