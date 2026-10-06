@@ -46,8 +46,8 @@ export async function updateProfile(data: { name: string; bio?: string; jobTitle
   return res.data.data;
 }
 
-export async function getCurrentUserProfile(): Promise<UpdateProfileData & { isVerified: boolean; role: string }> {
-  const res = await api.get<{ data: UpdateProfileData & { isVerified: boolean; role: string } }>('/auth/current-user');
+export async function getCurrentUserProfile(): Promise<UpdateProfileData & { isVerified: boolean; role: 'USER' | 'SUPER_ADMIN' }> {
+  const res = await api.get<{ data: UpdateProfileData & { isVerified: boolean; role: 'USER' | 'SUPER_ADMIN' } }>('/auth/current-user');
   return res.data.data;
 }
 

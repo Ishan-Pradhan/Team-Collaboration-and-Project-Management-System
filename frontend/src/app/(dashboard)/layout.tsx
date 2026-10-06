@@ -23,6 +23,20 @@ export default function ProtectedDashboardLayout({
 
     if (isAuthenticated) {
       setLoading(false);
+      getCurrentUserProfile()
+        .then((profile) => {
+          const currentUser = useAuthStore.getState().user;
+          if (currentUser) {
+            setAuth({
+              ...currentUser,
+              name: profile.name,
+              avatarUrl: profile.avatarUrl,
+              role: profile.role,
+              isVerified: profile.isVerified,
+            });
+          }
+        })
+        .catch(() => {});
       return;
     }
 
@@ -34,7 +48,7 @@ export default function ProtectedDashboardLayout({
           name: profile.name,
           email: profile.email,
           avatarUrl: profile.avatarUrl,
-          role: profile.role as 'USER' | 'SUPER_ADMIN',
+          role: profile.role,
           isVerified: profile.isVerified,
           isActive: true,
           authProvider: 'local',

@@ -87,6 +87,7 @@ export const registerUser = asyncHandler(
           name: newUser.name,
           email: newUser.email,
           avatarUrl: newUser.avatarUrl,
+          role: newUser.role,
           verificationEmailSent,
           ...(process.env.NODE_ENV === 'development' && verifyLink
             ? { verifyLink }
@@ -165,6 +166,7 @@ export const loginUser = asyncHandler(
           name: user.name,
           email: user.email,
           avatarUrl: user.avatarUrl,
+          role: user.role,
         },
         message: 'Login Successful',
       });

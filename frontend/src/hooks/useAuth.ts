@@ -27,7 +27,7 @@ export const useLogin = () => {
           name: data.data.name,
           email: data.data.email,
           avatarUrl: data.data.avatarUrl,
-          role: 'USER',
+          role: data.data.role,
           isVerified: true,
           isActive: true,
           authProvider: 'local',

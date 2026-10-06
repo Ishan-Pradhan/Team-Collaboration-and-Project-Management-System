@@ -21,6 +21,7 @@ export interface AuthResponse {
     name: string;
     email: string;
     avatarUrl: string | null;
+    role: 'USER' | 'SUPER_ADMIN';
   } | null;
   errors?: string[];
 }
